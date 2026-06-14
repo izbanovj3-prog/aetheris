@@ -55,6 +55,15 @@ export function Nav() {
           </span>
         </Link>
 
+        {/* Preview-build marker — present only on the feature/setup-preview branch,
+            so Vercel Preview deployments are visually distinct from production. */}
+        <span
+          title="Preview build — deployed from feature/setup-preview"
+          className="hidden sm:inline-flex items-center shrink-0 rounded-full border border-amber/40 bg-amber/10 px-2 py-0.5 telemetry !text-[9px] !tracking-[0.16em] text-amber"
+        >
+          Preview Version
+        </span>
+
         <div className="hidden md:flex items-center gap-1 mx-auto">
           {LINKS.map((l) => {
             const active = pathname.startsWith(l.href);
