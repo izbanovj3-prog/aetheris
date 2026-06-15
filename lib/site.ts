@@ -11,7 +11,11 @@ export const SITE = {
   tagline: "The operating system for Kazakhstan's environment.",
   description:
     "National environmental intelligence for Kazakhstan — real-time air quality, water, industrial emissions and ecological risk across every region and major city, in one living model.",
-  url: (process.env.NEXT_PUBLIC_SITE_URL ?? "https://aetheris-ashy.vercel.app").replace(/\/$/, ""),
+  // `.trim()` also strips a leading BOM (U+FEFF) — some shells prepend one when
+  // setting env vars — so `new URL(SITE.url)` never throws at build time.
+  url: (process.env.NEXT_PUBLIC_SITE_URL ?? "https://aetherisearth.live")
+    .trim()
+    .replace(/\/$/, ""),
   locale: "en_US",
   creator: "Aetheris Systems",
   keywords: [
