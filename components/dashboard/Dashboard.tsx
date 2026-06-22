@@ -11,12 +11,14 @@ import {
 import {
   HOTSPOTS,
   type HotspotType,
+  type Station,
   aqiBand,
   genSeries,
   getStations,
   planetSummary,
   scoreBand,
 } from "@/lib/data";
+import { fetchLiveStations } from "@/lib/live";
 
 const TONE = {
   emerald: "text-emerald",
@@ -265,7 +267,22 @@ function useLivePulse(base: number, amp: number, period = 3200) {
 /* ── Dashboard ────────────────────────────────────────────── */
 
 export default function Dashboard() {
-  const stations = useMemo(() => getStations(), []);
+  // Simulated baseline (SSR-safe), then enrich with live Open-Meteo readings
+  // after mount — air quality + weather become real, no hydration mismatch.
+  const [stations, setStations] = useState<Station[]>(() => getStations());
+  const [live, setLive] = useState(false);
+  useEffect(() => {
+    const ac = new AbortController();
+    fetchLiveStations(ac.signal)
+      .then((r) => {
+        if (r.live) {
+          setStations(r.stations);
+          setLive(true);
+        }
+      })
+      .catch(() => {});
+    return () => ac.abort();
+  }, []);
   const sum = useMemo(() => planetSummary(stations), [stations]);
   const anomalySeries = useMemo(() => genSeries("anomaly-365", 90, 1.32, 0.22, 0.0012), []);
   const aqiSeries = useMemo(() => genSeries("net-aqi", 90, sum.meanAqi, 16), [sum.meanAqi]);
@@ -290,7 +307,7 @@ export default function Dashboard() {
           <Reveal>
             <TelemetryTag tone="emerald">
               <span className="dot-live" />
-              Intelligence · live model
+              {live ? "Live · Open-Meteo feed" : "Intelligence · live model"}
             </TelemetryTag>
           </Reveal>
           <Reveal index={1}>

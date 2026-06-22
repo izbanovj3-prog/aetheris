@@ -21,6 +21,7 @@ import {
   type LayerKey,
   type Station,
 } from "@/lib/data";
+import { fetchLiveStations } from "@/lib/live";
 import { EASE } from "@/components/ui/primitives";
 import { AtlasBoot } from "./AtlasBoot";
 import { GlobalPulse } from "./GlobalPulse";
@@ -158,6 +159,7 @@ export default function EnvironmentalMap() {
   const [isDesktop, setIsDesktop] = useState(true);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [railOpen, setRailOpen] = useState(false);
+  const [liveOn, setLiveOn] = useState(false);
 
   const stations = useMemo(() => getStationsFC(), []);
 
@@ -396,6 +398,27 @@ export default function EnvironmentalMap() {
     map.setLayoutProperty("hotspots-core", "visibility", hotVis);
   }, [activeLayer, ready]);
 
+  /* ── live data: enrich markers with real Open-Meteo air quality + weather.
+     The color/heat expressions read ["get", prop], so updating the source
+     data repaints the field automatically — and hovers/clicks then surface
+     real readings. Falls back silently to the simulated baseline. ── */
+  useEffect(() => {
+    if (!ready) return;
+    const ac = new AbortController();
+    fetchLiveStations(ac.signal)
+      .then((res) => {
+        const map = mapRef.current;
+        if (!res.live || !map) return;
+        const src = map.getSource("stations");
+        if (src && "setData" in src) {
+          (src as maplibregl.GeoJSONSource).setData(fcFromStations(res.stations));
+          setLiveOn(true);
+        }
+      })
+      .catch(() => {});
+    return () => ac.abort();
+  }, [ready]);
+
   /* ── hotspot pulse: ONLY on the industrial layer, never under reduced motion ── */
   useEffect(() => {
     const map = mapRef.current;
@@ -620,6 +643,12 @@ export default function EnvironmentalMap() {
         </span>
         <span className="w-px h-3 bg-line-bright" />
         <span className="telemetry">{HOTSPOTS.length} environmental hotspots tracked</span>
+        {liveOn && (
+          <>
+            <span className="w-px h-3 bg-line-bright" />
+            <span className="telemetry text-emerald">● live air · Open-Meteo</span>
+          </>
+        )}
       </div>
 
       {/* cinematic boot */}
@@ -661,15 +690,19 @@ function MapButton({
 
 /* ── GeoJSON builders ─────────────────────────────────────── */
 
-function getStationsFC(): GeoJSON.FeatureCollection {
+function fcFromStations(list: Station[]): GeoJSON.FeatureCollection {
   return {
     type: "FeatureCollection",
-    features: getStations().map((s) => ({
+    features: list.map((s) => ({
       type: "Feature",
       geometry: { type: "Point", coordinates: [s.lon, s.lat] },
       properties: { ...s },
     })),
   };
+}
+
+function getStationsFC(): GeoJSON.FeatureCollection {
+  return fcFromStations(getStations());
 }
 
 function hotspotsFC(): GeoJSON.FeatureCollection {
