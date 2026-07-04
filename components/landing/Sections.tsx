@@ -1,32 +1,77 @@
 "use client";
 
 import Link from "next/link";
+import { useMemo } from "react";
 import { motion } from "framer-motion";
 import {
   GlassCard,
   GlowButton,
   Reveal,
   SectionHeading,
+  SourceNote,
   StatReadout,
   TelemetryTag,
 } from "@/components/ui/primitives";
-import { LAYERS, genSeries, type LayerKey } from "@/lib/data";
+import {
+  HOTSPOTS,
+  LAYERS,
+  genSeries,
+  getStations,
+  planetSummary,
+  type LayerKey,
+  type Station,
+} from "@/lib/data";
+import { useLiveStations } from "@/lib/useLiveStations";
 
 /* ── Telemetry ticker ─────────────────────────────────────── */
 
-const TICKER = [
-  "ALMATY AQI 188 ▲", "ASTANA AQI 121", "TEMIRTAU STEEL PLUME ACTIVE",
-  "ARAL DUST INDEX +18%", "BALKHASH INFLOW −9%", "OSKEMEN PM2.5 96 µg/m³",
-  "KOKSHETAU WQI 69 ▲", "SEMEY LEGACY ZONE MONITORED", "PAVLODAR NO₂ 47 ppb",
-  "EKIBASTUZ COAL LOAD HIGH", "SHYMKENT AQI 132 ▲", "PETROPAVL AQI 92 ▼",
-];
+/** Build the strip from actual network state instead of canned strings:
+ *  worst air, worst water, peak PM2.5, critical hotspots, network mean. */
+function tickerItems(stations: Station[], live: boolean): string[] {
+  const baseById = new Map(getStations().map((s) => [s.id, s]));
+  // Trend arrows only mean something once live readings diverge from baseline.
+  const arrow = (s: Station) => {
+    if (!live) return "";
+    const b = baseById.get(s.id);
+    if (!b || Math.abs(s.aqi - b.aqi) < 6) return "";
+    return s.aqi > b.aqi ? " ▲" : " ▼";
+  };
+
+  const byAqi = [...stations].sort((a, b) => b.aqi - a.aqi);
+  const byPm = [...stations].sort((a, b) => b.pm25 - a.pm25);
+  const byWater = [...stations].sort((a, b) => a.waterQuality - b.waterQuality);
+
+  return [
+    ...byAqi.slice(0, 5).map((s) => `${s.name.toUpperCase()} AQI ${s.aqi}${arrow(s)}`),
+    `${byPm[0].name.toUpperCase()} PM2.5 ${byPm[0].pm25} µg/m³`,
+    ...byWater.slice(0, 3).map((s) => `${s.name.toUpperCase()} WQI ${s.waterQuality}`),
+    ...HOTSPOTS.filter((h) => h.status === "critical").map(
+      (h) => `${h.name.toUpperCase()} — CRITICAL`,
+    ),
+    `NETWORK MEAN AQI ${planetSummary(stations).meanAqi}`,
+  ];
+}
 
 export function Ticker() {
-  const row = [...TICKER, ...TICKER];
+  const { stations, live, fetchedAt } = useLiveStations();
+  const items = useMemo(() => tickerItems(stations, live), [stations, live]);
+  const row = [...items, ...items];
   return (
     <div className="relative border-y border-line py-3.5 overflow-hidden bg-void/60">
       <div className="absolute inset-y-0 left-0 w-24 z-10 bg-gradient-to-r from-abyss to-transparent" />
       <div className="absolute inset-y-0 right-0 w-24 z-10 bg-gradient-to-l from-abyss to-transparent" />
+      {/* one citation for the whole strip — per-item tooltips can't be
+          hovered inside an infinite marquee */}
+      <span className="absolute right-3 top-1/2 -translate-y-1/2 z-20">
+        <SourceNote
+          source={
+            live
+              ? "AQI/PM2.5 — Open-Meteo (CAMS); WQI & hotspots — Aetheris modeled baseline"
+              : "Aetheris modeled baseline (live feed pending)"
+          }
+          asOf={fetchedAt ? new Date(fetchedAt).toISOString() : undefined}
+        />
+      </span>
       <motion.div
         className="flex gap-10 whitespace-nowrap w-max"
         animate={{ x: ["0%", "-50%"] }}
@@ -107,7 +152,7 @@ export function StatsBand() {
     <section className="max-w-6xl mx-auto px-6 pt-28">
       <Reveal>
         <GlassCard bright ticks className="scanline px-8 py-10 grid grid-cols-2 lg:grid-cols-4 gap-8">
-          <StatReadout value={14.2} decimals={1} suffix="B" label="Datapoints / day" tone="cyan" />
+          <StatReadout value={14.2} decimals={1} suffix="B" label="Datapoints / day" tone="cyan" source="[SOURCE_NEEDED]" />
           <StatReadout value={28} label="Cities monitored" tone="emerald" />
           <StatReadout value={17} label="Regions covered" tone="atmos" />
           <StatReadout value={98.7} decimals={1} suffix="%" label="Network uptime" tone="emerald" />

@@ -10,6 +10,12 @@ const nextConfig: NextConfig = {
   // Emit /map/index.html instead of /map.html so clean URLs resolve
   // correctly on hosts that don't rewrite extensionless paths.
   trailingSlash: true,
+  // Build moment for "as of" stamps in source citations. Inlined into both
+  // server and client bundles, so prerendered HTML and hydration agree
+  // (a module-level `new Date()` would differ between the two).
+  env: {
+    NEXT_PUBLIC_BUILD_TIME: new Date().toISOString(),
+  },
 };
 
 export default nextConfig;

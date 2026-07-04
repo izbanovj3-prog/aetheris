@@ -197,12 +197,15 @@ export function StatReadout({
   label,
   tone = "emerald",
   decimals = 0,
+  source,
 }: {
   value: number;
   suffix?: string;
   label: string;
   tone?: "emerald" | "cyan" | "atmos" | "amber";
   decimals?: number;
+  /** Attribution shown as an ⓘ tooltip next to the label. */
+  source?: string;
 }) {
   const toneClass = {
     emerald: "text-emerald",
@@ -222,8 +225,51 @@ export function StatReadout({
         <Counter target={value} decimals={decimals} />
         <span className="text-xl">{suffix}</span>
       </motion.span>
-      <span className="telemetry">{label}</span>
+      <span className="telemetry">
+        {label}
+        {source && <SourceNote source={source} className="ml-1.5" />}
+      </span>
     </div>
+  );
+}
+
+/* ── Inline source citation ───────────────────────────────── */
+
+// Inlined at build by next.config.ts `env` — a static export has no runtime
+// clock that agrees between prerender and hydration.
+const BUILT_AT = process.env.NEXT_PUBLIC_BUILD_TIME;
+
+/** Small ⓘ marker stating where a headline number comes from. */
+export function SourceNote({
+  source,
+  asOf,
+  className = "",
+}: {
+  source: string;
+  /** ISO timestamp of the reading; defaults to the build moment. */
+  asOf?: string;
+  className?: string;
+}) {
+  const note = `Source: ${source} · as of ${asOf ?? BUILT_AT ?? "build time unavailable"}`;
+  return (
+    <span
+      role="note"
+      tabIndex={0}
+      title={note}
+      aria-label={note}
+      className={`inline-block align-[-0.125em] cursor-help text-ink-faint ${className}`}
+    >
+      <svg viewBox="0 0 12 12" className="w-3 h-3" fill="none" aria-hidden>
+        <circle cx="6" cy="6" r="5.25" stroke="currentColor" strokeWidth="1" />
+        <path
+          d="M6 5.4v3.1"
+          stroke="currentColor"
+          strokeWidth="1.2"
+          strokeLinecap="round"
+        />
+        <circle cx="6" cy="3.4" r="0.7" fill="currentColor" />
+      </svg>
+    </span>
   );
 }
 
@@ -234,12 +280,19 @@ function Counter({ target, decimals }: { target: number; decimals: number }) {
   const ref = useRef<HTMLSpanElement>(null);
   const inView = useInView(ref, { once: true, margin: "-40px" });
   const reduce = useReducedMotion();
-  const [val, setVal] = useState(0);
+  // Seed with the real value: the static export ships this initial render,
+  // so crawlers and users without JS get the number, never a "0".
+  const [val, setVal] = useState(target);
 
   useEffect(() => {
-    if (!inView) return;
     if (reduce) {
       setVal(target);
+      return;
+    }
+    if (!inView) {
+      // JS is running, so the count-up will play — arm it back to zero while
+      // the readout is still off-screen (and opacity-0 via the parent).
+      setVal(0);
       return;
     }
     const t0 = performance.now();

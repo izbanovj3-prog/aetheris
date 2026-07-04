@@ -35,7 +35,19 @@ export const SITE = {
 } as const;
 
 /** Primary navigable surfaces — drives the sitemap. */
-export const ROUTES = ["/", "/map", "/dashboard", "/assistant", "/community"] as const;
+export const ROUTES = [
+  "/",
+  "/map",
+  "/dashboard",
+  "/assistant",
+  "/community",
+  "/methodology",
+  "/data-sources",
+  "/sensor-network",
+  "/mission",
+  "/press",
+  "/contact",
+] as const;
 
 /** Brand palette references used by generated images. */
 export const BRAND = {

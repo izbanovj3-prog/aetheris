@@ -3,8 +3,9 @@
 import dynamic from "next/dynamic";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useMemo, useRef } from "react";
-import { EASE, GlowButton, TelemetryTag } from "@/components/ui/primitives";
-import { HOTSPOTS, getStations, planetSummary } from "@/lib/data";
+import { EASE, GlowButton, SourceNote, TelemetryTag } from "@/components/ui/primitives";
+import { HOTSPOTS, planetSummary } from "@/lib/data";
+import { useLiveStations } from "@/lib/useLiveStations";
 
 const Globe = dynamic(() => import("./Globe"), { ssr: false });
 
@@ -31,16 +32,17 @@ const CHIP_META = [
 
 export function Hero() {
   const ref = useRef<HTMLDivElement>(null);
-  // Derive the floating readouts from the same seeded model the Atlas and
-  // dashboard use, so every surface reports identical planetary vitals.
+  // Readouts start on the same seeded baseline the Atlas and dashboard use
+  // (SSR-safe), then pick up real Open-Meteo readings once they arrive.
+  const { stations, live, fetchedAt } = useLiveStations();
   const chipValues = useMemo<Record<string, string>>(() => {
-    const sum = planetSummary(getStations());
+    const sum = planetSummary(stations);
     return {
       aqi: String(sum.meanAqi),
       anomaly: `+${sum.meanAnomaly.toFixed(2)} °C`,
       hotspots: String(HOTSPOTS.length).padStart(2, "0"),
     };
-  }, []);
+  }, [stations]);
   const { scrollYProgress } = useScroll({
     target: ref,
     offset: ["start start", "end start"],
@@ -72,7 +74,22 @@ export function Hero() {
             transition={{ duration: 1, delay: c.delay, ease: EASE }}
             className={`absolute ${c.pos} glass rounded-xl px-4 py-3 ticks`}
           >
-            <div className="telemetry mb-1">{c.label}</div>
+            <div className="telemetry mb-1">
+              {c.label}
+              {c.key === "aqi" && (
+                // chip layer is pointer-events-none — re-enable just the ⓘ
+                // so its tooltip stays hoverable
+                <SourceNote
+                  source={
+                    live
+                      ? "Open-Meteo Air Quality API (CAMS) · mean of 28 cities"
+                      : "Aetheris modeled baseline (live feed pending)"
+                  }
+                  asOf={fetchedAt ? new Date(fetchedAt).toISOString() : undefined}
+                  className="ml-1.5 pointer-events-auto"
+                />
+              )}
+            </div>
             <div className={`readout text-lg font-medium ${c.tone}`}>
               {chipValues[c.key]}
             </div>
@@ -94,7 +111,9 @@ export function Hero() {
           <motion.div variants={heroItem}>
             <TelemetryTag tone="emerald">
               <span className="dot-live" />
-              Planetary sensor network · online
+              {live
+                ? "Kazakhstan network · live readings"
+                : "Kazakhstan network · model baseline"}
             </TelemetryTag>
           </motion.div>
 
@@ -135,7 +154,10 @@ export function Hero() {
             <span className="w-px h-3 bg-line-bright" />
             <span className="telemetry">5 environmental layers</span>
             <span className="w-px h-3 bg-line-bright" />
-            <span className="telemetry hidden sm:inline">14.2B datapoints / day</span>
+            <span className="telemetry hidden sm:inline">
+              14.2B datapoints / day
+              <SourceNote source="[SOURCE_NEEDED]" className="ml-1.5" />
+            </span>
           </motion.div>
         </motion.div>
       </motion.div>

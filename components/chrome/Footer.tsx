@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { SourceNote } from "@/components/ui/primitives";
 
 const COLUMNS = [
   {
@@ -13,19 +14,17 @@ const COLUMNS = [
   {
     title: "Science",
     links: [
-      { label: "Methodology", href: "#" },
-      { label: "Data sources", href: "#" },
-      { label: "Sensor network", href: "#" },
-      { label: "Open datasets", href: "#" },
+      { label: "Methodology", href: "/methodology" },
+      { label: "Data sources", href: "/data-sources" },
+      { label: "Sensor network", href: "/sensor-network" },
     ],
   },
   {
     title: "Company",
     links: [
-      { label: "Mission", href: "#" },
-      { label: "Careers", href: "#" },
-      { label: "Press kit", href: "#" },
-      { label: "Contact", href: "#" },
+      { label: "Mission", href: "/mission" },
+      { label: "Press kit", href: "/press" },
+      { label: "Contact", href: "/contact" },
     ],
   },
 ];
@@ -51,6 +50,7 @@ export function Footer() {
             <span className="dot-live" />
             <span className="telemetry">
               2,847 stations reporting
+              <SourceNote source="[SOURCE_NEEDED]" className="ml-1.5" />
             </span>
           </div>
         </div>
