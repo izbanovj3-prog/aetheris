@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { SourceNote } from "@/components/ui/primitives";
+import { networkStats } from "@/lib/data";
 
 const COLUMNS = [
   {
@@ -49,8 +50,11 @@ export function Footer() {
           <div className="flex items-center gap-2 mt-2">
             <span className="dot-live" />
             <span className="telemetry">
-              2,847 stations reporting
-              <SourceNote source="[SOURCE_NEEDED]" className="ml-1.5" />
+              {networkStats().cities} city stations reporting
+              <SourceNote
+                source="Aetheris station registry · one station per monitored city, fed by Open-Meteo grid readings"
+                className="ml-1.5"
+              />
             </span>
           </div>
         </div>

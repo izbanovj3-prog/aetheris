@@ -127,7 +127,7 @@ function recommendations(s: Station): string {
 const TERMS: Array<{ match: string[]; text: string }> = [
   {
     match: ["aqi", "air quality index"],
-    text: "**AQI (Air Quality Index)** condenses pollutant concentrations — PM2.5, PM10, NO₂, O₃, SO₂, CO — into a single 0–500 scale. Below 50 is good; above 150 means health effects for the general population. Aetheris computes it from Kazhydromet stations cross-validated with community sensors and satellite aerosol depth.",
+    text: "**AQI (Air Quality Index)** condenses pollutant concentrations — PM2.5, PM10, NO₂, O₃, SO₂, CO — into a single 0–500 scale. Below 50 is good; above 150 means health effects for the general population. Aetheris takes the US AQI from the Open-Meteo air-quality feed (CAMS satellite-driven model), refreshed hourly for all 28 monitored cities.",
   },
   {
     match: ["pm2.5", "pm25", "pm 2.5", "particulate"],
@@ -196,7 +196,7 @@ export function generate(query: string): AssistantReply {
         ``,
         `The strongest negative signals are the Temirtau steel belt and the Aral dust season; the strongest positive signal is air-quality improvement across the northern oblasts.`,
       ].join("\n"),
-      citations: ["Kazhydromet station network · 28 cities", "MODIS / FIRMS thermal anomalies (simulated feed)"],
+      citations: ["Open-Meteo (CAMS) air-quality feed · 28 cities", "Aetheris modeled baseline — water, biodiversity, industry (simulated)"],
     };
   }
 
@@ -263,7 +263,7 @@ export function generate(query: string): AssistantReply {
   // 6 · Fallback.
   return {
     text: `I can analyze any of the **${stations.length} monitored cities** across Kazakhstan — ask about a specific place ("air quality in Temirtau"), request a **risk outlook**, ask for **recommendations**, or say **"national summary"** for the country-wide view.\n\nCoverage expands as community stations come online — the fastest way to add one is through the Community hub.`,
-    citations: ["Kazhydromet station network · 28 cities"],
+    citations: ["Open-Meteo (CAMS) air-quality feed · 28 cities"],
   };
 }
 

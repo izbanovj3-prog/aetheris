@@ -10,8 +10,7 @@ export const metadata: Metadata = {
   alternates: { canonical: "/sensor-network/" },
 };
 
-// TODO: replace with real content — publish the audited station inventory
-// (the footer's "2,847 stations reporting" figure needs substantiation here),
+// TODO: replace with real content — publish the audited station inventory,
 // per-station metadata and uptime history.
 const FACTS = [
   { value: "28", label: "Cities monitored — every oblast represented" },

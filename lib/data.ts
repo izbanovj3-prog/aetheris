@@ -1,9 +1,10 @@
 /* ─────────────────────────────────────────────────────────────
    AETHERIS · Kazakhstan environmental simulation engine
    Deterministic, seeded national telemetry across every region.
-   Each generator maps 1:1 to a real public feed — Kazhydromet /
-   AirKaz (air), MODIS-FIRMS (steppe fire), Copernicus (climate),
-   GBIF (biodiversity) — so a live feed swaps in without touching UI.
+   Air + weather are already LIVE via Open-Meteo/CAMS (lib/live.ts);
+   the remaining generators are shaped 1:1 like target public feeds —
+   MODIS-FIRMS (steppe fire), Copernicus (climate), GBIF (biodiversity)
+   — so each live feed can swap in without touching UI.
    ───────────────────────────────────────────────────────────── */
 
 export type LayerKey =
@@ -255,6 +256,25 @@ export function scoreBand(v: number) {
   return { label: "Critical", tone: "coral" as const };
 }
 
+/** Live metrics fetched per city from Open-Meteo (see lib/live.ts). */
+const LIVE_METRICS_PER_CITY = 6; // US AQI, PM2.5, PM10, NO₂, temperature, humidity
+/** Open-Meteo "current" fields refresh hourly upstream (CAMS / forecast models). */
+const UPSTREAM_REFRESHES_PER_DAY = 24;
+
+/** Headline figures computed from the actual network — no marketing numbers. */
+export function networkStats() {
+  const stations = getStations();
+  return {
+    cities: stations.length,
+    regions: new Set(stations.map((s) => s.region)).size,
+    hotspots: HOTSPOTS.length,
+    liveMetrics: LIVE_METRICS_PER_CITY,
+    refreshesPerDay: UPSTREAM_REFRESHES_PER_DAY,
+    dailyReadings:
+      stations.length * LIVE_METRICS_PER_CITY * UPSTREAM_REFRESHES_PER_DAY,
+  };
+}
+
 export function planetSummary(stations: Station[]) {
   const avg = (f: (s: Station) => number) =>
     stations.reduce((a, s) => a + f(s), 0) / stations.length;
@@ -281,7 +301,7 @@ export const LAYERS: Record<
     label: "Air Quality",
     unit: "AQI",
     color: "#4fd8f7",
-    describe: "PM2.5 / PM10 / NO₂ composite from Kazhydromet and community sensors",
+    describe: "PM2.5 / PM10 / NO₂ composite — live Open-Meteo (CAMS) readings over a modeled baseline",
   },
   industrial: {
     label: "Industrial Load",

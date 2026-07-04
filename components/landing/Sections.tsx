@@ -17,11 +17,14 @@ import {
   LAYERS,
   genSeries,
   getStations,
+  networkStats,
   planetSummary,
   type LayerKey,
   type Station,
 } from "@/lib/data";
 import { useLiveStations } from "@/lib/useLiveStations";
+
+const NET = networkStats();
 
 /* ── Telemetry ticker ─────────────────────────────────────── */
 
@@ -94,7 +97,7 @@ const PILLARS = [
   {
     n: "01",
     title: "Sense",
-    body: "A national nervous system. Satellite passes, Kazhydromet stations, and community sensors stream 14 billion datapoints a day from every region into one coherent model.",
+    body: `A national nervous system. Satellite-fed CAMS air-quality fields, Open-Meteo weather, and community reports stream ${NET.dailyReadings.toLocaleString("en-US")} fresh readings a day — every region, hourly — into one coherent model.`,
     accent: "from-cyan/60",
   },
   {
@@ -152,10 +155,15 @@ export function StatsBand() {
     <section className="max-w-6xl mx-auto px-6 pt-28">
       <Reveal>
         <GlassCard bright ticks className="scanline px-8 py-10 grid grid-cols-2 lg:grid-cols-4 gap-8">
-          <StatReadout value={14.2} decimals={1} suffix="B" label="Datapoints / day" tone="cyan" source="[SOURCE_NEEDED]" />
-          <StatReadout value={28} label="Cities monitored" tone="emerald" />
-          <StatReadout value={17} label="Regions covered" tone="atmos" />
-          <StatReadout value={98.7} decimals={1} suffix="%" label="Network uptime" tone="emerald" />
+          <StatReadout
+            value={NET.dailyReadings}
+            label="Live readings / day"
+            tone="cyan"
+            source={`Open-Meteo (CAMS): ${NET.cities} cities × ${NET.liveMetrics} metrics × ${NET.refreshesPerDay} hourly updates`}
+          />
+          <StatReadout value={NET.cities} label="Cities monitored" tone="emerald" />
+          <StatReadout value={NET.regions} label="Regions covered" tone="atmos" />
+          <StatReadout value={NET.hotspots} label="Hotspots under watch" tone="amber" />
         </GlassCard>
       </Reveal>
     </section>

@@ -8,9 +8,8 @@ export const metadata: Metadata = {
   alternates: { canonical: "/data-sources/" },
 };
 
-// TODO: replace with real content — this table is the canonical home for the
-// [SOURCE_NEEDED] citations scattered across the homepage. Fill in licences,
-// exact endpoints and refresh cadence as sources are confirmed.
+// TODO: replace with real content — fill in licences, exact endpoints and
+// refresh cadence as sources are confirmed.
 const SOURCES = [
   {
     name: "Open-Meteo Air Quality API",
@@ -28,9 +27,10 @@ const SOURCES = [
     status: "Modeled — deterministic regional baseline, refreshed per build",
   },
   {
-    name: "[SOURCE_NEEDED]",
-    provides: "Headline network figures: datapoints/day, station count, network uptime",
-    status: "Attribution pending",
+    name: "Aetheris station registry",
+    provides:
+      "Headline network figures — live readings per day (cities × metrics × hourly upstream updates), station, region and hotspot counts",
+    status: "Computed from the network registry at build time",
   },
 ];
 

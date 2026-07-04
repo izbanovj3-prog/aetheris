@@ -4,8 +4,10 @@ import dynamic from "next/dynamic";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useMemo, useRef } from "react";
 import { EASE, GlowButton, SourceNote, TelemetryTag } from "@/components/ui/primitives";
-import { HOTSPOTS, planetSummary } from "@/lib/data";
+import { HOTSPOTS, networkStats, planetSummary } from "@/lib/data";
 import { useLiveStations } from "@/lib/useLiveStations";
+
+const NET = networkStats();
 
 const Globe = dynamic(() => import("./Globe"), { ssr: false });
 
@@ -150,13 +152,18 @@ export function Hero() {
             variants={heroItem}
             className="flex items-center gap-6 mt-6 text-ink-faint"
           >
-            <span className="telemetry">28 cities · 17 regions</span>
+            <span className="telemetry">
+              {NET.cities} cities · {NET.regions} regions
+            </span>
             <span className="w-px h-3 bg-line-bright" />
             <span className="telemetry">5 environmental layers</span>
             <span className="w-px h-3 bg-line-bright" />
             <span className="telemetry hidden sm:inline">
-              14.2B datapoints / day
-              <SourceNote source="[SOURCE_NEEDED]" className="ml-1.5" />
+              {NET.dailyReadings.toLocaleString("en-US")} live readings / day
+              <SourceNote
+                source={`Open-Meteo (CAMS): ${NET.cities} cities × ${NET.liveMetrics} metrics × ${NET.refreshesPerDay} hourly updates`}
+                className="ml-1.5"
+              />
             </span>
           </motion.div>
         </motion.div>
