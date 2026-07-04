@@ -41,7 +41,9 @@ export const metadata: Metadata = {
   publisher: SITE.creator,
   keywords: [...SITE.keywords],
   category: "technology",
-  alternates: { canonical: "/" },
+  // NB: no `alternates.canonical` here — a canonical set in the root layout
+  // is inherited by every child page, marking them all duplicates of "/".
+  // Each page declares its own canonical instead.
   formatDetection: { telephone: false, address: false, email: false },
   openGraph: {
     type: "website",

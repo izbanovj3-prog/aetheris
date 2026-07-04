@@ -5,6 +5,7 @@ export const metadata: Metadata = {
   title: "Data sources",
   description:
     "The canonical attribution list for every layer and headline figure on Aetheris.",
+  alternates: { canonical: "/data-sources/" },
 };
 
 // TODO: replace with real content — this table is the canonical home for the

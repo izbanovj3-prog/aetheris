@@ -5,6 +5,7 @@ import { Footer } from "@/components/chrome/Footer";
 export const metadata: Metadata = {
   title: "Contact",
   description: "How to reach the Aetheris team.",
+  alternates: { canonical: "/contact/" },
 };
 
 // TODO: replace with real content — add the real inbox addresses for

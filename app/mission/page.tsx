@@ -5,6 +5,7 @@ export const metadata: Metadata = {
   title: "Mission",
   description:
     "Why Aetheris exists: making Kazakhstan's environment legible to the people who live in it.",
+  alternates: { canonical: "/mission/" },
 };
 
 export default function MissionPage() {

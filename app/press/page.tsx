@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: "Press kit",
   description:
     "Official Aetheris boilerplate, name usage, logo assets and brand palette for media use.",
+  alternates: { canonical: "/press/" },
 };
 
 const PALETTE = [

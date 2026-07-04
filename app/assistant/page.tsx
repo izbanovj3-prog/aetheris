@@ -5,6 +5,7 @@ import AssistantChat from "@/components/assistant/AssistantChat";
 export const metadata: Metadata = {
   title: "AI Assistant",
   description: "Converse with the Aetheris environmental analyst.",
+  alternates: { canonical: "/assistant/" },
 };
 
 export default function AssistantPage() {

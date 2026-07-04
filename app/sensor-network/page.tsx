@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { Footer } from "@/components/chrome/Footer";
+import { getStations } from "@/lib/data";
 
 export const metadata: Metadata = {
   title: "Sensor network",
   description:
     "Coverage of the Aetheris monitoring network across Kazakhstan — cities, regions, hotspots and refresh cadence.",
+  alternates: { canonical: "/sensor-network/" },
 };
 
 // TODO: replace with real content — publish the audited station inventory
@@ -39,6 +42,29 @@ export default function SensorNetworkPage() {
               <span className="text-ink-dim font-light leading-relaxed">{f.label}</span>
             </div>
           ))}
+        </div>
+
+        <div className="mt-14 border-t border-line pt-8">
+          <h2 className="font-[family-name:var(--font-syne)] font-bold text-2xl mb-2">
+            Monitored cities
+          </h2>
+          <p className="text-ink-dim font-light leading-relaxed mb-6">
+            Every city links to its live profile — current AQI, pollutant
+            breakdown and health guidance.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {[...getStations()]
+              .sort((a, b) => a.name.localeCompare(b.name))
+              .map((s) => (
+                <Link
+                  key={s.id}
+                  href={`/city/${s.id}`}
+                  className="telemetry border border-line rounded-full px-3 py-1.5 hover:text-emerald hover:border-emerald/25 transition-colors duration-300"
+                >
+                  {s.name}
+                </Link>
+              ))}
+          </div>
         </div>
 
         <p className="text-ink-faint text-sm font-light leading-relaxed mt-14 max-w-xl">

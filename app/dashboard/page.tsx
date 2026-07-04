@@ -5,6 +5,7 @@ import { Footer } from "@/components/chrome/Footer";
 export const metadata: Metadata = {
   title: "Intelligence",
   description: "Real-time planetary analytics and AI environmental insights.",
+  alternates: { canonical: "/dashboard/" },
 };
 
 export default function DashboardPage() {

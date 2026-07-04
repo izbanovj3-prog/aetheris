@@ -5,6 +5,7 @@ export const metadata: Metadata = {
   title: "Methodology",
   description:
     "How Aetheris turns raw environmental signals into the indices shown across the platform — and where the current model's limits are.",
+  alternates: { canonical: "/methodology/" },
 };
 
 // TODO: replace with real content — expand each section into the full

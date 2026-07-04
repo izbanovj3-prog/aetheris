@@ -6,6 +6,7 @@ export const metadata: Metadata = {
   title: "Community",
   description:
     "Field reports, eco missions, and the people verifying the planet's data.",
+  alternates: { canonical: "/community/" },
 };
 
 export default function CommunityPage() {

@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { Hero } from "@/components/landing/Hero";
 import {
   AssistantPreview,
@@ -9,6 +10,10 @@ import {
   Ticker,
 } from "@/components/landing/Sections";
 import { Footer } from "@/components/chrome/Footer";
+
+export const metadata: Metadata = {
+  alternates: { canonical: "/" },
+};
 
 export default function Home() {
   return (
