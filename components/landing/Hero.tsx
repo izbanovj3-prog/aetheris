@@ -5,6 +5,8 @@ import { motion, useScroll, useTransform } from "framer-motion";
 import { useMemo, useRef } from "react";
 import { EASE, GlowButton, SourceNote, TelemetryTag } from "@/components/ui/primitives";
 import { HOTSPOTS, networkStats, planetSummary } from "@/lib/data";
+import { numberLocale } from "@/lib/i18n";
+import { useDict, useLocale } from "@/lib/useLocale";
 import { useLiveStations } from "@/lib/useLiveStations";
 
 const NET = networkStats();
@@ -27,13 +29,15 @@ const heroItem = {
 };
 
 const CHIP_META = [
-  { key: "aqi", label: "Mean AQI · Network", tone: "text-cyan", pos: "top-[16%] right-[4%] lg:right-[8%]", delay: 1.2 },
-  { key: "anomaly", label: "Temp anomaly", tone: "text-amber", pos: "top-[46%] right-[-2%] lg:right-[2%]", delay: 1.5 },
-  { key: "hotspots", label: "Environmental hotspots", tone: "text-coral", pos: "bottom-[18%] right-[10%] lg:right-[16%]", delay: 1.8 },
+  { key: "aqi", dictKey: "chipAqi", tone: "text-cyan", pos: "top-[16%] right-[4%] lg:right-[8%]", delay: 1.2 },
+  { key: "anomaly", dictKey: "chipAnomaly", tone: "text-amber", pos: "top-[46%] right-[-2%] lg:right-[2%]", delay: 1.5 },
+  { key: "hotspots", dictKey: "chipHotspots", tone: "text-coral", pos: "bottom-[18%] right-[10%] lg:right-[16%]", delay: 1.8 },
 ] as const;
 
 export function Hero() {
   const ref = useRef<HTMLDivElement>(null);
+  const locale = useLocale();
+  const dict = useDict();
   // Readouts start on the same seeded baseline the Atlas and dashboard use
   // (SSR-safe), then pick up real Open-Meteo readings once they arrive.
   const { stations, live, fetchedAt } = useLiveStations();
@@ -77,7 +81,7 @@ export function Hero() {
             className={`absolute ${c.pos} glass rounded-xl px-4 py-3 ticks`}
           >
             <div className="telemetry mb-1">
-              {c.label}
+              {dict.hero[c.dictKey]}
               {c.key === "aqi" && (
                 // chip layer is pointer-events-none — re-enable just the ⓘ
                 // so its tooltip stays hoverable
@@ -113,9 +117,7 @@ export function Hero() {
           <motion.div variants={heroItem}>
             <TelemetryTag tone="emerald">
               <span className="dot-live" />
-              {live
-                ? "Kazakhstan network · live readings"
-                : "Kazakhstan network · model baseline"}
+              {live ? dict.hero.badgeLive : dict.hero.badgeBaseline}
             </TelemetryTag>
           </motion.div>
 
@@ -123,28 +125,26 @@ export function Hero() {
             variants={heroItem}
             className="font-[family-name:var(--font-syne)] font-extrabold tracking-tight leading-[1.02] text-[2.75rem] sm:text-6xl lg:text-7xl"
           >
-            The operating
+            {dict.hero.h1a}
             <br />
-            system for{" "}
-            <span className="display-gradient">Kazakhstan.</span>
+            {dict.hero.h1b}{" "}
+            <span className="display-gradient">{dict.hero.h1Accent}</span>
           </motion.h1>
 
           <motion.p
             variants={heroItem}
             className="text-ink-dim text-lg sm:text-xl font-light leading-relaxed max-w-lg"
           >
-            Aetheris fuses satellites, ground stations, and AI into a single
-            living picture of Kazakhstan — air, water, industry, and ecology,
-            across every region in real time.
+            {dict.hero.lede}
           </motion.p>
 
           <motion.div
             variants={heroItem}
             className="flex flex-wrap items-center gap-4 mt-2"
           >
-            <GlowButton href="/map">Open the Atlas</GlowButton>
+            <GlowButton href="/map">{dict.hero.ctaAtlas}</GlowButton>
             <GlowButton href="/dashboard" variant="ghost">
-              View intelligence
+              {dict.hero.ctaIntel}
             </GlowButton>
           </motion.div>
 
@@ -153,13 +153,15 @@ export function Hero() {
             className="flex items-center gap-6 mt-6 text-ink-faint"
           >
             <span className="telemetry">
-              {NET.cities} cities · {NET.regions} regions
+              {dict.hero.statCities(NET.cities, NET.regions)}
             </span>
             <span className="w-px h-3 bg-line-bright" />
-            <span className="telemetry">5 environmental layers</span>
+            <span className="telemetry">{dict.hero.statLayers}</span>
             <span className="w-px h-3 bg-line-bright" />
             <span className="telemetry hidden sm:inline">
-              {NET.dailyReadings.toLocaleString("en-US")} live readings / day
+              {dict.hero.statReadings(
+                NET.dailyReadings.toLocaleString(numberLocale(locale)),
+              )}
               <SourceNote
                 source={`Open-Meteo (CAMS): ${NET.cities} cities × ${NET.liveMetrics} metrics × ${NET.refreshesPerDay} hourly updates`}
                 className="ml-1.5"
@@ -176,7 +178,7 @@ export function Hero() {
         transition={{ delay: 2.4, duration: 1 }}
         className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3"
       >
-        <span className="telemetry">Descend</span>
+        <span className="telemetry">{dict.hero.descend}</span>
         <motion.span
           animate={{ y: [0, 8, 0] }}
           transition={{ duration: 2.2, repeat: Infinity, ease: "easeInOut" }}

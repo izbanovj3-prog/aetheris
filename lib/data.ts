@@ -242,11 +242,11 @@ export function genSeries(
 /* ── Aggregates ───────────────────────────────────────────── */
 
 export function aqiBand(aqi: number) {
-  if (aqi <= 50) return { label: "Good", tone: "emerald" as const };
-  if (aqi <= 100) return { label: "Moderate", tone: "cyan" as const };
-  if (aqi <= 150) return { label: "Sensitive", tone: "amber" as const };
-  if (aqi <= 200) return { label: "Unhealthy", tone: "amber" as const };
-  return { label: "Hazardous", tone: "coral" as const };
+  if (aqi <= 50) return { label: "Good" as const, tone: "emerald" as const };
+  if (aqi <= 100) return { label: "Moderate" as const, tone: "cyan" as const };
+  if (aqi <= 150) return { label: "Sensitive" as const, tone: "amber" as const };
+  if (aqi <= 200) return { label: "Unhealthy" as const, tone: "amber" as const };
+  return { label: "Hazardous" as const, tone: "coral" as const };
 }
 
 export function scoreBand(v: number) {

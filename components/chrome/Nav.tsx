@@ -4,13 +4,38 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
+import { LOCALES, localePrefix, switchPath, type Locale } from "@/lib/i18n";
+import { useDict, useLocale } from "@/lib/useLocale";
 
 const LINKS = [
-  { href: "/map", label: "Atlas" },
-  { href: "/dashboard", label: "Intelligence" },
-  { href: "/assistant", label: "Assistant" },
-  { href: "/community", label: "Community" },
-];
+  { href: "/map", key: "atlas" },
+  { href: "/dashboard", key: "intelligence" },
+  { href: "/assistant", key: "assistant" },
+  { href: "/community", key: "community" },
+] as const;
+
+const LOCALE_LABELS: Record<Locale, string> = { en: "ENG", ru: "РУС", kk: "ҚАЗ" };
+
+function LangSwitch({ className = "" }: { className?: string }) {
+  const pathname = usePathname() ?? "/";
+  const locale = useLocale();
+  return (
+    <span className={`flex items-center gap-2 ${className}`}>
+      {LOCALES.map((l) => (
+        <Link
+          key={l}
+          href={switchPath(pathname, l)}
+          aria-current={l === locale ? "true" : undefined}
+          className={`telemetry transition-colors duration-300 ${
+            l === locale ? "telemetry-bright" : "hover:text-ink"
+          }`}
+        >
+          {LOCALE_LABELS[l]}
+        </Link>
+      ))}
+    </span>
+  );
+}
 
 function UtcClock() {
   const [now, setNow] = useState<string | null>(null);
@@ -30,6 +55,8 @@ function UtcClock() {
 
 export function Nav() {
   const pathname = usePathname();
+  const locale = useLocale();
+  const dict = useDict();
   const [open, setOpen] = useState(false);
 
   useEffect(() => setOpen(false), [pathname]);
@@ -37,7 +64,10 @@ export function Nav() {
   return (
     <header className="fixed top-0 inset-x-0 z-50 flex justify-center px-4 pt-4">
       <nav className="glass-bright panel-glow w-full max-w-5xl rounded-2xl px-4 sm:px-5 py-3 flex items-center gap-4">
-        <Link href="/" className="flex items-center gap-3 group shrink-0">
+        <Link
+          href={localePrefix(locale) || "/"}
+          className="flex items-center gap-3 group shrink-0"
+        >
           <span className="relative grid place-items-center w-8 h-8 rounded-lg border border-line-bright bg-carbon-2 overflow-hidden">
             <span
               className="absolute inset-0 opacity-40 group-hover:opacity-80 transition-opacity duration-500"
@@ -75,16 +105,17 @@ export function Nav() {
                     transition={{ type: "spring", stiffness: 400, damping: 32 }}
                   />
                 )}
-                <span className="relative">{l.label}</span>
+                <span className="relative">{dict.nav[l.key]}</span>
               </Link>
             );
           })}
         </div>
 
         <div className="hidden md:flex items-center gap-3 shrink-0">
+          <LangSwitch className="mr-1" />
           <span className="flex items-center gap-2">
             <span className="dot-live" />
-            <span className="telemetry telemetry-bright">Live</span>
+            <span className="telemetry telemetry-bright">{dict.nav.live}</span>
           </span>
           <UtcClock />
         </div>
@@ -125,14 +156,17 @@ export function Nav() {
                     : "text-ink-dim"
                 }`}
               >
-                {l.label}
+                {dict.nav[l.key]}
               </Link>
             ))}
-            <div className="flex items-center gap-2 px-4 pt-2 pb-1 border-t border-line mt-1">
-              <span className="dot-live" />
-              <span className="telemetry telemetry-bright">
-                Planetary network · Live
+            <div className="flex items-center justify-between gap-2 px-4 pt-2 pb-1 border-t border-line mt-1">
+              <span className="flex items-center gap-2">
+                <span className="dot-live" />
+                <span className="telemetry telemetry-bright">
+                  {dict.nav.menuNetwork}
+                </span>
               </span>
+              <LangSwitch />
             </div>
           </motion.div>
         )}

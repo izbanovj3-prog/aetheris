@@ -22,6 +22,14 @@ import {
   type LayerKey,
   type Station,
 } from "@/lib/data";
+import {
+  cityName,
+  getDict,
+  hotspotName,
+  numberLocale,
+  type Locale,
+} from "@/lib/i18n";
+import { useDict, useLocale } from "@/lib/useLocale";
 import { useLiveStations } from "@/lib/useLiveStations";
 
 const NET = networkStats();
@@ -30,7 +38,9 @@ const NET = networkStats();
 
 /** Build the strip from actual network state instead of canned strings:
  *  worst air, worst water, peak PM2.5, critical hotspots, network mean. */
-function tickerItems(stations: Station[], live: boolean): string[] {
+function tickerItems(stations: Station[], live: boolean, locale: Locale): string[] {
+  const dict = getDict(locale);
+  const name = (s: Station) => cityName(s.id, s.name, locale).toUpperCase();
   const baseById = new Map(getStations().map((s) => [s.id, s]));
   // Trend arrows only mean something once live readings diverge from baseline.
   const arrow = (s: Station) => {
@@ -45,19 +55,23 @@ function tickerItems(stations: Station[], live: boolean): string[] {
   const byWater = [...stations].sort((a, b) => a.waterQuality - b.waterQuality);
 
   return [
-    ...byAqi.slice(0, 5).map((s) => `${s.name.toUpperCase()} AQI ${s.aqi}${arrow(s)}`),
-    `${byPm[0].name.toUpperCase()} PM2.5 ${byPm[0].pm25} µg/m³`,
-    ...byWater.slice(0, 3).map((s) => `${s.name.toUpperCase()} WQI ${s.waterQuality}`),
+    ...byAqi.slice(0, 5).map((s) => `${name(s)} AQI ${s.aqi}${arrow(s)}`),
+    `${name(byPm[0])} PM2.5 ${byPm[0].pm25} µg/m³`,
+    ...byWater.slice(0, 3).map((s) => `${name(s)} WQI ${s.waterQuality}`),
     ...HOTSPOTS.filter((h) => h.status === "critical").map(
-      (h) => `${h.name.toUpperCase()} — CRITICAL`,
+      (h) => `${hotspotName(h.id, h.name, locale).toUpperCase()} — ${dict.ticker.critical}`,
     ),
-    `NETWORK MEAN AQI ${planetSummary(stations).meanAqi}`,
+    `${dict.ticker.networkMean} ${planetSummary(stations).meanAqi}`,
   ];
 }
 
 export function Ticker() {
+  const locale = useLocale();
   const { stations, live, fetchedAt } = useLiveStations();
-  const items = useMemo(() => tickerItems(stations, live), [stations, live]);
+  const items = useMemo(
+    () => tickerItems(stations, live, locale),
+    [stations, live, locale],
+  );
   const row = [...items, ...items];
   return (
     <div className="relative border-y border-line py-3.5 overflow-hidden bg-void/60">
@@ -93,52 +107,39 @@ export function Ticker() {
 
 /* ── Pillars: Sense / Reason / Act ────────────────────────── */
 
-const PILLARS = [
-  {
-    n: "01",
-    title: "Sense",
-    body: `A national nervous system. Satellite-fed CAMS air-quality fields, Open-Meteo weather, and community reports stream ${NET.dailyReadings.toLocaleString("en-US")} fresh readings a day — every region, hourly — into one coherent model.`,
-    accent: "from-cyan/60",
-  },
-  {
-    n: "02",
-    title: "Reason",
-    body: "Environmental AI that doesn't just chart the data — it explains it. Risk forecasting, anomaly detection, and causal analysis across every layer.",
-    accent: "from-emerald/60",
-  },
-  {
-    n: "03",
-    title: "Act",
-    body: "From insight to intervention. Ranked sustainability actions, modeled impact, and a community that verifies change on the ground.",
-    accent: "from-atmos/60",
-  },
-];
+const PILLAR_ACCENTS = ["from-cyan/60", "from-emerald/60", "from-atmos/60"];
 
 export function Pillars() {
+  const locale = useLocale();
+  const dict = useDict();
+  const readings = NET.dailyReadings.toLocaleString(numberLocale(locale));
   return (
     <section className="max-w-6xl mx-auto px-6 pt-28">
       <SectionHeading
-        tag="System architecture"
+        tag={dict.pillars.tag}
         title={
           <>
-            One signal chain, <span className="display-gradient">nation-wide.</span>
+            {dict.pillars.titleA}
+            <span className="display-gradient">{dict.pillars.titleAccent}</span>
           </>
         }
-        lede="Most environmental tools show you a slice. Aetheris closes the loop — from raw photons hitting a sensor to a decision made on the ground in Kazakhstan."
+        lede={dict.pillars.lede}
       />
       <div className="grid md:grid-cols-3 gap-5 mt-14">
-        {PILLARS.map((p, i) => (
-          <Reveal key={p.n} index={i}>
+        {dict.pillars.items.map((p, i) => (
+          <Reveal key={p.title} index={i}>
             <GlassCard className="group p-7 h-full relative overflow-hidden transition-colors duration-500 hover:border-line-bright">
               <div
-                className={`absolute top-0 left-0 right-0 h-px bg-gradient-to-r ${p.accent} to-transparent`}
+                className={`absolute top-0 left-0 right-0 h-px bg-gradient-to-r ${PILLAR_ACCENTS[i]} to-transparent`}
               />
-              <span className="readout text-ink-faint text-sm">{p.n}</span>
+              <span className="readout text-ink-faint text-sm">
+                {String(i + 1).padStart(2, "0")}
+              </span>
               <h3 className="font-[family-name:var(--font-syne)] font-bold text-2xl mt-3 mb-3 group-hover:text-emerald transition-colors duration-500">
                 {p.title}
               </h3>
               <p className="text-ink-dim leading-relaxed text-[15px] font-light">
-                {p.body}
+                {p.body.replace("{readings}", readings)}
               </p>
             </GlassCard>
           </Reveal>
@@ -151,19 +152,20 @@ export function Pillars() {
 /* ── Live stats band ──────────────────────────────────────── */
 
 export function StatsBand() {
+  const dict = useDict();
   return (
     <section className="max-w-6xl mx-auto px-6 pt-28">
       <Reveal>
         <GlassCard bright ticks className="scanline px-8 py-10 grid grid-cols-2 lg:grid-cols-4 gap-8">
           <StatReadout
             value={NET.dailyReadings}
-            label="Live readings / day"
+            label={dict.stats.readings}
             tone="cyan"
             source={`Open-Meteo (CAMS): ${NET.cities} cities × ${NET.liveMetrics} metrics × ${NET.refreshesPerDay} hourly updates`}
           />
-          <StatReadout value={NET.cities} label="Cities monitored" tone="emerald" />
-          <StatReadout value={NET.regions} label="Regions covered" tone="atmos" />
-          <StatReadout value={NET.hotspots} label="Hotspots under watch" tone="amber" />
+          <StatReadout value={NET.cities} label={dict.stats.cities} tone="emerald" />
+          <StatReadout value={NET.regions} label={dict.stats.regions} tone="atmos" />
+          <StatReadout value={NET.hotspots} label={dict.stats.hotspots} tone="amber" />
         </GlassCard>
       </Reveal>
     </section>
@@ -193,30 +195,32 @@ function MiniSpark({ k, color }: { k: string; color: string }) {
 }
 
 export function AtlasShowcase() {
+  const dict = useDict();
   const keys = Object.keys(LAYERS) as LayerKey[];
   return (
     <section className="max-w-6xl mx-auto px-6 pt-32">
       <div className="grid lg:grid-cols-[1fr_1.2fr] gap-12 items-start">
         <div className="lg:sticky lg:top-32 flex flex-col items-start gap-7">
           <SectionHeading
-            tag="The Kazakhstan Atlas"
+            tag={dict.atlas.tag}
             title={
               <>
-                Five layers.
+                {dict.atlas.title1}
                 <br />
-                One living map.
+                {dict.atlas.title2}
               </>
             }
-            lede="Air, industry, water, life, and risk — rendered as continuous fields across Kazakhstan, not a spreadsheet of disconnected readings."
+            lede={dict.atlas.lede}
           />
           <Reveal index={3}>
-            <GlowButton href="/map">Explore the Atlas</GlowButton>
+            <GlowButton href="/map">{dict.atlas.cta}</GlowButton>
           </Reveal>
         </div>
 
         <div className="flex flex-col gap-4">
           {keys.map((k, i) => {
             const layer = LAYERS[k];
+            const copy = dict.atlas.layers[k];
             return (
               <Reveal key={k} index={i}>
                 <Link href="/map" className="block group">
@@ -228,13 +232,13 @@ export function AtlasShowcase() {
                           style={{ background: layer.color, boxShadow: `0 0 10px ${layer.color}` }}
                         />
                         <span className="font-[family-name:var(--font-syne)] font-bold text-lg">
-                          {layer.label}
+                          {copy.label}
                         </span>
                       </div>
                       <span className="telemetry">{layer.unit}</span>
                     </div>
                     <p className="text-ink-faint text-sm font-light mb-4">
-                      {layer.describe}
+                      {copy.describe}
                     </p>
                     <MiniSpark k={`landing-${k}`} color={layer.color} />
                   </GlassCard>
@@ -250,15 +254,12 @@ export function AtlasShowcase() {
 
 /* ── Assistant preview ────────────────────────────────────── */
 
-const DEMO_EXCHANGE = [
-  { role: "user", text: "Risk outlook for Almaty?" },
-  {
-    role: "ai",
-    text: "Composite environmental risk for Almaty sits at 57/100 — driven by winter inversions that trap traffic and heating emissions in the mountain basin. PM2.5 episodes are projected to intensify through the cold season…",
-  },
-];
-
 export function AssistantPreview() {
+  const dict = useDict();
+  const DEMO_EXCHANGE = [
+    { role: "user", text: dict.assistant.demoUser },
+    { role: "ai", text: dict.assistant.demoAi },
+  ];
   return (
     <section className="max-w-6xl mx-auto px-6 pt-32">
       <div className="grid lg:grid-cols-2 gap-12 items-center">
@@ -269,11 +270,11 @@ export function AssistantPreview() {
                 <span className="grid place-items-center w-8 h-8 rounded-lg bg-emerald/10 border border-emerald/30 text-emerald text-xs font-bold">
                   Æ
                 </span>
-                <span className="telemetry telemetry-bright">Environmental analyst</span>
+                <span className="telemetry telemetry-bright">{dict.assistant.analyst}</span>
               </div>
               <span className="flex items-center gap-2">
                 <span className="dot-live" />
-                <span className="telemetry">Reasoning</span>
+                <span className="telemetry">{dict.assistant.reasoning}</span>
               </span>
             </div>
             <div className="flex flex-col gap-4">
@@ -315,19 +316,19 @@ export function AssistantPreview() {
 
         <div className="flex flex-col items-start gap-7 lg:pl-6">
           <SectionHeading
-            tag="Environmental AI"
+            tag={dict.assistant.tag}
             title={
               <>
-                Ask the network
+                {dict.assistant.titleA}
                 <br />
-                <span className="display-gradient">anything.</span>
+                <span className="display-gradient">{dict.assistant.titleAccent}</span>
               </>
             }
-            lede="The Aetheris analyst reads every layer of the live Kazakhstan model — and answers in plain language, with citations back to the sensors."
+            lede={dict.assistant.lede}
           />
           <Reveal index={3}>
             <GlowButton href="/assistant" variant="ghost">
-              Start a conversation
+              {dict.assistant.cta}
             </GlowButton>
           </Reveal>
         </div>
@@ -338,13 +339,14 @@ export function AssistantPreview() {
 
 /* ── Community strip ──────────────────────────────────────── */
 
-const COMMUNITY_STATS = [
-  { v: "31,408", l: "Verified field reports" },
-  { v: "1,962", l: "Active missions" },
-  { v: "412k", l: "Contribution points awarded this week" },
-];
+const COMMUNITY_VALUES = ["31,408", "1,962", "412k"];
 
 export function CommunityStrip() {
+  const dict = useDict();
+  const stats = COMMUNITY_VALUES.map((v, i) => ({
+    v,
+    l: dict.community.statLabels[i],
+  }));
   return (
     <section className="max-w-6xl mx-auto px-6 pt-32">
       <Reveal>
@@ -358,24 +360,21 @@ export function CommunityStrip() {
           />
           <div className="relative grid lg:grid-cols-[1.2fr_1fr] gap-10 items-center">
             <div className="flex flex-col items-start gap-5">
-              <TelemetryTag tone="cyan">Ground truth network</TelemetryTag>
+              <TelemetryTag tone="cyan">{dict.community.tag}</TelemetryTag>
               <h2 className="font-[family-name:var(--font-syne)] font-bold text-3xl sm:text-4xl leading-tight">
-                Satellites see the planet.
+                {dict.community.titleA}
                 <br />
-                People verify it.
+                {dict.community.titleB}
               </h2>
               <p className="text-ink-dim font-light leading-relaxed max-w-md">
-                Every Aetheris layer is sharpened by citizen scientists —
-                photographing waterways, logging species, flagging pollution
-                events. Reports are cross-checked against sensor data and
-                rewarded.
+                {dict.community.lede}
               </p>
               <GlowButton href="/community" variant="ghost" className="mt-2">
-                Join the network
+                {dict.community.cta}
               </GlowButton>
             </div>
             <div className="flex flex-col gap-5">
-              {COMMUNITY_STATS.map((s, i) => (
+              {stats.map((s, i) => (
                 <Reveal key={s.l} index={i}>
                   <div className="flex items-baseline gap-4 border-b border-line pb-4">
                     <span className="readout text-2xl sm:text-3xl text-emerald">{s.v}</span>
@@ -394,6 +393,7 @@ export function CommunityStrip() {
 /* ── Final CTA ────────────────────────────────────────────── */
 
 export function FinalCta() {
+  const dict = useDict();
   return (
     <section className="relative max-w-4xl mx-auto px-6 pt-36 pb-10 text-center">
       <div
@@ -405,20 +405,20 @@ export function FinalCta() {
       />
       <SectionHeading
         align="center"
-        tag="Begin"
+        tag={dict.finalCta.tag}
         title={
           <>
-            Kazakhstan is already
+            {dict.finalCta.titleA}
             <br />
-            <span className="display-gradient">talking. Listen in.</span>
+            <span className="display-gradient">{dict.finalCta.titleAccent}</span>
           </>
         }
-        lede="Open the Atlas and watch Kazakhstan's vital signs update in real time — no account required."
+        lede={dict.finalCta.lede}
       />
       <Reveal index={3} className="flex justify-center gap-4 mt-10 flex-wrap">
-        <GlowButton href="/map">Open the Atlas</GlowButton>
+        <GlowButton href="/map">{dict.finalCta.ctaAtlas}</GlowButton>
         <GlowButton href="/assistant" variant="ghost">
-          Ask the analyst
+          {dict.finalCta.ctaAssistant}
         </GlowButton>
       </Reveal>
     </section>

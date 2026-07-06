@@ -3,9 +3,8 @@ import { notFound } from "next/navigation";
 import CityDetail from "@/components/city/CityDetail";
 import { Footer } from "@/components/chrome/Footer";
 import { getStations } from "@/lib/data";
-import { hreflangAlternates } from "@/lib/i18n";
+import { cityName, getDict, hreflangAlternates, regionLabel } from "@/lib/i18n";
 
-// Static export: all 28 cities prerender at build; unknown slugs 404.
 export const dynamicParams = false;
 
 export function generateStaticParams() {
@@ -20,17 +19,19 @@ export async function generateMetadata({
   const { id } = await params;
   const s = getStations().find((st) => st.id === id);
   if (!s) return {};
+  const dict = getDict("kk");
+  const name = cityName(s.id, s.name, "kk");
   return {
-    title: `${s.name} air quality`,
-    description: `Live air quality in ${s.name}, ${s.region} region — AQI, PM2.5, NO₂ and health guidance, plus modeled water, biodiversity and industrial-load indices.`,
+    title: dict.meta.cityTitle(name),
+    description: dict.meta.cityDescription(name, regionLabel(s.region, "kk")),
     alternates: {
-      canonical: `/city/${s.id}/`,
+      canonical: `/kk/city/${s.id}/`,
       languages: hreflangAlternates(`/city/${s.id}/`),
     },
   };
 }
 
-export default async function CityPage({
+export default async function CityPageKk({
   params,
 }: {
   params: Promise<{ id: string }>;

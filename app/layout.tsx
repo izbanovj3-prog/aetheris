@@ -3,6 +3,7 @@ import { Syne, Albert_Sans, IBM_Plex_Mono } from "next/font/google";
 import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
+import { LangSync } from "@/components/chrome/LangSync";
 import { Nav } from "@/components/chrome/Nav";
 import { Providers } from "./providers";
 import { SITE } from "@/lib/site";
@@ -129,6 +130,7 @@ export default function RootLayout({
         <div className="atmosphere" aria-hidden />
         <div className="gridlines" aria-hidden />
         <Providers>
+          <LangSync />
           <a href="#main-content" className="skip-link">
             Skip to main content
           </a>

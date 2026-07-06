@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { hreflangAlternates } from "@/lib/i18n";
 import { Hero } from "@/components/landing/Hero";
 import {
   AssistantPreview,
@@ -11,15 +10,20 @@ import {
   Ticker,
 } from "@/components/landing/Sections";
 import { Footer } from "@/components/chrome/Footer";
+import { getDict, hreflangAlternates } from "@/lib/i18n";
+
+const dict = getDict("kk");
 
 export const metadata: Metadata = {
+  title: dict.meta.homeTitle,
+  description: dict.meta.homeDescription,
   alternates: {
-    canonical: "/",
+    canonical: "/kk/",
     languages: hreflangAlternates("/"),
   },
 };
 
-export default function Home() {
+export default function HomeKk() {
   return (
     <main className="flex-1">
       <Hero />
