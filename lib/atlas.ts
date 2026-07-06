@@ -12,6 +12,47 @@ import {
   planetSummary,
   type Station,
 } from "./data";
+import {
+  cityName,
+  hotspotName,
+  regionShort,
+  statusLabel,
+  type Locale,
+} from "./i18n";
+
+/* Event text templates per locale — filled from live station/hotspot data. */
+const FEED = {
+  en: {
+    aqi: (v: number, haz: boolean) => `AQI ${v} ▲ — ${haz ? "hazardous air" : "elevated particulates"}`,
+    hot: (name: string, sev: number, status: string) => `${name} — severity ${sev}/100 · ${status}`,
+    improving: (v: number) => `Sustainability ▲ ${v}/100 — improving`,
+    water: (v: number) => `Water quality ${v}/100 — treatment pressure`,
+    bio: (v: number) => `Biodiversity intactness ${v}/100 — recovering steppe`,
+    aral: "Aral seabed dust index +18% — salt-storm season intensifying",
+    balkhash: "Lake Balkhash inflow −9% vs decadal mean",
+  },
+  ru: {
+    aqi: (v: number, haz: boolean) => `AQI ${v} ▲ — ${haz ? "опасный воздух" : "повышенные частицы"}`,
+    hot: (name: string, sev: number, status: string) => `${name} — тяжесть ${sev}/100 · ${status}`,
+    improving: (v: number) => `Устойчивость ▲ ${v}/100 — улучшается`,
+    water: (v: number) => `Качество воды ${v}/100 — нагрузка на очистку`,
+    bio: (v: number) => `Сохранность биоразнообразия ${v}/100 — степь восстанавливается`,
+    aral: "Индекс аральской пыли +18% — сезон солевых бурь усиливается",
+    balkhash: "Приток в озеро Балхаш −9% к десятилетней норме",
+  },
+  kk: {
+    aqi: (v: number, haz: boolean) => `AQI ${v} ▲ — ${haz ? "қауіпті ауа" : "жоғары бөлшектер"}`,
+    hot: (name: string, sev: number, status: string) => `${name} — ауырлығы ${sev}/100 · ${status}`,
+    improving: (v: number) => `Тұрақтылық ▲ ${v}/100 — жақсаруда`,
+    water: (v: number) => `Су сапасы ${v}/100 — тазарту жүктемесі`,
+    bio: (v: number) => `Биоалуантүрлілік сақталуы ${v}/100 — дала қалпына келуде`,
+    aral: "Арал түбі шаңы индексі +18% — тұзды дауыл маусымы күшеюде",
+    balkhash: "Балқаш көліне құйылу −9% онжылдық нормаға қатысты",
+  },
+} as const;
+
+const ARAL_PLACE = { en: "Kyzylorda", ru: "Кызылорда", kk: "Қызылорда" };
+const BALKHASH_PLACE = { en: "Karaganda", ru: "Караганда", kk: "Қарағанды" };
 
 export type EventSeverity = "alert" | "watch" | "positive" | "info";
 
@@ -35,7 +76,8 @@ const HOTSPOT_GLYPH: Record<string, string> = {
 };
 
 /** Build the event pool once from the actual station + hotspot data. */
-export function buildEvents(): AtlasEvent[] {
+export function buildEvents(locale: Locale = "en"): AtlasEvent[] {
+  const f = FEED[locale];
   const ev: AtlasEvent[] = [];
   const byAqi = [...stations].sort((a, b) => b.aqi - a.aqi);
   const byImproving = stations.filter((s) => s.trend === "improving");
@@ -47,8 +89,8 @@ export function buildEvents(): AtlasEvent[] {
       id: `aqi-${s.id}`,
       severity: s.aqi > 200 ? "alert" : "watch",
       glyph: "◬",
-      text: `AQI ${s.aqi} ▲ — ${s.aqi > 200 ? "hazardous air" : "elevated particulates"}`,
-      place: s.name,
+      text: f.aqi(s.aqi, s.aqi > 200),
+      place: cityName(s.id, s.name, locale),
     });
   }
   for (const h of HOTSPOTS.filter((x) => x.severity >= 70)) {
@@ -56,8 +98,8 @@ export function buildEvents(): AtlasEvent[] {
       id: `hot-${h.id}`,
       severity: h.status === "critical" ? "alert" : "watch",
       glyph: HOTSPOT_GLYPH[h.type] ?? "⬡",
-      text: `${h.name} — severity ${h.severity}/100 · ${h.status}`,
-      place: h.region,
+      text: f.hot(hotspotName(h.id, h.name, locale), h.severity, statusLabel(h.status, locale)),
+      place: regionShort(h.region, locale),
     });
   }
   for (const s of byImproving.slice(0, 3)) {
@@ -65,8 +107,8 @@ export function buildEvents(): AtlasEvent[] {
       id: `imp-${s.id}`,
       severity: "positive",
       glyph: "✦",
-      text: `Sustainability ▲ ${s.sustainability}/100 — improving`,
-      place: s.name,
+      text: f.improving(s.sustainability),
+      place: cityName(s.id, s.name, locale),
     });
   }
   for (const s of byWater.slice(0, 2)) {
@@ -74,8 +116,8 @@ export function buildEvents(): AtlasEvent[] {
       id: `wq-${s.id}`,
       severity: "watch",
       glyph: "◈",
-      text: `Water quality ${s.waterQuality}/100 — treatment pressure`,
-      place: s.name,
+      text: f.water(s.waterQuality),
+      place: cityName(s.id, s.name, locale),
     });
   }
   for (const s of byBio.slice(0, 2)) {
@@ -83,23 +125,23 @@ export function buildEvents(): AtlasEvent[] {
       id: `bio-${s.id}`,
       severity: "positive",
       glyph: "❋",
-      text: `Biodiversity intactness ${s.biodiversity}/100 — recovering steppe`,
-      place: s.name,
+      text: f.bio(s.biodiversity),
+      place: cityName(s.id, s.name, locale),
     });
   }
   ev.push({
     id: "aral",
     severity: "alert",
     glyph: "◷",
-    text: "Aral seabed dust index +18% — salt-storm season intensifying",
-    place: "Kyzylorda",
+    text: f.aral,
+    place: ARAL_PLACE[locale],
   });
   ev.push({
     id: "balkhash",
     severity: "watch",
     glyph: "≈",
-    text: "Lake Balkhash inflow −9% vs decadal mean",
-    place: "Karaganda",
+    text: f.balkhash,
+    place: BALKHASH_PLACE[locale],
   });
 
   // deterministic shuffle so the stream order is stable across reloads
@@ -161,12 +203,28 @@ function clamp(v: number, lo: number, hi: number) {
 }
 
 /** A short, rotating national narrative line for the HUD headline. */
-export function planetNarrative(p: PlanetPulse): string {
-  if (p.health >= 70)
-    return "National vitals stable — northern air improving, industrial zones holding within limits.";
-  if (p.health >= 50)
-    return "Mixed signals — winter inversions building over Almaty and the Karaganda steel belt.";
-  return "Stress elevated — Aral dust, smelter plumes and heat exposure compounding across regions.";
+const NARRATIVE: Record<Locale, [string, string, string]> = {
+  en: [
+    "National vitals stable — northern air improving, industrial zones holding within limits.",
+    "Mixed signals — winter inversions building over Almaty and the Karaganda steel belt.",
+    "Stress elevated — Aral dust, smelter plumes and heat exposure compounding across regions.",
+  ],
+  ru: [
+    "Национальные показатели стабильны — воздух на севере улучшается, промзоны в пределах нормы.",
+    "Смешанные сигналы — зимние инверсии нарастают над Алматы и карагандинским стальным поясом.",
+    "Нагрузка повышена — аральская пыль, плюмы заводов и жара накладываются по регионам.",
+  ],
+  kk: [
+    "Ұлттық көрсеткіштер тұрақты — солтүстікте ауа жақсаруда, өнеркәсіп аймақтары шек ішінде.",
+    "Аралас сигналдар — Алматы мен Қарағанды болат белдеуі үстінде қысқы инверсиялар күшеюде.",
+    "Жүктеме жоғары — Арал шаңы, зауыт түтіні мен ыстық өңірлер бойынша жинақталуда.",
+  ],
+};
+export function planetNarrative(p: PlanetPulse, locale: Locale = "en"): string {
+  const n = NARRATIVE[locale];
+  if (p.health >= 70) return n[0];
+  if (p.health >= 50) return n[1];
+  return n[2];
 }
 
 export type StationLite = Pick<Station, "name" | "aqi" | "sustainability">;

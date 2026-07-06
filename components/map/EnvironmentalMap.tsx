@@ -22,6 +22,18 @@ import {
   type Station,
 } from "@/lib/data";
 import { fetchLiveStations } from "@/lib/live";
+import {
+  aqiBandLabel,
+  cityName,
+  kindLabel,
+  localePath,
+  regionShort,
+  scoreBandLabel,
+  trendLabel,
+  type Locale,
+} from "@/lib/i18n";
+import { useDict, useLocale } from "@/lib/useLocale";
+import type { Dict } from "@/lib/i18n";
 import { EASE } from "@/components/ui/primitives";
 import { AtlasBoot } from "./AtlasBoot";
 import { GlobalPulse } from "./GlobalPulse";
@@ -48,14 +60,6 @@ const TONE_HEX: Record<Tone, string> = {
   cyan: "#4fd8f7",
   amber: "#f5b352",
   coral: "#f57362",
-};
-
-const KIND_LABEL: Record<string, string> = {
-  capital: "National capital",
-  metropolis: "Metropolis",
-  industrial: "Industrial hub",
-  resource: "Resource hub",
-  regional: "Regional centre",
 };
 
 interface LayerVis {
@@ -148,6 +152,8 @@ const KZ_ZOOM = 4.1;
 /* ── root ─────────────────────────────────────────────────── */
 
 export default function EnvironmentalMap() {
+  const dict = useDict();
+  const locale = useLocale();
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<maplibregl.Map | null>(null);
 
@@ -161,7 +167,7 @@ export default function EnvironmentalMap() {
   const [railOpen, setRailOpen] = useState(false);
   const [liveOn, setLiveOn] = useState(false);
 
-  const stations = useMemo(() => getStationsFC(), []);
+  const stations = useMemo(() => getStationsFC(locale), [locale]);
 
   const hoverCardRef = useRef<HTMLDivElement>(null);
   const hoverRingRef = useRef<HTMLDivElement>(null);
@@ -242,7 +248,7 @@ export default function EnvironmentalMap() {
     mapRef.current = map;
     map.touchZoomRotate.disableRotation();
     map.getCanvas().setAttribute("tabindex", "0");
-    map.getCanvas().setAttribute("aria-label", "Environmental map canvas");
+    map.getCanvas().setAttribute("aria-label", dict.map.canvasAria);
 
     const ro = new ResizeObserver(() => map.resize());
     ro.observe(container);
@@ -322,7 +328,7 @@ export default function EnvironmentalMap() {
         type: "symbol",
         source: "stations",
         layout: {
-          "text-field": ["get", "name"],
+          "text-field": ["get", "name_loc"],
           "text-font": ["noto"],
           "text-size": ["interpolate", ["linear"], ["zoom"], 4, 10, 8, 14],
           "text-offset": [0, 1.25],
@@ -411,13 +417,13 @@ export default function EnvironmentalMap() {
         if (!res.live || !map) return;
         const src = map.getSource("stations");
         if (src && "setData" in src) {
-          (src as maplibregl.GeoJSONSource).setData(fcFromStations(res.stations));
+          (src as maplibregl.GeoJSONSource).setData(fcFromStations(res.stations, locale));
           setLiveOn(true);
         }
       })
       .catch(() => {});
     return () => ac.abort();
-  }, [ready]);
+  }, [ready, locale]);
 
   /* ── hotspot pulse: ONLY on the industrial layer, never under reduced motion ── */
   useEffect(() => {
@@ -496,7 +502,7 @@ export default function EnvironmentalMap() {
         // Inline styles beat any stylesheet, so the canvas always fills the viewport.
         style={{ position: "absolute", inset: 0 }}
         role="region"
-        aria-label="Interactive environmental map of Kazakhstan"
+        aria-label={dict.map.regionAria}
       />
 
       {/* ── atmospheric depth (compositor-only; never repaints the map) ── */}
@@ -582,7 +588,7 @@ export default function EnvironmentalMap() {
         className="absolute top-0 left-0 z-20 pointer-events-none glass-bright panel-glow rounded-xl px-4 py-3 w-[220px] opacity-0 transition-opacity duration-150"
         style={{ transform: "translate3d(-9999px,0,0)", willChange: "transform, opacity" }}
       >
-        {hoverStation && <HoverContent station={hoverStation} layer={activeLayer} />}
+        {hoverStation && <HoverContent station={hoverStation} layer={activeLayer} dict={dict} locale={locale} />}
       </div>
 
       <LayerRail
@@ -591,13 +597,14 @@ export default function EnvironmentalMap() {
         isDesktop={isDesktop}
         open={railOpen}
         onToggle={() => setRailOpen((v) => !v)}
+        dict={dict}
       />
 
       <GlobalPulse isDesktop={isDesktop} />
 
       <LayerLegend
         layer={activeLayer}
-        label={LAYERS[activeLayer].label}
+        label={dict.atlas.layers[activeLayer].label}
         unit={LAYERS[activeLayer].unit}
         ramp={vis.ramp}
         domain={vis.domain}
@@ -605,17 +612,17 @@ export default function EnvironmentalMap() {
 
       {/* zoom / home controls */}
       <div className="absolute right-3 sm:right-4 bottom-4 z-20 flex flex-col gap-1.5">
-        <MapButton label="Zoom in" onClick={zoomIn}>
+        <MapButton label={dict.map.zoomIn} onClick={zoomIn}>
           <svg viewBox="0 0 16 16" className="w-4 h-4" fill="none" aria-hidden>
             <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
           </svg>
         </MapButton>
-        <MapButton label="Zoom out" onClick={zoomOut}>
+        <MapButton label={dict.map.zoomOut} onClick={zoomOut}>
           <svg viewBox="0 0 16 16" className="w-4 h-4" fill="none" aria-hidden>
             <path d="M3 8h10" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
           </svg>
         </MapButton>
-        <MapButton label="Reset view" onClick={resetView}>
+        <MapButton label={dict.map.reset} onClick={resetView}>
           <svg viewBox="0 0 16 16" className="w-3.5 h-3.5" fill="none" aria-hidden>
             <circle cx="8" cy="8" r="5.2" stroke="currentColor" strokeWidth="1.4" />
             <path d="M8 1.5v2M8 12.5v2M1.5 8h2M12.5 8h2" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
@@ -631,6 +638,8 @@ export default function EnvironmentalMap() {
             station={selected}
             isDesktop={isDesktop}
             onClose={closePanel}
+            dict={dict}
+            locale={locale}
           />
         )}
       </AnimatePresence>
@@ -639,14 +648,14 @@ export default function EnvironmentalMap() {
       <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 glass rounded-full px-5 py-2 hidden sm:flex items-center gap-4">
         <span className="flex items-center gap-2">
           <span className="dot-live" />
-          <span className="telemetry telemetry-bright">{stations.features.length} cities · Kazakhstan</span>
+          <span className="telemetry telemetry-bright">{dict.map.citiesKz(stations.features.length)}</span>
         </span>
         <span className="w-px h-3 bg-line-bright" />
-        <span className="telemetry">{HOTSPOTS.length} environmental hotspots tracked</span>
+        <span className="telemetry">{dict.map.hotspotsTracked(HOTSPOTS.length)}</span>
         {liveOn && (
           <>
             <span className="w-px h-3 bg-line-bright" />
-            <span className="telemetry text-emerald">● live air · Open-Meteo</span>
+            <span className="telemetry text-emerald">{dict.map.liveAir}</span>
           </>
         )}
       </div>
@@ -690,19 +699,20 @@ function MapButton({
 
 /* ── GeoJSON builders ─────────────────────────────────────── */
 
-function fcFromStations(list: Station[]): GeoJSON.FeatureCollection {
+function fcFromStations(list: Station[], locale: Locale): GeoJSON.FeatureCollection {
   return {
     type: "FeatureCollection",
     features: list.map((s) => ({
       type: "Feature",
       geometry: { type: "Point", coordinates: [s.lon, s.lat] },
-      properties: { ...s },
+      // name_loc drives the on-map label layer; raw `name` stays for lookups.
+      properties: { ...s, name_loc: cityName(s.id, s.name, locale) },
     })),
   };
 }
 
-function getStationsFC(): GeoJSON.FeatureCollection {
-  return fcFromStations(getStations());
+function getStationsFC(locale: Locale): GeoJSON.FeatureCollection {
+  return fcFromStations(getStations(), locale);
 }
 
 function hotspotsFC(): GeoJSON.FeatureCollection {
@@ -724,15 +734,18 @@ const LayerRail = memo(function LayerRail({
   isDesktop,
   open,
   onToggle,
+  dict,
 }: {
   activeLayer: LayerKey;
   onSelect: (k: LayerKey) => void;
   isDesktop: boolean;
   open: boolean;
   onToggle: () => void;
+  dict: Dict;
 }) {
   const keys = Object.keys(LAYERS) as LayerKey[];
   const active = LAYERS[activeLayer];
+  const activeCopy = dict.atlas.layers[activeLayer];
 
   const list = (
     <div className="flex flex-col gap-1">
@@ -763,7 +776,7 @@ const LayerRail = memo(function LayerRail({
               className="relative w-2 h-2 rounded-full shrink-0"
               style={{ background: l.color, boxShadow: on ? `0 0 8px ${l.color}` : "none" }}
             />
-            <span className="relative flex-1">{l.label}</span>
+            <span className="relative flex-1">{dict.atlas.layers[k].label}</span>
             <span className="relative telemetry !text-[9px]">{l.unit}</span>
           </button>
         );
@@ -785,7 +798,7 @@ const LayerRail = memo(function LayerRail({
             className="w-2 h-2 rounded-full shrink-0"
             style={{ background: active.color, boxShadow: `0 0 8px ${active.color}` }}
           />
-          <span className="flex-1 text-left text-[13px] font-medium text-ink">{active.label}</span>
+          <span className="flex-1 text-left text-[13px] font-medium text-ink">{activeCopy.label}</span>
           <svg
             viewBox="0 0 16 16"
             className={`w-3.5 h-3.5 text-ink-dim transition-transform duration-300 ${open ? "rotate-180" : ""}`}
@@ -804,10 +817,10 @@ const LayerRail = memo(function LayerRail({
               transition={{ duration: 0.25, ease: EASE }}
               className="mt-2 glass-bright panel-glow rounded-2xl p-2"
             >
-              <span className="telemetry px-3 pt-1 pb-1.5 block">Layers</span>
+              <span className="telemetry px-3 pt-1 pb-1.5 block">{dict.map.layersTitle}</span>
               {list}
               <p className="text-[11px] leading-relaxed text-ink-faint font-light px-3 pt-2 border-t border-line mt-1">
-                {active.describe}
+                {activeCopy.describe}
               </p>
             </motion.div>
           )}
@@ -826,10 +839,10 @@ const LayerRail = memo(function LayerRail({
       role="group"
       aria-label="Environmental layers"
     >
-      <span className="telemetry px-3 pt-2 pb-1.5">Layers</span>
+      <span className="telemetry px-3 pt-2 pb-1.5">{dict.map.layersTitle}</span>
       {list}
       <div className="border-t border-line mt-1 px-3 py-2.5">
-        <p className="text-[11px] leading-relaxed text-ink-faint font-light">{active.describe}</p>
+        <p className="text-[11px] leading-relaxed text-ink-faint font-light">{activeCopy.describe}</p>
       </div>
     </motion.div>
   );
@@ -837,23 +850,35 @@ const LayerRail = memo(function LayerRail({
 
 /* ── hover content ────────────────────────────────────────── */
 
-function HoverContent({ station, layer }: { station: Station; layer: LayerKey }) {
+function HoverContent({
+  station,
+  layer,
+  dict,
+  locale,
+}: {
+  station: Station;
+  layer: LayerKey;
+  dict: Dict;
+  locale: Locale;
+}) {
   const v = LAYER_VIS[layer];
   const band = v.band(station);
+  const bandText =
+    layer === "air" ? aqiBandLabel(band.label, locale) : scoreBandLabel(band.label, locale);
   return (
     <>
       <div className="flex items-center justify-between gap-3 mb-1.5">
-        <span className="font-[family-name:var(--font-syne)] font-bold text-sm">{station.name}</span>
-        <span className="telemetry !text-[9px]">{station.region}</span>
+        <span className="font-[family-name:var(--font-syne)] font-bold text-sm">{cityName(station.id, station.name, locale)}</span>
+        <span className="telemetry !text-[9px]">{regionShort(station.region, locale)}</span>
       </div>
       <div className="flex items-baseline justify-between">
-        <span className="text-[11px] text-ink-faint">{LAYERS[layer].label}</span>
+        <span className="text-[11px] text-ink-faint">{dict.atlas.layers[layer].label}</span>
         <span className={`readout text-base font-medium ${TONE_TEXT[band.tone]}`}>
           {Math.round(v.value(station))}
-          <span className="text-[10px] ml-1 opacity-70">{band.label}</span>
+          <span className="text-[10px] ml-1 opacity-70">{bandText}</span>
         </span>
       </div>
-      <span className="telemetry !text-[9px] mt-2 block text-emerald/70">Click to open analytics →</span>
+      <span className="telemetry !text-[9px] mt-2 block text-emerald/70">{dict.map.clickToOpen}</span>
     </>
   );
 }
@@ -930,13 +955,18 @@ const StationPanel = memo(function StationPanel({
   station: s,
   isDesktop,
   onClose,
+  dict,
+  locale,
 }: {
   station: Station;
   isDesktop: boolean;
   onClose: () => void;
+  dict: Dict;
+  locale: Locale;
 }) {
   const air = aqiBand(s.aqi);
   const sus = scoreBand(s.sustainability);
+  const name = cityName(s.id, s.name, locale);
   const variants = isDesktop ? PANEL_VARIANTS.desktop : PANEL_VARIANTS.mobile;
 
   useEffect(() => {
@@ -955,7 +985,7 @@ const StationPanel = memo(function StationPanel({
       exit="hidden"
       transition={{ duration: 0.5, ease: EASE }}
       role="dialog"
-      aria-label={`${s.name} environmental analytics`}
+      aria-label={name}
       className={
         isDesktop
           ? "absolute right-4 top-24 bottom-4 w-[360px] glass-bright panel-glow rounded-2xl ticks flex flex-col overflow-hidden z-30"
@@ -965,17 +995,17 @@ const StationPanel = memo(function StationPanel({
       <div className="p-5 border-b border-line flex items-start justify-between gap-3">
         <div>
           <div className="telemetry mb-1.5">
-            {s.region} · {s.lat.toFixed(2)}°N, {s.lon.toFixed(2)}°E
+            {regionShort(s.region, locale)} · {s.lat.toFixed(2)}°N, {s.lon.toFixed(2)}°E
           </div>
-          <h2 className="font-[family-name:var(--font-syne)] font-bold text-2xl leading-none">{s.name}</h2>
+          <h2 className="font-[family-name:var(--font-syne)] font-bold text-2xl leading-none">{name}</h2>
           <div className="telemetry !text-[9px] mt-2 text-ink-faint">
-            {KIND_LABEL[s.kind] ?? "City"} · {s.population.toLocaleString("en-US")} residents
+            {kindLabel(s.kind, locale)} · {dict.map.residents(s.population.toLocaleString("en-US"))}
           </div>
         </div>
         <button
           type="button"
           onClick={onClose}
-          aria-label="Close panel"
+          aria-label={dict.map.closePanel}
           className="grid place-items-center w-8 h-8 rounded-lg border border-line text-ink-dim hover:text-ink hover:border-line-bright transition-colors shrink-0"
         >
           <svg viewBox="0 0 14 14" className="w-3 h-3" fill="none" aria-hidden>
@@ -987,13 +1017,13 @@ const StationPanel = memo(function StationPanel({
       <div className="flex-1 overflow-y-auto p-5 flex flex-col gap-6">
         <div className="flex items-end justify-between">
           <div>
-            <div className="telemetry mb-1">Sustainability score</div>
+            <div className="telemetry mb-1">{dict.map.sustainabilityScore}</div>
             <div className={`readout text-5xl font-medium ${TONE_TEXT[sus.tone]}`}>{s.sustainability}</div>
           </div>
           <div className="text-right">
-            <span className={`text-xs font-semibold ${TONE_TEXT[sus.tone]}`}>{sus.label}</span>
+            <span className={`text-xs font-semibold ${TONE_TEXT[sus.tone]}`}>{scoreBandLabel(sus.label, locale)}</span>
             <div className="telemetry mt-1">
-              {s.trend === "improving" ? "▲ improving" : s.trend === "declining" ? "▼ declining" : "● stable"}
+              {trendLabel(s.trend, locale)}
             </div>
           </div>
         </div>
@@ -1001,56 +1031,56 @@ const StationPanel = memo(function StationPanel({
         {/* live conditions */}
         <div className="grid grid-cols-3 divide-x divide-line rounded-xl bg-carbon-2/40 border border-line overflow-hidden">
           <div className="px-3 py-2.5 flex flex-col gap-0.5">
-            <span className="telemetry !text-[8px]">Temperature</span>
+            <span className="telemetry !text-[8px]">{dict.map.temperature}</span>
             <span className="readout text-sm">{s.temperature}°C</span>
           </div>
           <div className="px-3 py-2.5 flex flex-col gap-0.5">
-            <span className="telemetry !text-[8px]">Humidity</span>
+            <span className="telemetry !text-[8px]">{dict.map.humidity}</span>
             <span className="readout text-sm">{s.humidity}%</span>
           </div>
           <div className="px-3 py-2.5 flex flex-col gap-0.5">
-            <span className="telemetry !text-[8px]">Pollution idx</span>
+            <span className="telemetry !text-[8px]">{dict.map.pollutionIdx}</span>
             <span className="readout text-sm text-amber">{s.pollutionIndex}</span>
           </div>
         </div>
 
         <div>
-          <div className="telemetry mb-2">90-day composite trend</div>
+          <div className="telemetry mb-2">{dict.map.trend90}</div>
           <TrendSpark id={s.id} />
         </div>
 
         <div className="flex flex-col gap-4">
-          <MetricRow label={`Air quality — AQI (${air.label})`} value={s.aqi} max={300} color={TONE_HEX[air.tone]} />
-          <MetricRow label="PM2.5 · µg/m³" value={s.pm25} max={150} color={TONE_HEX.cyan} />
-          <MetricRow label="PM10 · µg/m³" value={s.pm10} max={250} color={TONE_HEX.cyan} />
-          <MetricRow label="Industrial emission load" value={s.industrialEmissions} max={100} color={TONE_HEX.coral} />
-          <MetricRow label="Water quality index" value={s.waterQuality} max={100} color="#4f9dde" />
-          <MetricRow label="Biodiversity intactness" value={s.biodiversity} max={100} color={TONE_HEX.emerald} />
-          <MetricRow label="Environmental risk exposure" value={s.climateRisk} max={100} color={TONE_HEX.amber} />
+          <MetricRow label={dict.map.airMetric(aqiBandLabel(air.label, locale))} value={s.aqi} max={300} color={TONE_HEX[air.tone]} />
+          <MetricRow label={dict.map.pm25} value={s.pm25} max={150} color={TONE_HEX.cyan} />
+          <MetricRow label={dict.map.pm10} value={s.pm10} max={250} color={TONE_HEX.cyan} />
+          <MetricRow label={dict.map.industrial} value={s.industrialEmissions} max={100} color={TONE_HEX.coral} />
+          <MetricRow label={dict.map.water} value={s.waterQuality} max={100} color="#4f9dde" />
+          <MetricRow label={dict.map.bio} value={s.biodiversity} max={100} color={TONE_HEX.emerald} />
+          <MetricRow label={dict.map.risk} value={s.climateRisk} max={100} color={TONE_HEX.amber} />
         </div>
 
         <div className="glass rounded-xl p-4">
           <div className="flex items-center gap-2 mb-2">
             <span className="grid place-items-center w-5 h-5 rounded bg-emerald/10 border border-emerald/30 text-emerald text-[9px] font-bold">Æ</span>
-            <span className="telemetry telemetry-bright">AI read</span>
+            <span className="telemetry telemetry-bright">{dict.map.aiRead}</span>
           </div>
           <p className="text-[13px] leading-relaxed text-ink-dim font-light">
-            {s.name} is running {s.tempAnomaly.toFixed(2)} °C above its climate baseline.{" "}
+            {dict.map.aiLead(name, s.tempAnomaly.toFixed(2))}
             {s.aqi > 150
-              ? "Air quality is the dominant stressor — winter inversions push PM2.5 well past WHO guidance."
+              ? dict.map.aiAir
               : s.industrialEmissions > 65
-                ? "Industrial emissions dominate the signal — metallurgy and power load drive most of the score deficit."
+                ? dict.map.aiIndustrial
                 : s.waterQuality < 45
-                  ? "Water-system strain leads — salinity and abstraction pressure warrant close monitoring."
+                  ? dict.map.aiWater
                   : s.climateRisk > 70
-                    ? "Heat, drought and desertification exposure are the leading risks for this region."
-                    : "No single critical stressor — the long-term warming trend is the primary signal to watch."}
+                    ? dict.map.aiHeat
+                    : dict.map.aiNone}
           </p>
           <a
-            href={`/assistant?q=${encodeURIComponent(`Risk outlook for ${s.name}`)}`}
+            href={`${localePath("/assistant", locale)}?q=${encodeURIComponent(dict.map.riskQuery(name))}`}
             className="inline-flex items-center gap-1.5 mt-3 text-[12px] font-medium text-emerald hover:gap-2.5 transition-all"
           >
-            Full risk outlook
+            {dict.map.fullRisk}
             <svg viewBox="0 0 16 16" className="w-3 h-3" fill="none" aria-hidden>
               <path d="M3 8h10M9 4l4 4-4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
             </svg>

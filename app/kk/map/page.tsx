@@ -1,19 +1,19 @@
 import type { Metadata } from "next";
-import { MapClient } from "./MapClient";
+import { MapClient } from "../../map/MapClient";
 import { getDict, hreflangAlternates } from "@/lib/i18n";
 
-const dict = getDict("en");
+const dict = getDict("kk");
 
 export const metadata: Metadata = {
   title: dict.meta.atlasTitle,
   description: dict.meta.atlasDescription,
   alternates: {
-    canonical: "/map/",
+    canonical: "/kk/map/",
     languages: hreflangAlternates("/map/"),
   },
 };
 
-export default function MapPage() {
+export default function MapPageKk() {
   return (
     <main className="flex-1">
       <MapClient />

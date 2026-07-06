@@ -8,7 +8,7 @@ import {
   TelemetryTag,
 } from "@/components/ui/primitives";
 import { aqiBand, scoreBand } from "@/lib/data";
-import { cityName, regionLabel } from "@/lib/i18n";
+import { cityName, localePath, regionLabel } from "@/lib/i18n";
 import { useDict, useLocale } from "@/lib/useLocale";
 import { useLiveStations } from "@/lib/useLiveStations";
 
@@ -123,12 +123,12 @@ export default function CityDetail({ id }: { id: string }) {
       </div>
 
       <div className="flex flex-wrap items-center gap-4 mt-14">
-        <GlowButton href="/map">{dict.city.ctaAtlas(name)}</GlowButton>
-        <GlowButton href="/dashboard" variant="ghost">
+        <GlowButton href={localePath("/map", locale)}>{dict.city.ctaAtlas(name)}</GlowButton>
+        <GlowButton href={localePath("/dashboard", locale)} variant="ghost">
           {dict.city.ctaIntel}
         </GlowButton>
         <Link
-          href="/sensor-network"
+          href={localePath("/sensor-network", locale)}
           className="text-sm text-ink-dim hover:text-emerald transition-colors duration-300 link-sweep"
         >
           {dict.city.allCities}

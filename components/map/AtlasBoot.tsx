@@ -2,18 +2,10 @@
 
 import { memo, useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
+import { useDict } from "@/lib/useLocale";
 
 /* Progressive boot sequence shown over the map until the first frame is ready.
    Pure SVG/CSS — unmounts on reveal, so it costs nothing once the map is live. */
-
-const LINES = [
-  "Establishing satellite uplink",
-  "Synchronising 28 regional stations",
-  "Calibrating AQI · PM2.5 · PM10 grid",
-  "Loading industrial emission feed",
-  "Resolving biodiversity index",
-  "Rendering Kazakhstan surface",
-];
 
 export const AtlasBoot = memo(function AtlasBoot({
   ready,
@@ -24,6 +16,8 @@ export const AtlasBoot = memo(function AtlasBoot({
   reducedMotion: boolean;
   onDone: () => void;
 }) {
+  const dict = useDict();
+  const LINES = dict.map.bootLines;
   const [step, setStep] = useState(0);
   const [pct, setPct] = useState(4);
   const doneRef = useRef(false);
@@ -69,7 +63,7 @@ export const AtlasBoot = memo(function AtlasBoot({
       className="absolute inset-0 z-40 grid place-items-center bg-abyss overflow-hidden"
       role="status"
       aria-live="polite"
-      aria-label="Loading the global environmental map"
+      aria-label={dict.map.bootAria}
     >
       {/* faint moving starfield/grid wash */}
       <div
@@ -163,7 +157,7 @@ export const AtlasBoot = memo(function AtlasBoot({
         {/* wordmark + progress */}
         <div className="flex flex-col items-center gap-3 w-[260px]">
           <span className="telemetry telemetry-bright tracking-[0.3em]">
-            AETHERIS · KAZAKHSTAN ATLAS
+            {dict.map.bootWordmark}
           </span>
           <div className="h-px w-full bg-carbon-3 overflow-hidden">
             <div

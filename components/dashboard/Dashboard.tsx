@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/primitives";
 import {
   HOTSPOTS,
-  type HotspotType,
   type Station,
   aqiBand,
   genSeries,
@@ -19,6 +18,16 @@ import {
   scoreBand,
 } from "@/lib/data";
 import { fetchLiveStations } from "@/lib/live";
+import {
+  aqiBandLabel,
+  cityName,
+  hotspotName,
+  hotspotTypeLabel,
+  regionShort,
+  scoreBandLabel,
+  statusLabel,
+} from "@/lib/i18n";
+import { useDict, useLocale } from "@/lib/useLocale";
 
 const TONE = {
   emerald: "text-emerald",
@@ -127,6 +136,7 @@ function AreaChart({
 /* ── Radial gauge ─────────────────────────────────────────── */
 
 function RadialGauge({ value, label }: { value: number; label: string }) {
+  const locale = useLocale();
   const R = 64;
   const C = 2 * Math.PI * R;
   const band = scoreBand(value);
@@ -158,7 +168,7 @@ function RadialGauge({ value, label }: { value: number; label: string }) {
           <div className="readout text-4xl font-medium" style={{ color }}>
             {value}
           </div>
-          <div className="telemetry mt-1">{band.label}</div>
+          <div className="telemetry mt-1">{scoreBandLabel(band.label, locale)}</div>
         </div>
       </div>
       <span className="telemetry telemetry-bright -mt-2">{label}</span>
@@ -212,35 +222,8 @@ function CityBars({
 
 /* ── Insight cards ────────────────────────────────────────── */
 
-const INSIGHTS = [
-  {
-    severity: "High",
-    tone: "coral" as const,
-    title: "Karaganda steel-belt particulate load",
-    body: "Temirtau and the Karaganda industrial cluster are driving the highest sustained PM and SO₂ load in the network. Continuous-monitoring retrofits modeled to cut exceedance hours by a third.",
-  },
-  {
-    severity: "Watch",
-    tone: "amber" as const,
-    title: "Aral dust season intensifying",
-    body: "Seabed dust index up 18% over Kyzylorda as the dry season sets in. Salt-laden PM10 transport projected to reach lower Syr Darya settlements within days — issue respiratory advisories.",
-  },
-  {
-    severity: "Positive",
-    tone: "emerald" as const,
-    title: "Northern oblast air corridor clearing",
-    body: "Kokshetau, Petropavl and Kostanay show the strongest sustained air-quality improvement as the heating season ends — the clearest positive signal nationwide.",
-  },
-];
-
-const TYPE_LABEL: Record<HotspotType, string> = {
-  industrial: "Industrial",
-  water: "Water",
-  radiation: "Radiation",
-  wildfire: "Wildfire",
-  desertification: "Desertification",
-  oilgas: "Oil & gas",
-};
+// Copy lives in the dictionary (dict.dashboard.insights); tones stay here.
+const INSIGHT_TONES = ["coral", "amber", "emerald"] as const;
 
 const STATUS_TONE: Record<string, string> = {
   critical: "text-coral",
@@ -267,6 +250,8 @@ function useLivePulse(base: number, amp: number, period = 3200) {
 /* ── Dashboard ────────────────────────────────────────────── */
 
 export default function Dashboard() {
+  const dict = useDict();
+  const locale = useLocale();
   // Simulated baseline (SSR-safe), then enrich with live Open-Meteo readings
   // after mount — air quality + weather become real, no hydration mismatch.
   const [stations, setStations] = useState<Station[]>(() => getStations());
@@ -288,12 +273,12 @@ export default function Dashboard() {
   const aqiSeries = useMemo(() => genSeries("net-aqi", 90, sum.meanAqi, 16), [sum.meanAqi]);
 
   const cleanest = useMemo(
-    () => [...stations].sort((a, b) => b.sustainability - a.sustainability).slice(0, 5).map((s) => ({ name: s.name, v: s.sustainability })),
-    [stations],
+    () => [...stations].sort((a, b) => b.sustainability - a.sustainability).slice(0, 5).map((s) => ({ name: cityName(s.id, s.name, locale), v: s.sustainability })),
+    [stations, locale],
   );
   const stressed = useMemo(
-    () => [...stations].sort((a, b) => a.sustainability - b.sustainability).slice(0, 5).map((s) => ({ name: s.name, v: s.sustainability })),
-    [stations],
+    () => [...stations].sort((a, b) => a.sustainability - b.sustainability).slice(0, 5).map((s) => ({ name: cityName(s.id, s.name, locale), v: s.sustainability })),
+    [stations, locale],
   );
 
   const liveIngest = useLivePulse(164.2, 6);
@@ -307,23 +292,23 @@ export default function Dashboard() {
           <Reveal>
             <TelemetryTag tone="emerald">
               <span className="dot-live" />
-              {live ? "Live · Open-Meteo feed" : "Intelligence · live model"}
+              {live ? dict.dashboard.badgeLive : dict.dashboard.badgeModel}
             </TelemetryTag>
           </Reveal>
           <Reveal index={1}>
             <h1 className="font-[family-name:var(--font-syne)] font-bold text-4xl sm:text-5xl mt-4 tracking-tight">
-              State of Kazakhstan
+              {dict.dashboard.title}
             </h1>
           </Reveal>
         </div>
         <Reveal index={2}>
           <div className="flex gap-6">
             <div>
-              <div className="telemetry mb-1">Ingest rate</div>
+              <div className="telemetry mb-1">{dict.dashboard.ingestRate}</div>
               <div className="readout text-lg text-cyan">{liveIngest.toFixed(1)} k/s</div>
             </div>
             <div>
-              <div className="telemetry mb-1">Model latency</div>
+              <div className="telemetry mb-1">{dict.dashboard.modelLatency}</div>
               <div className="readout text-lg text-emerald">{Math.round(liveLatency)} ms</div>
             </div>
           </div>
@@ -337,13 +322,13 @@ export default function Dashboard() {
           <GlassCard bright ticks className="p-6 scanline">
             <div className="flex items-center justify-between mb-2">
               <div>
-                <div className="telemetry mb-1">Global temperature anomaly</div>
+                <div className="telemetry mb-1">{dict.dashboard.anomalyTitle}</div>
                 <div className="readout text-2xl text-amber">
                   +{sum.meanAnomaly} °C
-                  <span className="text-xs text-ink-faint ml-2">vs 1991–2020</span>
+                  <span className="text-xs text-ink-faint ml-2">{dict.dashboard.vsBaseline}</span>
                 </div>
               </div>
-              <span className="telemetry hidden sm:inline">90-day window</span>
+              <span className="telemetry hidden sm:inline">{dict.dashboard.window90}</span>
             </div>
             <AreaChart series={anomalySeries} color="#f5b352" unit="°C" />
           </GlassCard>
@@ -352,10 +337,9 @@ export default function Dashboard() {
         {/* gauge */}
         <Reveal index={1}>
           <GlassCard className="p-6 flex flex-col items-center justify-center gap-2 h-full">
-            <RadialGauge value={sum.meanSustainability} label="Network sustainability" />
+            <RadialGauge value={sum.meanSustainability} label={dict.dashboard.gaugeLabel} />
             <p className="text-[12px] text-ink-faint text-center font-light leading-relaxed mt-2 max-w-[220px]">
-              Composite of air, water, biodiversity, pollution and inverse
-              environmental risk across {stations.length} cities.
+              {dict.dashboard.gaugeLede(stations.length)}
             </p>
           </GlassCard>
         </Reveal>
@@ -367,10 +351,10 @@ export default function Dashboard() {
           <GlassCard className="p-6 lg:col-span-1">
             <div className="flex items-center justify-between mb-2">
               <div>
-                <div className="telemetry mb-1">Network mean AQI</div>
+                <div className="telemetry mb-1">{dict.dashboard.meanAqi}</div>
                 <div className={`readout text-2xl ${TONE[aqiBand(sum.meanAqi).tone]}`}>
                   {sum.meanAqi}
-                  <span className="text-xs text-ink-faint ml-2">{aqiBand(sum.meanAqi).label}</span>
+                  <span className="text-xs text-ink-faint ml-2">{aqiBandLabel(aqiBand(sum.meanAqi).label, locale)}</span>
                 </div>
               </div>
             </div>
@@ -379,12 +363,12 @@ export default function Dashboard() {
         </Reveal>
         <Reveal index={1}>
           <GlassCard className="p-6">
-            <CityBars title="Strongest cities · sustainability" items={cleanest} />
+            <CityBars title={dict.dashboard.strongest} items={cleanest} />
           </GlassCard>
         </Reveal>
         <Reveal index={2}>
           <GlassCard className="p-6">
-            <CityBars title="Most stressed cities" items={stressed} invert />
+            <CityBars title={dict.dashboard.stressed} items={stressed} invert />
           </GlassCard>
         </Reveal>
       </div>
@@ -397,18 +381,19 @@ export default function Dashboard() {
               Æ
             </span>
             <h2 className="font-[family-name:var(--font-syne)] font-bold text-xl">
-              AI insights
+              {dict.dashboard.aiInsights}
             </h2>
-            <span className="telemetry ml-auto">Generated from live model · refreshed 6 min ago</span>
+            <span className="telemetry ml-auto">{dict.dashboard.aiInsightsMeta}</span>
           </div>
         </Reveal>
         <div className="grid md:grid-cols-3 gap-5">
-          {INSIGHTS.map((ins, i) => {
-            const border = { coral: "border-coral/25", amber: "border-amber/25", emerald: "border-emerald/25" }[ins.tone];
+          {dict.dashboard.insights.map((ins, i) => {
+            const tone = INSIGHT_TONES[i];
+            const border = { coral: "border-coral/25", amber: "border-amber/25", emerald: "border-emerald/25" }[tone];
             return (
               <Reveal key={ins.title} index={i}>
                 <GlassCard className={`p-6 h-full border ${border} transition-transform duration-500 hover:-translate-y-1`}>
-                  <span className={`telemetry ${TONE[ins.tone]}`}>{ins.severity}</span>
+                  <span className={`telemetry ${TONE[tone]}`}>{ins.severity}</span>
                   <h3 className="font-[family-name:var(--font-syne)] font-bold text-lg mt-2 mb-2.5 leading-snug">
                     {ins.title}
                   </h3>
@@ -426,7 +411,7 @@ export default function Dashboard() {
       <div className="mt-12">
         <Reveal>
           <h2 className="font-[family-name:var(--font-syne)] font-bold text-xl mb-5">
-            Environmental hotspots &amp; industrial zones
+            {dict.dashboard.hotspotsTitle}
           </h2>
         </Reveal>
         <Reveal index={1}>
@@ -435,7 +420,7 @@ export default function Dashboard() {
               <table className="w-full text-left">
                 <thead>
                   <tr className="border-b border-line">
-                    {["Site", "Region", "Type", "Severity", "Status"].map((h) => (
+                    {[dict.dashboard.th.site, dict.dashboard.th.region, dict.dashboard.th.type, dict.dashboard.th.severity, dict.dashboard.th.status].map((h) => (
                       <th key={h} className="telemetry px-5 py-3.5 font-normal whitespace-nowrap">
                         {h}
                       </th>
@@ -451,10 +436,10 @@ export default function Dashboard() {
                         title={h.detail}
                         className="border-b border-line/50 last:border-0 hover:bg-carbon-2/60 transition-colors"
                       >
-                        <td className="px-5 py-3.5 text-sm font-medium whitespace-nowrap">{h.name}</td>
-                        <td className="px-5 py-3.5 text-xs text-ink-dim whitespace-nowrap">{h.region}</td>
+                        <td className="px-5 py-3.5 text-sm font-medium whitespace-nowrap">{hotspotName(h.id, h.name, locale)}</td>
+                        <td className="px-5 py-3.5 text-xs text-ink-dim whitespace-nowrap">{regionShort(h.region, locale)}</td>
                         <td className="px-5 py-3.5 telemetry !text-[9px] whitespace-nowrap">
-                          {TYPE_LABEL[h.type]}
+                          {hotspotTypeLabel(h.type, locale)}
                         </td>
                         <td className="px-5 py-3.5">
                           <div className="flex items-center gap-2.5">
@@ -469,7 +454,7 @@ export default function Dashboard() {
                         </td>
                         <td className="px-5 py-3.5">
                           <span className={`readout text-xs capitalize ${STATUS_TONE[h.status]}`}>
-                            {h.status}
+                            {statusLabel(h.status, locale)}
                           </span>
                         </td>
                       </tr>

@@ -18,9 +18,11 @@ import {
 import {
   CITY_NAMES,
   REGION_NAMES,
+  aqiBandLabel,
   cityName,
   hotspotName,
   regionLabel,
+  scoreBandLabel,
   type Locale,
 } from "./i18n";
 
@@ -61,24 +63,10 @@ function findStation(q: string): Station | undefined {
   return inRegion[0];
 }
 
-/* ── Localized label tables ───────────────────────────────── */
+/* ── Localized label helpers (tables shared via lib/i18n) ─── */
 
-type AqiLabel = "Good" | "Moderate" | "Sensitive" | "Unhealthy" | "Hazardous";
-type ScoreLabel = "Strong" | "Stable" | "Stressed" | "Critical";
-
-const AQI_LABELS: Record<Locale, Record<AqiLabel, string>> = {
-  en: { Good: "Good", Moderate: "Moderate", Sensitive: "Sensitive", Unhealthy: "Unhealthy", Hazardous: "Hazardous" },
-  ru: { Good: "хорошо", Moderate: "умеренно", Sensitive: "риск для чувствительных", Unhealthy: "вредно", Hazardous: "опасно" },
-  kk: { Good: "жақсы", Moderate: "орташа", Sensitive: "сезімталдарға қауіп", Unhealthy: "зиянды", Hazardous: "қауіпті" },
-};
-const SCORE_LABELS: Record<Locale, Record<ScoreLabel, string>> = {
-  en: { Strong: "Strong", Stable: "Stable", Stressed: "Stressed", Critical: "Critical" },
-  ru: { Strong: "сильный", Stable: "стабильный", Stressed: "под нагрузкой", Critical: "критический" },
-  kk: { Strong: "мықты", Stable: "тұрақты", Stressed: "жүктемеде", Critical: "критикалық" },
-};
-
-const aqiLabel = (aqi: number, l: Locale) => AQI_LABELS[l][aqiBand(aqi).label as AqiLabel];
-const scoreLabel = (v: number, l: Locale) => SCORE_LABELS[l][scoreBand(v).label as ScoreLabel];
+const aqiLabel = (aqi: number, l: Locale) => aqiBandLabel(aqiBand(aqi).label, l);
+const scoreLabel = (v: number, l: Locale) => scoreBandLabel(scoreBand(v).label, l);
 
 /* ── Response templates, per locale ───────────────────────── */
 

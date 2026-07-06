@@ -10,6 +10,7 @@ import {
   severityColor,
   type AtlasEvent,
 } from "@/lib/atlas";
+import { useDict, useLocale } from "@/lib/useLocale";
 
 const TONE = (h: number) =>
   h >= 70 ? "#2de2a6" : h >= 50 ? "#4fd8f7" : h >= 35 ? "#f5b352" : "#f57362";
@@ -24,8 +25,10 @@ export const GlobalPulse = memo(function GlobalPulse({
 }: {
   isDesktop: boolean;
 }) {
+  const dict = useDict();
+  const locale = useLocale();
   const base = useMemo(() => basePulse(), []);
-  const events = useMemo(() => buildEvents(), []);
+  const events = useMemo(() => buildEvents(locale), [locale]);
   const [tick, setTick] = useState(0);
   const [head, setHead] = useState(0);
   const [open, setOpen] = useState(false); // mobile expand
@@ -76,7 +79,7 @@ export const GlobalPulse = memo(function GlobalPulse({
           type="button"
           onClick={() => setOpen((v) => !v)}
           aria-expanded={open}
-          aria-label="Planetary pulse"
+          aria-label={dict.map.planetaryPulse}
           className="glass-bright panel-glow rounded-2xl pl-2 pr-3 py-2 flex items-center gap-2"
         >
           <span className="relative grid place-items-center w-9 h-9">
@@ -86,8 +89,8 @@ export const GlobalPulse = memo(function GlobalPulse({
             </span>
           </span>
           <span className="flex flex-col items-start leading-tight">
-            <span className="telemetry !text-[8px]">Planet</span>
-            <span className="text-[11px] font-semibold text-ink">Health</span>
+            <span className="telemetry !text-[8px]">{dict.map.planet}</span>
+            <span className="text-[11px] font-semibold text-ink">{dict.map.health}</span>
           </span>
         </button>
         <AnimatePresence>
@@ -121,29 +124,29 @@ export const GlobalPulse = memo(function GlobalPulse({
             <span className="readout text-xl font-medium" style={{ color }}>
               {health}
             </span>
-            <span className="telemetry !text-[7px] -mt-0.5">INDEX</span>
+            <span className="telemetry !text-[7px] -mt-0.5">{dict.map.index}</span>
           </div>
         </div>
         <div className="flex flex-col gap-1">
           <span className="telemetry flex items-center gap-1.5">
-            <span className="dot-live" /> Planetary pulse
+            <span className="dot-live" /> {dict.map.planetaryPulse}
           </span>
           <p className="text-[11px] leading-snug text-ink-dim font-light">
-            {planetNarrative({ ...base, health })}
+            {planetNarrative({ ...base, health }, locale)}
           </p>
         </div>
       </div>
 
       <div className="grid grid-cols-3 divide-x divide-line border-b border-line">
-        <Stat label="Mean AQI" value={String(meanAqi)} tone="#4fd8f7" />
-        <Stat label="Anomaly" value={`+${anomaly.toFixed(2)}°`} tone="#f5b352" />
-        <Stat label="Hotspots" value={String(base.hotspots)} tone="#f57362" />
+        <Stat label={dict.map.pulseAqi} value={String(meanAqi)} tone="#4fd8f7" />
+        <Stat label={dict.map.pulseAnomaly} value={`+${anomaly.toFixed(2)}°`} tone="#f5b352" />
+        <Stat label={dict.map.pulseHotspots} value={String(base.hotspots)} tone="#f57362" />
       </div>
 
       <div className="p-3">
         <div className="telemetry mb-2 flex items-center justify-between">
-          <span>Environmental feed</span>
-          <span className="text-emerald/60">streaming</span>
+          <span>{dict.map.feedTitle}</span>
+          <span className="text-emerald/60">{dict.map.streaming}</span>
         </div>
         <Feed visible={visible} head={head} />
       </div>

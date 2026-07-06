@@ -5,7 +5,7 @@ import { motion, useScroll, useTransform } from "framer-motion";
 import { useMemo, useRef } from "react";
 import { EASE, GlowButton, SourceNote, TelemetryTag } from "@/components/ui/primitives";
 import { HOTSPOTS, networkStats, planetSummary } from "@/lib/data";
-import { numberLocale } from "@/lib/i18n";
+import { localePath, numberLocale } from "@/lib/i18n";
 import { useDict, useLocale } from "@/lib/useLocale";
 import { useLiveStations } from "@/lib/useLiveStations";
 
@@ -142,8 +142,8 @@ export function Hero() {
             variants={heroItem}
             className="flex flex-wrap items-center gap-4 mt-2"
           >
-            <GlowButton href="/map">{dict.hero.ctaAtlas}</GlowButton>
-            <GlowButton href="/dashboard" variant="ghost">
+            <GlowButton href={localePath("/map", locale)}>{dict.hero.ctaAtlas}</GlowButton>
+            <GlowButton href={localePath("/dashboard", locale)} variant="ghost">
               {dict.hero.ctaIntel}
             </GlowButton>
           </motion.div>

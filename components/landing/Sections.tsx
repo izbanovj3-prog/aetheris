@@ -197,6 +197,7 @@ function MiniSpark({ k, color }: { k: string; color: string }) {
 
 export function AtlasShowcase() {
   const dict = useDict();
+  const locale = useLocale();
   const keys = Object.keys(LAYERS) as LayerKey[];
   return (
     <section className="max-w-6xl mx-auto px-6 pt-32">
@@ -214,7 +215,7 @@ export function AtlasShowcase() {
             lede={dict.atlas.lede}
           />
           <Reveal index={3}>
-            <GlowButton href="/map">{dict.atlas.cta}</GlowButton>
+            <GlowButton href={localePath("/map", locale)}>{dict.atlas.cta}</GlowButton>
           </Reveal>
         </div>
 
@@ -224,7 +225,7 @@ export function AtlasShowcase() {
             const copy = dict.atlas.layers[k];
             return (
               <Reveal key={k} index={i}>
-                <Link href="/map" className="block group">
+                <Link href={localePath("/map", locale)} className="block group">
                   <GlassCard className="p-6 transition-all duration-500 group-hover:border-line-bright group-hover:translate-x-1.5">
                     <div className="flex items-center justify-between mb-1">
                       <div className="flex items-center gap-3">
@@ -419,7 +420,7 @@ export function FinalCta() {
         lede={dict.finalCta.lede}
       />
       <Reveal index={3} className="flex justify-center gap-4 mt-10 flex-wrap">
-        <GlowButton href="/map">{dict.finalCta.ctaAtlas}</GlowButton>
+        <GlowButton href={localePath("/map", locale)}>{dict.finalCta.ctaAtlas}</GlowButton>
         <GlowButton href={localePath("/assistant", locale)} variant="ghost">
           {dict.finalCta.ctaAssistant}
         </GlowButton>

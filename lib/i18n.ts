@@ -34,6 +34,8 @@ export function localeFromPathname(pathname: string): Locale {
 const LOCALIZED_ROOTS = [
   /^\/$/,
   /^\/city\//,
+  /^\/map(\/|$)/,
+  /^\/dashboard(\/|$)/,
   /^\/assistant(\/|$)/,
   /^\/methodology(\/|$)/,
   /^\/data-sources(\/|$)/,
@@ -136,6 +138,10 @@ export function regionLabel(region: string, locale: Locale): string {
   return locale === "ru" ? `регион ${name}` : `${name} өңірі`;
 }
 
+/** Bare localized region name (no "region"/"өңірі" suffix) for tight table cells. */
+export const regionShort = (region: string, locale: Locale): string =>
+  locale === "en" ? region : REGION_NAMES[region]?.[locale] ?? region;
+
 export const HOTSPOT_NAMES: Record<string, { ru: string; kk: string }> = {
   "h-aral": { ru: "Бассейн Аральского моря", kk: "Арал теңізі алабы" },
   "h-balkhash": { ru: "Озеро Балхаш", kk: "Балқаш көлі" },
@@ -157,6 +163,53 @@ export function hotspotName(id: string, fallback: string, locale: Locale): strin
   if (locale === "en") return fallback;
   return HOTSPOT_NAMES[id]?.[locale] ?? fallback;
 }
+
+/* ── Categorical label tables (shared by assistant, map, dashboard) ── */
+
+export type AqiLabel = "Good" | "Moderate" | "Sensitive" | "Unhealthy" | "Hazardous";
+export type ScoreLabel = "Strong" | "Stable" | "Stressed" | "Critical";
+
+const AQI_BAND: Record<Locale, Record<AqiLabel, string>> = {
+  en: { Good: "Good", Moderate: "Moderate", Sensitive: "Sensitive", Unhealthy: "Unhealthy", Hazardous: "Hazardous" },
+  ru: { Good: "хорошо", Moderate: "умеренно", Sensitive: "риск для чувствительных", Unhealthy: "вредно", Hazardous: "опасно" },
+  kk: { Good: "жақсы", Moderate: "орташа", Sensitive: "сезімталдарға қауіп", Unhealthy: "зиянды", Hazardous: "қауіпті" },
+};
+const SCORE_BAND: Record<Locale, Record<ScoreLabel, string>> = {
+  en: { Strong: "Strong", Stable: "Stable", Stressed: "Stressed", Critical: "Critical" },
+  ru: { Strong: "сильный", Stable: "стабильный", Stressed: "под нагрузкой", Critical: "критический" },
+  kk: { Strong: "мықты", Stable: "тұрақты", Stressed: "жүктемеде", Critical: "критикалық" },
+};
+export const aqiBandLabel = (label: string, l: Locale) => AQI_BAND[l][label as AqiLabel] ?? label;
+export const scoreBandLabel = (label: string, l: Locale) => SCORE_BAND[l][label as ScoreLabel] ?? label;
+
+export const KIND_LABELS: Record<Locale, Record<string, string>> = {
+  en: { capital: "National capital", metropolis: "Metropolis", industrial: "Industrial hub", resource: "Resource hub", regional: "Regional centre", city: "City" },
+  ru: { capital: "Столица", metropolis: "Мегаполис", industrial: "Промышленный узел", resource: "Ресурсный узел", regional: "Региональный центр", city: "Город" },
+  kk: { capital: "Астана", metropolis: "Мегаполис", industrial: "Өнеркәсіп торабы", resource: "Ресурс торабы", regional: "Өңірлік орталық", city: "Қала" },
+};
+export const kindLabel = (kind: string, l: Locale) => KIND_LABELS[l][kind] ?? KIND_LABELS[l].city;
+
+export const HOTSPOT_TYPE_LABELS: Record<Locale, Record<string, string>> = {
+  en: { industrial: "Industrial", water: "Water", radiation: "Radiation", wildfire: "Wildfire", desertification: "Desertification", oilgas: "Oil & gas" },
+  ru: { industrial: "Промышленность", water: "Вода", radiation: "Радиация", wildfire: "Пожары", desertification: "Опустынивание", oilgas: "Нефть и газ" },
+  kk: { industrial: "Өнеркәсіп", water: "Су", radiation: "Радиация", wildfire: "Өрттер", desertification: "Шөлейттену", oilgas: "Мұнай-газ" },
+};
+export const hotspotTypeLabel = (type: string, l: Locale) => HOTSPOT_TYPE_LABELS[l][type] ?? type;
+
+export const STATUS_LABELS: Record<Locale, Record<string, string>> = {
+  en: { critical: "critical", elevated: "elevated", monitored: "monitored", recovering: "recovering" },
+  ru: { critical: "критический", elevated: "повышенный", monitored: "под контролем", recovering: "восстановление" },
+  kk: { critical: "критикалық", elevated: "жоғары", monitored: "бақылауда", recovering: "қалпына келу" },
+};
+export const statusLabel = (status: string, l: Locale) => STATUS_LABELS[l][status] ?? status;
+
+/** trend → localized "▲ improving" style badge for the map panel. */
+export const TREND_LABELS: Record<Locale, Record<string, string>> = {
+  en: { improving: "▲ improving", declining: "▼ declining", stable: "● stable" },
+  ru: { improving: "▲ улучшается", declining: "▼ ухудшается", stable: "● стабильно" },
+  kk: { improving: "▲ жақсаруда", declining: "▼ нашарлауда", stable: "● тұрақты" },
+};
+export const trendLabel = (trend: string, l: Locale) => TREND_LABELS[l][trend] ?? trend;
 
 /* ── Dictionary ───────────────────────────────────────────── */
 
@@ -290,6 +343,74 @@ export interface Dict {
     allCities: string;
     advice: Record<"Good" | "Moderate" | "Sensitive" | "Unhealthy" | "Hazardous", string>;
   };
+  dashboard: {
+    badgeLive: string;
+    badgeModel: string;
+    title: string;
+    ingestRate: string;
+    modelLatency: string;
+    anomalyTitle: string;
+    vsBaseline: string;
+    window90: string;
+    gaugeLabel: string;
+    gaugeLede: (n: number) => string;
+    meanAqi: string;
+    strongest: string;
+    stressed: string;
+    aiInsights: string;
+    aiInsightsMeta: string;
+    insights: Array<{ severity: string; title: string; body: string }>;
+    hotspotsTitle: string;
+    th: { site: string; region: string; type: string; severity: string; status: string };
+  };
+  map: {
+    loading: string;
+    layersTitle: string;
+    clickToOpen: string;
+    citiesKz: (n: number) => string;
+    hotspotsTracked: (n: number) => string;
+    liveAir: string;
+    zoomIn: string;
+    zoomOut: string;
+    reset: string;
+    regionAria: string;
+    canvasAria: string;
+    closePanel: string;
+    residents: (n: string) => string;
+    sustainabilityScore: string;
+    temperature: string;
+    humidity: string;
+    pollutionIdx: string;
+    trend90: string;
+    airMetric: (band: string) => string;
+    pm25: string;
+    pm10: string;
+    industrial: string;
+    water: string;
+    bio: string;
+    risk: string;
+    aiRead: string;
+    aiLead: (name: string, val: string) => string;
+    aiAir: string;
+    aiIndustrial: string;
+    aiWater: string;
+    aiHeat: string;
+    aiNone: string;
+    fullRisk: string;
+    riskQuery: (name: string) => string;
+    planet: string;
+    health: string;
+    index: string;
+    planetaryPulse: string;
+    pulseAqi: string;
+    pulseAnomaly: string;
+    pulseHotspots: string;
+    feedTitle: string;
+    streaming: string;
+    bootLines: string[];
+    bootWordmark: string;
+    bootAria: string;
+  };
   meta: {
     homeTitle: string;
     homeDescription: string;
@@ -297,6 +418,10 @@ export interface Dict {
     cityDescription: (city: string, region: string) => string;
     assistantTitle: string;
     assistantDescription: string;
+    atlasTitle: string;
+    atlasDescription: string;
+    dashboardTitle: string;
+    dashboardDescription: string;
   };
 }
 
@@ -472,6 +597,98 @@ const en: Dict = {
         "Health alert: avoid all outdoor exertion. Stay indoors with windows closed, run an air purifier if available, and wear a well-fitting respirator (N95/FFP2) if you must go outside.",
     },
   },
+  dashboard: {
+    badgeLive: "Live · Open-Meteo feed",
+    badgeModel: "Intelligence · live model",
+    title: "State of Kazakhstan",
+    ingestRate: "Ingest rate",
+    modelLatency: "Model latency",
+    anomalyTitle: "Global temperature anomaly",
+    vsBaseline: "vs 1991–2020",
+    window90: "90-day window",
+    gaugeLabel: "Network sustainability",
+    gaugeLede: (n) =>
+      `Composite of air, water, biodiversity, pollution and inverse environmental risk across ${n} cities.`,
+    meanAqi: "Network mean AQI",
+    strongest: "Strongest cities · sustainability",
+    stressed: "Most stressed cities",
+    aiInsights: "AI insights",
+    aiInsightsMeta: "Generated from live model · refreshed 6 min ago",
+    insights: [
+      {
+        severity: "High",
+        title: "Karaganda steel-belt particulate load",
+        body: "Temirtau and the Karaganda industrial cluster are driving the highest sustained PM and SO₂ load in the network. Continuous-monitoring retrofits modeled to cut exceedance hours by a third.",
+      },
+      {
+        severity: "Watch",
+        title: "Aral dust season intensifying",
+        body: "Seabed dust index up 18% over Kyzylorda as the dry season sets in. Salt-laden PM10 transport projected to reach lower Syr Darya settlements within days — issue respiratory advisories.",
+      },
+      {
+        severity: "Positive",
+        title: "Northern oblast air corridor clearing",
+        body: "Kokshetau, Petropavl and Kostanay show the strongest sustained air-quality improvement as the heating season ends — the clearest positive signal nationwide.",
+      },
+    ],
+    hotspotsTitle: "Environmental hotspots & industrial zones",
+    th: { site: "Site", region: "Region", type: "Type", severity: "Severity", status: "Status" },
+  },
+  map: {
+    loading: "Acquiring satellite feed",
+    layersTitle: "Layers",
+    clickToOpen: "Click to open analytics →",
+    citiesKz: (n) => `${n} cities · Kazakhstan`,
+    hotspotsTracked: (n) => `${n} environmental hotspots tracked`,
+    liveAir: "● live air · Open-Meteo",
+    zoomIn: "Zoom in",
+    zoomOut: "Zoom out",
+    reset: "Reset view",
+    regionAria: "Interactive environmental map of Kazakhstan",
+    canvasAria: "Environmental map canvas",
+    closePanel: "Close panel",
+    residents: (n) => `${n} residents`,
+    sustainabilityScore: "Sustainability score",
+    temperature: "Temperature",
+    humidity: "Humidity",
+    pollutionIdx: "Pollution idx",
+    trend90: "90-day composite trend",
+    airMetric: (band) => `Air quality — AQI (${band})`,
+    pm25: "PM2.5 · µg/m³",
+    pm10: "PM10 · µg/m³",
+    industrial: "Industrial emission load",
+    water: "Water quality index",
+    bio: "Biodiversity intactness",
+    risk: "Environmental risk exposure",
+    aiRead: "AI read",
+    aiLead: (name, val) => `${name} is running ${val} °C above its climate baseline. `,
+    aiAir: "Air quality is the dominant stressor — winter inversions push PM2.5 well past WHO guidance.",
+    aiIndustrial: "Industrial emissions dominate the signal — metallurgy and power load drive most of the score deficit.",
+    aiWater: "Water-system strain leads — salinity and abstraction pressure warrant close monitoring.",
+    aiHeat: "Heat, drought and desertification exposure are the leading risks for this region.",
+    aiNone: "No single critical stressor — the long-term warming trend is the primary signal to watch.",
+    fullRisk: "Full risk outlook",
+    riskQuery: (name) => `Risk outlook for ${name}`,
+    planet: "Planet",
+    health: "Health",
+    index: "INDEX",
+    planetaryPulse: "Planetary pulse",
+    pulseAqi: "Mean AQI",
+    pulseAnomaly: "Anomaly",
+    pulseHotspots: "Hotspots",
+    feedTitle: "Environmental feed",
+    streaming: "streaming",
+    bootLines: [
+      "Establishing satellite uplink",
+      "Synchronising 28 regional stations",
+      "Calibrating AQI · PM2.5 · PM10 grid",
+      "Loading industrial emission feed",
+      "Resolving biodiversity index",
+      "Rendering Kazakhstan surface",
+    ],
+    bootWordmark: "AETHERIS · KAZAKHSTAN ATLAS",
+    bootAria: "Loading the global environmental map",
+  },
   meta: {
     homeTitle: "AETHERIS — Kazakhstan Environmental Intelligence",
     homeDescription:
@@ -482,6 +699,12 @@ const en: Dict = {
     assistantTitle: "AI Assistant",
     assistantDescription:
       "Converse with the Aetheris environmental analyst — live briefings, risk outlooks and metric explainers for every monitored city in Kazakhstan.",
+    atlasTitle: "Kazakhstan Atlas",
+    atlasDescription:
+      "A living map of Kazakhstan — air quality, industrial emissions, water, biodiversity and environmental risk rendered as continuous fields across 28 cities and 17 regions.",
+    dashboardTitle: "Intelligence",
+    dashboardDescription:
+      "Real-time environmental analytics for Kazakhstan — network AQI, temperature anomaly, city rankings, AI insights and the national hotspot registry.",
   },
 };
 
@@ -657,6 +880,98 @@ const ru: Dict = {
         "Тревога: избегайте любых нагрузок на улице. Оставайтесь в помещении с закрытыми окнами, включите очиститель воздуха, при выходе надевайте плотно прилегающий респиратор (N95/FFP2).",
     },
   },
+  dashboard: {
+    badgeLive: "Live · поток Open-Meteo",
+    badgeModel: "Аналитика · живая модель",
+    title: "Состояние Казахстана",
+    ingestRate: "Скорость приёма",
+    modelLatency: "Задержка модели",
+    anomalyTitle: "Глобальная температурная аномалия",
+    vsBaseline: "к 1991–2020",
+    window90: "окно 90 дней",
+    gaugeLabel: "Устойчивость сети",
+    gaugeLede: (n) =>
+      `Композит воздуха, воды, биоразнообразия, загрязнения и обратного экологического риска по ${n} городам.`,
+    meanAqi: "Средний AQI сети",
+    strongest: "Сильнейшие города · устойчивость",
+    stressed: "Города под наибольшей нагрузкой",
+    aiInsights: "Выводы ИИ",
+    aiInsightsMeta: "Сгенерировано живой моделью · обновлено 6 мин назад",
+    insights: [
+      {
+        severity: "Высокий",
+        title: "Пылевая нагрузка карагандинского стального пояса",
+        body: "Темиртау и карагандинский промышленный кластер дают наибольшую устойчивую нагрузку PM и SO₂ в сети. Модернизация непрерывного мониторинга по модели сокращает часы превышений на треть.",
+      },
+      {
+        severity: "Наблюдение",
+        title: "Аральский пылевой сезон усиливается",
+        body: "Индекс пыли с обнажённого дна вырос на 18% над Кызылординской областью с наступлением сухого сезона. Перенос солёной PM10 достигнет низовий Сырдарьи за считанные дни — выпустите предупреждения для органов дыхания.",
+      },
+      {
+        severity: "Позитив",
+        title: "Воздушный коридор северных областей очищается",
+        body: "Кокшетау, Петропавловск и Костанай показывают сильнейшее устойчивое улучшение качества воздуха к концу отопительного сезона — самый чёткий позитивный сигнал по стране.",
+      },
+    ],
+    hotspotsTitle: "Экологические горячие точки и промышленные зоны",
+    th: { site: "Объект", region: "Регион", type: "Тип", severity: "Тяжесть", status: "Статус" },
+  },
+  map: {
+    loading: "Получение спутникового сигнала",
+    layersTitle: "Слои",
+    clickToOpen: "Нажмите, чтобы открыть аналитику →",
+    citiesKz: (n) => `${n} городов · Казахстан`,
+    hotspotsTracked: (n) => `${n} экологических горячих точек на контроле`,
+    liveAir: "● живой воздух · Open-Meteo",
+    zoomIn: "Приблизить",
+    zoomOut: "Отдалить",
+    reset: "Сбросить вид",
+    regionAria: "Интерактивная экологическая карта Казахстана",
+    canvasAria: "Холст экологической карты",
+    closePanel: "Закрыть панель",
+    residents: (n) => `${n} жителей`,
+    sustainabilityScore: "Оценка устойчивости",
+    temperature: "Температура",
+    humidity: "Влажность",
+    pollutionIdx: "Индекс загр.",
+    trend90: "Композитный тренд за 90 дней",
+    airMetric: (band) => `Качество воздуха — AQI (${band})`,
+    pm25: "PM2.5 · µg/m³",
+    pm10: "PM10 · µg/m³",
+    industrial: "Промышленная эмиссионная нагрузка",
+    water: "Индекс качества воды",
+    bio: "Сохранность биоразнообразия",
+    risk: "Экологический риск",
+    aiRead: "Прочтение ИИ",
+    aiLead: (name, val) => `${name} на ${val} °C выше своей климатической базы. `,
+    aiAir: "Качество воздуха — главный стресс-фактор: зимние инверсии выводят PM2.5 далеко за рекомендации ВОЗ.",
+    aiIndustrial: "В сигнале доминируют промышленные выбросы — металлургия и энергетика дают большую часть дефицита оценки.",
+    aiWater: "Ведёт нагрузка на водную систему — засоление и водозабор требуют пристального контроля.",
+    aiHeat: "Жара, засуха и опустынивание — ведущие риски для этого региона.",
+    aiNone: "Единого критического стресс-фактора нет — главный сигнал для наблюдения — долгосрочное потепление.",
+    fullRisk: "Полный прогноз рисков",
+    riskQuery: (name) => `Прогноз рисков для ${name}`,
+    planet: "Планета",
+    health: "Здоровье",
+    index: "ИНДЕКС",
+    planetaryPulse: "Планетарный пульс",
+    pulseAqi: "Средний AQI",
+    pulseAnomaly: "Аномалия",
+    pulseHotspots: "Точки",
+    feedTitle: "Экологическая лента",
+    streaming: "поток",
+    bootLines: [
+      "Установка спутниковой связи",
+      "Синхронизация 28 региональных станций",
+      "Калибровка сетки AQI · PM2.5 · PM10",
+      "Загрузка потока промышленных выбросов",
+      "Разрешение индекса биоразнообразия",
+      "Отрисовка поверхности Казахстана",
+    ],
+    bootWordmark: "AETHERIS · АТЛАС КАЗАХСТАНА",
+    bootAria: "Загрузка глобальной экологической карты",
+  },
   meta: {
     homeTitle: "Экологический интеллект Казахстана",
     homeDescription:
@@ -667,6 +982,12 @@ const ru: Dict = {
     assistantTitle: "ИИ-ассистент",
     assistantDescription:
       "Диалог с экологическим аналитиком Aetheris — живые сводки, прогнозы рисков и объяснения показателей для каждого города Казахстана под наблюдением.",
+    atlasTitle: "Атлас Казахстана",
+    atlasDescription:
+      "Живая карта Казахстана — качество воздуха, промышленные выбросы, вода, биоразнообразие и экологический риск как непрерывные поля по 28 городам и 17 регионам.",
+    dashboardTitle: "Аналитика",
+    dashboardDescription:
+      "Экологическая аналитика Казахстана в реальном времени — AQI сети, температурная аномалия, рейтинги городов, выводы ИИ и национальный реестр горячих точек.",
   },
 };
 
@@ -842,6 +1163,98 @@ const kk: Dict = {
         "Дабыл: даладағы кез келген жүктемеден аулақ болыңыз. Терезесі жабық үйде отырыңыз, ауа тазартқышты қосыңыз, шығу қажет болса тығыз жанасатын респиратор (N95/FFP2) киіңіз.",
     },
   },
+  dashboard: {
+    badgeLive: "Live · Open-Meteo ағыны",
+    badgeModel: "Аналитика · тірі модель",
+    title: "Қазақстан жағдайы",
+    ingestRate: "Қабылдау жылдамдығы",
+    modelLatency: "Модель кідірісі",
+    anomalyTitle: "Жаһандық температура ауытқуы",
+    vsBaseline: "1991–2020-ға",
+    window90: "90 күндік терезе",
+    gaugeLabel: "Желі тұрақтылығы",
+    gaugeLede: (n) =>
+      `${n} қала бойынша ауа, су, биоалуантүрлілік, ластану және кері экологиялық тәуекел композиті.`,
+    meanAqi: "Желінің орташа AQI",
+    strongest: "Ең мықты қалалар · тұрақтылық",
+    stressed: "Ең жоғары жүктемедегі қалалар",
+    aiInsights: "ЖИ тұжырымдары",
+    aiInsightsMeta: "Тірі модельден жасалды · 6 мин бұрын жаңарды",
+    insights: [
+      {
+        severity: "Жоғары",
+        title: "Қарағанды болат белдеуінің шаң жүктемесі",
+        body: "Теміртау мен Қарағанды өнеркәсіп кластері желідегі ең жоғары тұрақты PM және SO₂ жүктемесін береді. Үздіксіз мониторинг модернизациясы модель бойынша асып кету сағаттарын үштен бірге қысқартады.",
+      },
+      {
+        severity: "Бақылау",
+        title: "Арал шаң маусымы күшеюде",
+        body: "Құрғақ маусым басталуымен Қызылорда үстіндегі түп шаңы индексі 18%-ға өсті. Тұзды PM10 тасымалы бірнеше күнде Сырдария төменгі елді мекендеріне жетеді — тыныс алу бойынша ескерту жасаңыз.",
+      },
+      {
+        severity: "Оң",
+        title: "Солтүстік облыстардың ауа дәлізі тазаруда",
+        body: "Көкшетау, Петропавл және Қостанай жылу маусымы аяқталуымен ауа сапасының ең күшті тұрақты жақсаруын көрсетеді — ел бойынша ең айқын оң сигнал.",
+      },
+    ],
+    hotspotsTitle: "Экологиялық ошақтар және өнеркәсіп аймақтары",
+    th: { site: "Нысан", region: "Өңір", type: "Түрі", severity: "Ауырлық", status: "Мәртебе" },
+  },
+  map: {
+    loading: "Спутник сигналын алу",
+    layersTitle: "Қабаттар",
+    clickToOpen: "Аналитиканы ашу үшін басыңыз →",
+    citiesKz: (n) => `${n} қала · Қазақстан`,
+    hotspotsTracked: (n) => `${n} экологиялық ошақ бақылауда`,
+    liveAir: "● тірі ауа · Open-Meteo",
+    zoomIn: "Жақындату",
+    zoomOut: "Алыстату",
+    reset: "Көріністі қалпына келтіру",
+    regionAria: "Қазақстанның интерактивті экологиялық картасы",
+    canvasAria: "Экологиялық карта кенебі",
+    closePanel: "Панельді жабу",
+    residents: (n) => `${n} тұрғын`,
+    sustainabilityScore: "Тұрақтылық бағасы",
+    temperature: "Температура",
+    humidity: "Ылғалдылық",
+    pollutionIdx: "Ластану инд.",
+    trend90: "90 күндік композиттік тренд",
+    airMetric: (band) => `Ауа сапасы — AQI (${band})`,
+    pm25: "PM2.5 · µg/m³",
+    pm10: "PM10 · µg/m³",
+    industrial: "Өнеркәсіптік шығарынды жүктемесі",
+    water: "Су сапасы индексі",
+    bio: "Биоалуантүрлілік сақталуы",
+    risk: "Экологиялық тәуекел",
+    aiRead: "ЖИ оқуы",
+    aiLead: (name, val) => `${name} климаттық базасынан ${val} °C жоғары. `,
+    aiAir: "Ауа сапасы — басым стресс-фактор: қысқы инверсиялар PM2.5-ті ДДҰ ұсынымдарынан әлдеқайда асырады.",
+    aiIndustrial: "Сигналда өнеркәсіптік шығарындылар басым — металлургия мен энергетика баға тапшылығының көбін береді.",
+    aiWater: "Су жүйесіне жүктеме басым — тұздану мен су алу мұқият бақылауды қажет етеді.",
+    aiHeat: "Ыстық, құрғақшылық және шөлейттену — осы өңір үшін негізгі тәуекелдер.",
+    aiNone: "Бір ғана критикалық стресс-фактор жоқ — бақылаудағы басты сигнал — ұзақ мерзімді жылыну.",
+    fullRisk: "Толық тәуекел болжамы",
+    riskQuery: (name) => `${name} бойынша тәуекел болжамы`,
+    planet: "Планета",
+    health: "Денсаулық",
+    index: "ИНДЕКС",
+    planetaryPulse: "Планеталық импульс",
+    pulseAqi: "Орташа AQI",
+    pulseAnomaly: "Ауытқу",
+    pulseHotspots: "Ошақтар",
+    feedTitle: "Экологиялық лента",
+    streaming: "ағын",
+    bootLines: [
+      "Спутниктік байланыс орнату",
+      "28 өңірлік станцияны синхрондау",
+      "AQI · PM2.5 · PM10 торын калибрлеу",
+      "Өнеркәсіптік шығарынды ағынын жүктеу",
+      "Биоалуантүрлілік индексін шешу",
+      "Қазақстан бетін бейнелеу",
+    ],
+    bootWordmark: "AETHERIS · ҚАЗАҚСТАН АТЛАСЫ",
+    bootAria: "Жаһандық экологиялық картаны жүктеу",
+  },
   meta: {
     homeTitle: "Қазақстанның экологиялық интеллектісі",
     homeDescription:
@@ -852,6 +1265,12 @@ const kk: Dict = {
     assistantTitle: "ЖИ-ассистент",
     assistantDescription:
       "Aetheris экологиялық аналитигімен диалог — Қазақстанның бақылаудағы әр қаласы бойынша тірі сводкалар, тәуекел болжамдары және көрсеткіш түсіндірмелері.",
+    atlasTitle: "Қазақстан Атласы",
+    atlasDescription:
+      "Қазақстанның тірі картасы — ауа сапасы, өнеркәсіптік шығарындылар, су, биоалуантүрлілік және экологиялық тәуекел 28 қала мен 17 өңір бойынша үздіксіз өрістер ретінде.",
+    dashboardTitle: "Аналитика",
+    dashboardDescription:
+      "Қазақстанның нақты уақыттағы экологиялық аналитикасы — желі AQI, температура ауытқуы, қала рейтингтері, ЖИ тұжырымдары және ұлттық ошақтар тізілімі.",
   },
 };
 
