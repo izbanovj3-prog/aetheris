@@ -10,7 +10,8 @@ import {
 } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { EASE, TelemetryTag } from "@/components/ui/primitives";
-import { SUGGESTED_PROMPTS, generate } from "@/lib/ai";
+import { generate, suggestedPrompts } from "@/lib/ai";
+import { useDict, useLocale } from "@/lib/useLocale";
 
 interface Message {
   id: number;
@@ -82,6 +83,9 @@ function Rich({ text }: { text: string }) {
 
 export default function AssistantChat() {
   const params = useSearchParams();
+  const locale = useLocale();
+  const dict = useDict();
+  const prompts = suggestedPrompts(locale);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
@@ -109,7 +113,7 @@ export default function AssistantChat() {
       scrollToEnd();
 
       // analyst "thinks", then streams
-      const reply = generate(query);
+      const reply = generate(query, locale);
       const aiId = ++idRef.current;
       setTimeout(() => {
         setThinking(false);
@@ -119,7 +123,7 @@ export default function AssistantChat() {
         ]);
       }, 900 + Math.random() * 600);
     },
-    [scrollToEnd],
+    [scrollToEnd, locale],
   );
 
   /* streaming reveal */
@@ -162,14 +166,14 @@ export default function AssistantChat() {
           </span>
           <div>
             <div className="font-[family-name:var(--font-syne)] font-bold">
-              Environmental analyst
+              {dict.assistant.analyst}
             </div>
-            <div className="telemetry mt-0.5">Grounded in live network · 28 cities · Kazakhstan</div>
+            <div className="telemetry mt-0.5">{dict.assistant.grounded}</div>
           </div>
         </div>
         <TelemetryTag tone="emerald">
           <span className="dot-live" />
-          Online
+          {dict.assistant.online}
         </TelemetryTag>
       </div>
 
@@ -195,16 +199,14 @@ export default function AssistantChat() {
             </div>
             <div>
               <h1 className="font-[family-name:var(--font-syne)] font-bold text-2xl mb-2">
-                Ask the network anything.
+                {dict.assistant.emptyTitle}
               </h1>
               <p className="text-ink-dim font-light text-[15px] leading-relaxed">
-                I analyze live environmental telemetry across Kazakhstan — air,
-                water, industry, biodiversity, and ecological risk — and answer
-                with sources.
+                {dict.assistant.emptyLede}
               </p>
             </div>
             <div className="flex flex-wrap justify-center gap-2">
-              {SUGGESTED_PROMPTS.map((p, i) => (
+              {prompts.map((p, i) => (
                 <motion.button
                   key={p}
                   initial={{ opacity: 0, y: 10 }}
@@ -290,7 +292,7 @@ export default function AssistantChat() {
                 />
               ))}
             </span>
-            <span className="telemetry">Reading sensor field…</span>
+            <span className="telemetry">{dict.assistant.reading}</span>
           </motion.div>
         )}
       </div>
@@ -306,14 +308,14 @@ export default function AssistantChat() {
         <input
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          placeholder="Ask about any city, risk, or metric…"
-          aria-label="Message the environmental analyst"
+          placeholder={dict.assistant.placeholder}
+          aria-label={dict.assistant.messageAria}
           className="flex-1 bg-transparent outline-none text-[14px] placeholder:text-ink-faint py-2.5"
         />
         <button
           type="submit"
           disabled={!input.trim()}
-          aria-label="Send"
+          aria-label={dict.assistant.sendAria}
           className="grid place-items-center w-10 h-10 rounded-xl bg-emerald text-abyss disabled:opacity-30 disabled:cursor-not-allowed transition-all duration-300 hover:shadow-[0_0_24px_rgba(45,226,166,0.4)]"
         >
           <svg viewBox="0 0 16 16" className="w-4 h-4" fill="none" aria-hidden>
@@ -328,7 +330,7 @@ export default function AssistantChat() {
         </button>
       </form>
       <p className="telemetry !text-[9px] text-center mt-3 !tracking-[0.18em]">
-        Analysis grounded in network telemetry · not a substitute for official advisories
+        {dict.assistant.disclaimer}
       </p>
     </div>
   );

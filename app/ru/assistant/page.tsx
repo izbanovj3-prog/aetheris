@@ -3,18 +3,18 @@ import { Suspense } from "react";
 import AssistantChat from "@/components/assistant/AssistantChat";
 import { getDict, hreflangAlternates } from "@/lib/i18n";
 
-const dict = getDict("en");
+const dict = getDict("ru");
 
 export const metadata: Metadata = {
   title: dict.meta.assistantTitle,
   description: dict.meta.assistantDescription,
   alternates: {
-    canonical: "/assistant/",
+    canonical: "/ru/assistant/",
     languages: hreflangAlternates("/assistant/"),
   },
 };
 
-export default function AssistantPage() {
+export default function AssistantPageRu() {
   return (
     <main className="flex-1">
       <Suspense

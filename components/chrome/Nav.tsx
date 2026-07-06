@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { LOCALES, localePrefix, switchPath, type Locale } from "@/lib/i18n";
+import { LOCALES, localePath, localePrefix, switchPath, type Locale } from "@/lib/i18n";
 import { useDict, useLocale } from "@/lib/useLocale";
 
 const LINKS = [
@@ -87,11 +87,12 @@ export function Nav() {
 
         <div className="hidden md:flex items-center gap-1 mx-auto">
           {LINKS.map((l) => {
-            const active = pathname.startsWith(l.href);
+            const href = localePath(l.href, locale);
+            const active = pathname.startsWith(href);
             return (
               <Link
                 key={l.href}
-                href={l.href}
+                href={href}
                 className={`relative px-3.5 py-1.5 rounded-lg text-[13px] font-medium transition-colors duration-300 ${
                   active
                     ? "text-ink"
@@ -146,19 +147,22 @@ export function Nav() {
             transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
             className="md:hidden absolute top-[72px] inset-x-4 glass-bright panel-glow rounded-2xl p-3 flex flex-col gap-1"
           >
-            {LINKS.map((l) => (
-              <Link
-                key={l.href}
-                href={l.href}
-                className={`px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
-                  pathname.startsWith(l.href)
-                    ? "bg-carbon-3 text-ink border border-line-bright"
-                    : "text-ink-dim"
-                }`}
-              >
-                {dict.nav[l.key]}
-              </Link>
-            ))}
+            {LINKS.map((l) => {
+              const href = localePath(l.href, locale);
+              return (
+                <Link
+                  key={l.href}
+                  href={href}
+                  className={`px-4 py-3 rounded-xl text-sm font-medium transition-colors ${
+                    pathname.startsWith(href)
+                      ? "bg-carbon-3 text-ink border border-line-bright"
+                      : "text-ink-dim"
+                  }`}
+                >
+                  {dict.nav[l.key]}
+                </Link>
+              );
+            })}
             <div className="flex items-center justify-between gap-2 px-4 pt-2 pb-1 border-t border-line mt-1">
               <span className="flex items-center gap-2">
                 <span className="dot-live" />

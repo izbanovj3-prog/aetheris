@@ -34,6 +34,7 @@ export function localeFromPathname(pathname: string): Locale {
 const LOCALIZED_ROOTS = [
   /^\/$/,
   /^\/city\//,
+  /^\/assistant(\/|$)/,
   /^\/methodology(\/|$)/,
   /^\/data-sources(\/|$)/,
   /^\/sensor-network(\/|$)/,
@@ -220,6 +221,16 @@ export interface Dict {
     reasoning: string;
     demoUser: string;
     demoAi: string;
+    // full chat page
+    grounded: string;
+    online: string;
+    emptyTitle: string;
+    emptyLede: string;
+    reading: string;
+    placeholder: string;
+    sendAria: string;
+    messageAria: string;
+    disclaimer: string;
   };
   community: {
     tag: string;
@@ -284,6 +295,8 @@ export interface Dict {
     homeDescription: string;
     cityTitle: (city: string) => string;
     cityDescription: (city: string, region: string) => string;
+    assistantTitle: string;
+    assistantDescription: string;
   };
 }
 
@@ -368,6 +381,17 @@ const en: Dict = {
     demoUser: "Risk outlook for Almaty?",
     demoAi:
       "Composite environmental risk for Almaty sits at 57/100 — driven by winter inversions that trap traffic and heating emissions in the mountain basin. PM2.5 episodes are projected to intensify through the cold season…",
+    grounded: "Grounded in live network · 28 cities · Kazakhstan",
+    online: "Online",
+    emptyTitle: "Ask the network anything.",
+    emptyLede:
+      "I analyze live environmental telemetry across Kazakhstan — air, water, industry, biodiversity, and ecological risk — and answer with sources.",
+    reading: "Reading sensor field…",
+    placeholder: "Ask about any city, risk, or metric…",
+    sendAria: "Send",
+    messageAria: "Message the environmental analyst",
+    disclaimer:
+      "Analysis grounded in network telemetry · not a substitute for official advisories",
   },
   community: {
     tag: "Ground truth network",
@@ -455,6 +479,9 @@ const en: Dict = {
     cityTitle: (city) => `${city} air quality`,
     cityDescription: (city, region) =>
       `Live air quality in ${city}, ${region} — AQI, PM2.5, NO₂ and health guidance, plus modeled water, biodiversity and industrial-load indices.`,
+    assistantTitle: "AI Assistant",
+    assistantDescription:
+      "Converse with the Aetheris environmental analyst — live briefings, risk outlooks and metric explainers for every monitored city in Kazakhstan.",
   },
 };
 
@@ -539,6 +566,17 @@ const ru: Dict = {
     demoUser: "Прогноз рисков для Алматы?",
     demoAi:
       "Совокупный экологический риск Алматы — 57/100: зимние инверсии запирают выбросы транспорта и отопления в горной котловине. Эпизоды PM2.5 будут усиливаться в холодный сезон…",
+    grounded: "На базе живой сети · 28 городов · Казахстан",
+    online: "Онлайн",
+    emptyTitle: "Спросите сеть о чём угодно.",
+    emptyLede:
+      "Я анализирую живую экологическую телеметрию по Казахстану — воздух, воду, промышленность, биоразнообразие и экологический риск — и отвечаю со ссылками на источники.",
+    reading: "Читаю поле сенсоров…",
+    placeholder: "Спросите о городе, риске или показателе…",
+    sendAria: "Отправить",
+    messageAria: "Написать экологическому аналитику",
+    disclaimer:
+      "Анализ на основе телеметрии сети · не заменяет официальные предупреждения",
   },
   community: {
     tag: "Сеть наземной проверки",
@@ -626,6 +664,9 @@ const ru: Dict = {
     cityTitle: (city) => `Качество воздуха — ${city}`,
     cityDescription: (city, region) =>
       `Живое качество воздуха: ${city}, ${region} — AQI, PM2.5, NO₂ и рекомендации для здоровья, плюс модельные индексы воды, биоразнообразия и промышленной нагрузки.`,
+    assistantTitle: "ИИ-ассистент",
+    assistantDescription:
+      "Диалог с экологическим аналитиком Aetheris — живые сводки, прогнозы рисков и объяснения показателей для каждого города Казахстана под наблюдением.",
   },
 };
 
@@ -710,6 +751,17 @@ const kk: Dict = {
     demoUser: "Алматы бойынша тәуекел болжамы?",
     demoAi:
       "Алматының жиынтық экологиялық тәуекелі — 57/100: қысқы инверсиялар көлік пен жылыту шығарындыларын тау қазаншұңқырында ұстап қалады. PM2.5 эпизодтары суық маусымда күшейе түседі…",
+    grounded: "Тірі желі негізінде · 28 қала · Қазақстан",
+    online: "Онлайн",
+    emptyTitle: "Желіден кез келгенін сұраңыз.",
+    emptyLede:
+      "Мен Қазақстан бойынша тірі экологиялық телеметрияны талдаймын — ауа, су, өнеркәсіп, биоалуантүрлілік және экологиялық тәуекел — және дереккөздермен жауап беремін.",
+    reading: "Сенсор өрісін оқып жатырмын…",
+    placeholder: "Қала, тәуекел немесе көрсеткіш туралы сұраңыз…",
+    sendAria: "Жіберу",
+    messageAria: "Экологиялық аналитикке жазу",
+    disclaimer:
+      "Талдау желі телеметриясына негізделген · ресми ескертулерді алмастырмайды",
   },
   community: {
     tag: "Жердегі растау желісі",
@@ -797,6 +849,9 @@ const kk: Dict = {
     cityTitle: (city) => `${city} — ауа сапасы`,
     cityDescription: (city, region) =>
       `${city} (${region}) бойынша тірі ауа сапасы — AQI, PM2.5, NO₂ және денсаулық ұсыныстары, қоса модельдік су, биоалуантүрлілік және өнеркәсіп индекстері.`,
+    assistantTitle: "ЖИ-ассистент",
+    assistantDescription:
+      "Aetheris экологиялық аналитигімен диалог — Қазақстанның бақылаудағы әр қаласы бойынша тірі сводкалар, тәуекел болжамдары және көрсеткіш түсіндірмелері.",
   },
 };
 

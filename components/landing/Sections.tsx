@@ -26,6 +26,7 @@ import {
   cityName,
   getDict,
   hotspotName,
+  localePath,
   numberLocale,
   type Locale,
 } from "@/lib/i18n";
@@ -256,6 +257,7 @@ export function AtlasShowcase() {
 
 export function AssistantPreview() {
   const dict = useDict();
+  const locale = useLocale();
   const DEMO_EXCHANGE = [
     { role: "user", text: dict.assistant.demoUser },
     { role: "ai", text: dict.assistant.demoAi },
@@ -327,7 +329,7 @@ export function AssistantPreview() {
             lede={dict.assistant.lede}
           />
           <Reveal index={3}>
-            <GlowButton href="/assistant" variant="ghost">
+            <GlowButton href={localePath("/assistant", locale)} variant="ghost">
               {dict.assistant.cta}
             </GlowButton>
           </Reveal>
@@ -394,6 +396,7 @@ export function CommunityStrip() {
 
 export function FinalCta() {
   const dict = useDict();
+  const locale = useLocale();
   return (
     <section className="relative max-w-4xl mx-auto px-6 pt-36 pb-10 text-center">
       <div
@@ -417,7 +420,7 @@ export function FinalCta() {
       />
       <Reveal index={3} className="flex justify-center gap-4 mt-10 flex-wrap">
         <GlowButton href="/map">{dict.finalCta.ctaAtlas}</GlowButton>
-        <GlowButton href="/assistant" variant="ghost">
+        <GlowButton href={localePath("/assistant", locale)} variant="ghost">
           {dict.finalCta.ctaAssistant}
         </GlowButton>
       </Reveal>
