@@ -30,14 +30,34 @@ export function localeFromPathname(pathname: string): Locale {
   return "en";
 }
 
-/** Only these path roots exist in every locale tree. */
-const LOCALIZED_ROOTS = [/^\/$/, /^\/city\//];
+/** Path roots that exist in every locale tree (EN root + /ru + /kk). */
+const LOCALIZED_ROOTS = [
+  /^\/$/,
+  /^\/city\//,
+  /^\/methodology(\/|$)/,
+  /^\/data-sources(\/|$)/,
+  /^\/sensor-network(\/|$)/,
+  /^\/mission(\/|$)/,
+  /^\/press(\/|$)/,
+  /^\/contact(\/|$)/,
+];
+
+export function isLocalized(path: string): boolean {
+  return LOCALIZED_ROOTS.some((r) => r.test(path));
+}
+
+/** Prefix an internal link with the active locale, but only for paths that
+ *  actually exist in that locale tree — untranslated routes (map, dashboard,
+ *  assistant, community) stay at their EN root. */
+export function localePath(path: string, locale: Locale): string {
+  if (locale === "en" || !isLocalized(path)) return path;
+  return `${localePrefix(locale)}${path}`;
+}
 
 /** Where the language switcher should send the user from `pathname`. */
 export function switchPath(pathname: string, target: Locale): string {
   const base = pathname.replace(/^\/(ru|kk)(?=\/|$)/, "") || "/";
-  const localized = LOCALIZED_ROOTS.some((r) => r.test(base));
-  const to = localized ? base : "/";
+  const to = isLocalized(base) ? base : "/";
   return `${localePrefix(target)}${to}` || "/";
 }
 

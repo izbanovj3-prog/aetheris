@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { SourceNote } from "@/components/ui/primitives";
 import { networkStats } from "@/lib/data";
-import { useDict } from "@/lib/useLocale";
+import { localePath } from "@/lib/i18n";
+import { useDict, useLocale } from "@/lib/useLocale";
 
 export function Footer() {
   const dict = useDict();
+  const locale = useLocale();
 
   const columns = [
     {
@@ -69,7 +71,7 @@ export function Footer() {
             {col.links.map((l) => (
               <Link
                 key={l.href}
-                href={l.href}
+                href={localePath(l.href, locale)}
                 className="text-sm text-ink-dim hover:text-emerald transition-colors duration-300 w-fit link-sweep"
               >
                 {l.label}

@@ -4,18 +4,18 @@ import { SensorNetworkContent } from "@/components/pages/StaticPages";
 import { getPageContent } from "@/lib/content";
 import { hreflangAlternates } from "@/lib/i18n";
 
-const c = getPageContent("en");
+const c = getPageContent("ru");
 
 export const metadata: Metadata = {
   title: c.sensorNetwork.metaTitle,
   description: c.sensorNetwork.metaDescription,
   alternates: {
-    canonical: "/sensor-network/",
+    canonical: "/ru/sensor-network/",
     languages: hreflangAlternates("/sensor-network/"),
   },
 };
 
-export default function SensorNetworkPage() {
+export default function SensorNetworkPageRu() {
   return (
     <main className="flex-1">
       <SensorNetworkContent />

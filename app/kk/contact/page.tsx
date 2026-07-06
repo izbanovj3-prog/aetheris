@@ -1,24 +1,24 @@
 import type { Metadata } from "next";
 import { Footer } from "@/components/chrome/Footer";
-import { PressContent } from "@/components/pages/StaticPages";
+import { ContactContent } from "@/components/pages/StaticPages";
 import { getPageContent } from "@/lib/content";
 import { hreflangAlternates } from "@/lib/i18n";
 
-const c = getPageContent("en");
+const c = getPageContent("kk");
 
 export const metadata: Metadata = {
-  title: c.press.metaTitle,
-  description: c.press.metaDescription,
+  title: c.contact.metaTitle,
+  description: c.contact.metaDescription,
   alternates: {
-    canonical: "/press/",
-    languages: hreflangAlternates("/press/"),
+    canonical: "/kk/contact/",
+    languages: hreflangAlternates("/contact/"),
   },
 };
 
-export default function PressPage() {
+export default function ContactPageKk() {
   return (
     <main className="flex-1">
-      <PressContent />
+      <ContactContent />
       <Footer />
     </main>
   );
