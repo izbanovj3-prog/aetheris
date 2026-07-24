@@ -33,6 +33,7 @@ export function Footer() {
       links: [
         { label: dict.footer.mission, href: "/mission" },
         { label: dict.footer.press, href: "/press" },
+        { label: "Oxford Challenge 2026", href: "/oxford-challenge" },
         { label: dict.footer.contact, href: "/contact" },
       ],
     },
