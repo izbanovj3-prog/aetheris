@@ -2,10 +2,9 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { motion, useReducedMotion } from "framer-motion";
+import { useReducedMotion } from "framer-motion";
 import { nearestCityForHotspot } from "@/lib/brief";
 import {
-  EASE,
   GlassCard,
   OriginBadge,
   Reveal,
@@ -104,16 +103,12 @@ function AreaChart({
           />
         ))}
         <path d={`${d} L${x(series.length - 1)},${H} L${x(0)},${H} Z`} fill={`url(#${gid})`} />
-        <motion.path
-          d={d}
-          fill="none"
-          stroke={color}
-          strokeWidth="1.8"
-          initial={{ pathLength: 0 }}
-          whileInView={{ pathLength: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 2, ease: "easeOut" }}
-        />
+        {/* Drawn in full, not animated from pathLength 0. The line IS the
+            data: an entrance animation that grows it from nothing renders
+            an empty chart in any capture that never scrolls — print, a
+            screenshot, a reader with JS off. The card still animates in
+            via its parent Reveal; the reading inside it does not. */}
+        <path d={d} fill="none" stroke={color} strokeWidth="1.8" />
         {hoverIdx !== null && (
           <g>
             <line
@@ -158,7 +153,10 @@ function RadialGauge({ value, label }: { value: number; label: string }) {
     <div className="relative flex flex-col items-center">
       <svg viewBox="0 0 160 160" className="w-44 h-44 -rotate-90">
         <circle cx="80" cy="80" r={R} fill="none" stroke="rgba(140,180,192,0.1)" strokeWidth="7" />
-        <motion.circle
+        {/* Arc length encodes the score, so it is rendered at its true
+            value rather than swept up from empty — a gauge caught at
+            strokeDashoffset C reads as a sustainability of zero. */}
+        <circle
           cx="80"
           cy="80"
           r={R}
@@ -167,10 +165,7 @@ function RadialGauge({ value, label }: { value: number; label: string }) {
           strokeWidth="7"
           strokeLinecap="round"
           strokeDasharray={C}
-          initial={{ strokeDashoffset: C }}
-          whileInView={{ strokeDashoffset: C * (1 - value / 100) }}
-          viewport={{ once: true }}
-          transition={{ duration: 1.8, ease: EASE, delay: 0.3 }}
+          strokeDashoffset={C * (1 - value / 100)}
           style={{ filter: `drop-shadow(0 0 8px ${color}66)` }}
         />
       </svg>
@@ -215,13 +210,15 @@ function CityBars({
             <div key={it.name} className="grid grid-cols-[90px_1fr_44px] items-center gap-3">
               <span className="text-[12px] text-ink-dim truncate">{it.name}</span>
               <div className="h-1.5 rounded-full bg-carbon-3 overflow-hidden">
-                <motion.div
-                  initial={{ width: 0 }}
-                  whileInView={{ width: `${(it.v / max) * 100}%` }}
-                  viewport={{ once: true }}
-                  transition={{ duration: 1, ease: EASE, delay: i * 0.07 }}
+                {/* Width encodes the ranking value — rendered directly, not
+                    grown from 0, so an unscrolled capture shows the real
+                    bars rather than an empty chart. */}
+                <div
                   className="h-full rounded-full"
-                  style={{ background: `linear-gradient(90deg, ${color}77, ${color})` }}
+                  style={{
+                    width: `${(it.v / max) * 100}%`,
+                    background: `linear-gradient(90deg, ${color}77, ${color})`,
+                  }}
                 />
               </div>
               <span className="readout text-xs text-right" style={{ color }}>

@@ -235,12 +235,12 @@ function MissionCard({ m, index }: { m: Mission; index: number }) {
               </span>
             </div>
             <div className="h-1 rounded-full bg-carbon-3 overflow-hidden">
-              <motion.div
-                initial={{ width: 0 }}
-                whileInView={{ width: `${pct}%` }}
-                viewport={{ once: true }}
-                transition={{ duration: 1, ease: EASE }}
+              {/* Width encodes progress, so it renders at its value instead
+                  of growing from 0 — the bar must agree with the "3/5"
+                  readout above it in a screenshot, not show empty. */}
+              <div
                 className="h-full rounded-full bg-gradient-to-r from-cyan/70 to-emerald"
+                style={{ width: `${pct}%` }}
               />
             </div>
           </>
