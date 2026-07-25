@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   EASE,
   GlassCard,
   Reveal,
+  SourceNote,
   TelemetryTag,
 } from "@/components/ui/primitives";
 import {
@@ -36,6 +37,39 @@ const TONE_CHIP: Record<Tone, string> = {
   atmos: "text-atmos border-atmos/30 bg-atmos/[0.06]",
 };
 
+/* ── Sample-data disclosure ───────────────────────────────────
+   Aetheris has no accounts, no auth and no backend: the profile block,
+   the gamification rail and the seeded feed below are a mockup of the
+   design, not a record of anyone's activity. Everything on this page is
+   labelled accordingly, and every headline figure is derived from
+   SEED_REPORTS so it can't drift from the pilot totals quoted on
+   /oxford-challenge.
+   ───────────────────────────────────────────────────────────── */
+
+/** Real totals of the seeded pilot feed — never hand-typed. */
+const PILOT = {
+  reports: SEED_REPORTS.length,
+  contributors: new Set(SEED_REPORTS.map((r) => r.author)).size,
+  verified: SEED_REPORTS.filter((r) => r.status === "verified").length,
+  upvotes: SEED_REPORTS.reduce((a, r) => a + r.upvotes, 0),
+};
+
+/** Points shown on the sample profile: upvotes earned by the pilot's
+ *  verified reports. Derived, so it stays proportional to the feed. */
+const SAMPLE_POINTS = SEED_REPORTS.filter((r) => r.status === "verified").reduce(
+  (a, r) => a + r.upvotes,
+  0,
+);
+
+function SampleTag({ note, children }: { note: string; children: ReactNode }) {
+  return (
+    <span className="inline-flex items-center gap-1.5">
+      <TelemetryTag tone="amber">{children}</TelemetryTag>
+      <SourceNote source={note} />
+    </span>
+  );
+}
+
 /* ── Missions / achievements / events (static) ──────────────── */
 
 interface Mission {
@@ -54,12 +88,15 @@ const MISSIONS: Mission[] = [
   { id: "m3", title: "Night Sky Audit", desc: "Submit 3 light-pollution measurements after 23:00.", reward: 280, progress: 1, total: 3, joined: true },
 ];
 
+// Only badges the seeded pilot could actually have earned are shown unlocked.
+// "Field Naturalist — 25 species logged" and "Stream Keeper — 10 water samples"
+// used to render as unlocked, which a 6-report feed cannot support.
 const ACHIEVEMENTS = [
   { icon: "◬", name: "First Signal", desc: "First verified report", unlocked: true },
-  { icon: "❋", name: "Field Naturalist", desc: "25 species logged", unlocked: true },
-  { icon: "◈", name: "Stream Keeper", desc: "10 water samples", unlocked: true },
+  { icon: "❋", name: "Field Naturalist", desc: "25 species logged", unlocked: false },
+  { icon: "◈", name: "Stream Keeper", desc: "10 water samples", unlocked: false },
   { icon: "⬡", name: "Sentinel", desc: "100 verified reports", unlocked: false },
-  { icon: "✦", name: "Constellation", desc: "Reports on 3 continents", unlocked: false },
+  { icon: "✦", name: "Constellation", desc: "Reports from 3 regions", unlocked: false },
   { icon: "◉", name: "Ground Truth", desc: "Sensor-confirmed ×50", unlocked: false },
 ];
 
@@ -282,22 +319,35 @@ export default function Community() {
           </Reveal>
         </div>
         <Reveal index={2}>
-          <GlassCard bright className="px-6 py-4 flex items-center gap-6">
-            <div>
-              <div className="telemetry mb-1">Your points</div>
-              <div className="readout text-2xl text-emerald">2,840</div>
-            </div>
-            <div className="w-px h-10 bg-line-bright" />
-            <div>
-              <div className="telemetry mb-1">Rank</div>
-              <div className="font-[family-name:var(--font-syne)] font-bold text-lg">
-                Sentinel II
+          {/* Not "your" anything — there are no accounts. This is a mockup of
+              the contributor profile, scaled to the pilot feed: points are the
+              upvotes on its verified reports, and the verified count is the
+              pilot's actual one. Previously read 2,840 / Sentinel II / 38,
+              which contradicted the 6-report pilot stated on /oxford-challenge
+              and the locked "Sentinel — 100 verified reports" badge below. */}
+          <GlassCard bright className="px-6 py-4 flex flex-col gap-3">
+            <SampleTag
+              note={`Illustrative contributor profile — Aetheris has no accounts or logins. Figures are derived from the ${PILOT.reports}-report seeded pilot feed, not from any real user's activity.`}
+            >
+              Sample profile · illustrative
+            </SampleTag>
+            <div className="flex items-center gap-6">
+              <div>
+                <div className="telemetry mb-1">Points</div>
+                <div className="readout text-2xl text-emerald">{SAMPLE_POINTS}</div>
               </div>
-            </div>
-            <div className="w-px h-10 bg-line-bright hidden sm:block" />
-            <div className="hidden sm:block">
-              <div className="telemetry mb-1">Verified reports</div>
-              <div className="readout text-2xl text-cyan">38</div>
+              <div className="w-px h-10 bg-line-bright" />
+              <div>
+                <div className="telemetry mb-1">Rank</div>
+                <div className="font-[family-name:var(--font-syne)] font-bold text-lg">
+                  Observer I
+                </div>
+              </div>
+              <div className="w-px h-10 bg-line-bright hidden sm:block" />
+              <div className="hidden sm:block">
+                <div className="telemetry mb-1">Verified reports</div>
+                <div className="readout text-2xl text-cyan">{PILOT.verified}</div>
+              </div>
             </div>
           </GlassCard>
         </Reveal>
@@ -307,10 +357,20 @@ export default function Community() {
         {/* feed */}
         <div className="flex flex-col gap-5">
           <Reveal>
-            <div className="flex items-center justify-between">
-              <h2 className="font-[family-name:var(--font-syne)] font-bold text-xl">
-                Field reports
-              </h2>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-3">
+                <h2 className="font-[family-name:var(--font-syne)] font-bold text-xl">
+                  Field reports
+                </h2>
+                {/* The seeded entries are written examples, not submissions
+                    from real people. Anything you post yourself IS real — it
+                    just lives in this browser's localStorage, no backend. */}
+                <SampleTag
+                  note={`Seeded sample data — ${PILOT.reports} illustrative reports from ${PILOT.contributors} example contributors, written to demonstrate the feed. Not real submissions. Reports you file yourself are real but persist only to this browser (localStorage); there is no backend yet.`}
+                >
+                  Sample data · {PILOT.reports} seeded reports
+                </SampleTag>
+              </div>
               <button
                 type="button"
                 onClick={() => setModalOpen(true)}
@@ -346,9 +406,14 @@ export default function Community() {
         <div className="flex flex-col gap-8 lg:sticky lg:top-24">
           <div>
             <Reveal>
-              <h2 className="font-[family-name:var(--font-syne)] font-bold text-xl mb-4">
-                Active missions
-              </h2>
+              <div className="flex flex-wrap items-center gap-2.5 mb-4">
+                <h2 className="font-[family-name:var(--font-syne)] font-bold text-xl">
+                  Active missions
+                </h2>
+                <SampleTag note="Illustrative mission designs with example progress — no mission system is running yet, and the progress shown is not anyone's.">
+                  Sample data
+                </SampleTag>
+              </div>
             </Reveal>
             <div className="flex flex-col gap-3.5">
               {MISSIONS.map((m, i) => (
@@ -359,9 +424,16 @@ export default function Community() {
 
           <div>
             <Reveal>
-              <h2 className="font-[family-name:var(--font-syne)] font-bold text-xl mb-4">
-                Achievements
-              </h2>
+              <div className="flex flex-wrap items-center gap-2.5 mb-4">
+                <h2 className="font-[family-name:var(--font-syne)] font-bold text-xl">
+                  Achievements
+                </h2>
+                <SampleTag
+                  note={`Illustrative badge set. Only "First Signal" shows as earned, consistent with the ${PILOT.verified} verified reports in the seeded pilot feed.`}
+                >
+                  Sample data
+                </SampleTag>
+              </div>
             </Reveal>
             <Reveal index={1}>
               <GlassCard className="p-4 grid grid-cols-3 gap-2.5">
@@ -387,9 +459,14 @@ export default function Community() {
 
           <div>
             <Reveal>
-              <h2 className="font-[family-name:var(--font-syne)] font-bold text-xl mb-4">
-                Local eco-events
-              </h2>
+              <div className="flex flex-wrap items-center gap-2.5 mb-4">
+                <h2 className="font-[family-name:var(--font-syne)] font-bold text-xl">
+                  Local eco-events
+                </h2>
+                <SampleTag note="Example events with illustrative attendee counts — these are not scheduled gatherings and there is no sign-up behind them.">
+                  Sample data
+                </SampleTag>
+              </div>
             </Reveal>
             <div className="flex flex-col gap-3">
               {EVENTS.map((e, i) => (
