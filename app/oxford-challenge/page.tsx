@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/primitives";
 import { LAYERS, LAYER_ORIGIN, networkStats, type LayerKey } from "@/lib/data";
 import { SEED_REPORTS } from "@/lib/reports";
+import { SITE } from "@/lib/site";
 
 /* ─────────────────────────────────────────────────────────────
    AETHERIS · Oxford Saïd Global Climate Tech Challenge 2026
@@ -22,12 +23,32 @@ import { SEED_REPORTS } from "@/lib/reports";
    Reached only via a single footer link (Company column).
    ───────────────────────────────────────────────────────────── */
 
+const OG_TITLE = "Aral Sea Early Warning — Water Crisis Intelligence";
+const OG_DESCRIPTION =
+  "Kazakhstan's Aral basin reads critical on every water measure — Aralsk WQI 20, Kyzylorda 32, Zhanaozen 38. Aetheris turns its Water Quality layer into an early-warning system for the communities of the Priaralye.";
+
 export const metadata: Metadata = {
-  title: "Aral Sea Early Warning — Water Crisis Intelligence",
+  title: OG_TITLE,
   description:
     "How Aetheris's Water Quality layer turns into an early-warning system for the Aral Sea basin water crisis. Submitted to the Oxford Saïd Global Climate Tech Challenge 2026.",
   // Standalone page — self-canonical, no locale variants (EN only).
   alternates: { canonical: "/oxford-challenge/" },
+  // Without these the route inherits the homepage's OG copy from the root
+  // layout, so every share of this page read "Kazakhstan Environmental
+  // Intelligence" instead of the Aral Sea story.
+  openGraph: {
+    type: "article",
+    siteName: SITE.name,
+    title: OG_TITLE,
+    description: OG_DESCRIPTION,
+    url: `${SITE.url}/oxford-challenge/`,
+    locale: SITE.locale,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: OG_TITLE,
+    description: OG_DESCRIPTION,
+  },
 };
 
 // Aral Sea basin — Water Quality Index reference figures. WQI is 0–100,
@@ -57,6 +78,8 @@ const PILOT_CONTRIBUTORS = new Set(SEED_REPORTS.map((r) => r.author)).size;
 
 // Submission team. Names are transliterated to Latin for this English-language
 // page (Жанболат Избанов, Александр Токарев, Инсар Туртаев).
+// TODO: add each member's role alongside their name before submission —
+// deliberately left blank rather than guessed.
 const TEAM = ["Zhanbolat Izbanov", "Alexander Tokarev", "Insar Turtaev"];
 const TEAM_LINE = `${TEAM.slice(0, -1).join(", ")} and ${TEAM[TEAM.length - 1]}`;
 

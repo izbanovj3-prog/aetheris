@@ -45,6 +45,10 @@ export interface PageContent {
     title: string;
     lede: string;
     paragraphs: string[];
+    /** How the project pays for itself — short, and explicit that it is
+     *  the intended model rather than reported traction. */
+    sustainTitle: string;
+    sustainParagraphs: string[];
   };
   press: {
     metaTitle: string;
@@ -154,6 +158,13 @@ const en: PageContent = {
       "Kazakhstan carries some of the world's most consequential environmental stories — the Aral Sea, the Semipalatinsk Polygon, industrial corridors like Temirtau and Ekibastuz — yet the data describing them has lived scattered across agencies, formats and paywalls. Aetheris exists to close that gap: one living model of the country's air, water, industry and ecology that anyone can open.",
       "We build for three audiences at once. Scientists get traceable indices and honest uncertainty. Cities get decision-grade risk signals. Citizens get a map that tells them, plainly, what they are breathing today — and a way to report what the sensors can't see.",
       "Everything we publish aims to be verifiable: measured where a source exists, clearly labeled as modeled where one doesn't yet.",
+    ],
+    sustainTitle: "How this sustains itself",
+    sustainParagraphs: [
+      "The public map, the city pages, the action briefs and the assistant stay free for citizens. The people most exposed to these conditions are generally the least able to pay for information about them, and a paywalled environmental map is a contradiction in terms.",
+      "Revenue is intended to come from the tier above that: licensed dashboard seats and API access for municipal environmental departments, industrial operators working under monitoring obligations, and research groups that need bulk historical series rather than a live view.",
+      "In the near term the funding path is grant and institutional: oblast environmental programmes and international basin-restoration funds already procure monitoring of exactly this kind, and that is what carries the build-out of real water and industrial sensing.",
+      "To be explicit: Aetheris has no paying customers today. This is the model we are building toward, not traction we are reporting.",
     ],
   },
   press: {
@@ -288,6 +299,13 @@ const ru: PageContent = {
       "Мы строим сразу для трёх аудиторий. Учёные получают прослеживаемые индексы и честную неопределённость. Города — сигналы риска уровня принятия решений. Граждане — карту, которая прямо говорит, чем они дышат сегодня, и способ сообщить о том, чего не видят сенсоры.",
       "Всё, что мы публикуем, стремится быть проверяемым: измерено там, где источник есть, и явно помечено как модельное там, где источника пока нет.",
     ],
+    sustainTitle: "На что это существует",
+    sustainParagraphs: [
+      "Публичная карта, страницы городов, планы действий и ассистент остаются бесплатными для граждан. Те, кто сильнее всего подвержен этим условиям, как правило, меньше всего способны платить за информацию о них, а экологическая карта за платной стеной — противоречие сама по себе.",
+      "Доход предполагается с уровня выше: лицензионные места в дашборде и доступ к API для городских управлений экологии, промышленных операторов с обязательствами по мониторингу и исследовательских групп, которым нужны массивы исторических рядов, а не живая картинка.",
+      "В ближайшей перспективе путь финансирования — гранты и институциональные средства: областные экологические программы и международные фонды восстановления бассейнов уже закупают мониторинг ровно такого типа, и именно это оплачивает разворачивание реальных датчиков воды и промышленных выбросов.",
+      "Прямо и без прикрас: платящих клиентов у Aetheris сегодня нет. Это модель, к которой мы идём, а не результаты, о которых мы отчитываемся.",
+    ],
   },
   press: {
     metaTitle: "Пресс-кит",
@@ -420,6 +438,13 @@ const kk: PageContent = {
       "Қазақстан әлемдегі ең маңызды экологиялық оқиғалардың бірін сақтайды — Арал теңізі, Семей полигоны, Теміртау мен Екібастұз секілді өнеркәсіп дәліздері — бірақ ол туралы деректер ведомстволар, форматтар мен ақылы қолжетімділік арасында шашырап жатты. Aetheris осы алшақтықты жою үшін бар: елдің ауасы, суы, өнеркәсібі мен экологиясының кез келген адам аша алатын бір тірі моделі.",
       "Біз бірден үш аудиторияға құрамыз. Ғалымдар бақыланатын индекстер мен адал белгісіздік алады. Қалалар — шешім қабылдау деңгейіндегі тәуекел сигналдарын. Азаматтар — бүгін немен тыныс алатынын анық айтатын картаны және сенсорлар көрмейтінін хабарлау мүмкіндігін.",
       "Біз жариялайтын барлық нәрсе тексерілетін болуға тырысады: дереккөз бар жерде өлшенген, әлі жоқ жерде анық модельдік деп белгіленген.",
+    ],
+    sustainTitle: "Бұл немен қаржыландырылады",
+    sustainParagraphs: [
+      "Ашық карта, қала беттері, іс-қимыл жоспарлары және ассистент азаматтар үшін тегін болып қала береді. Осы жағдайларға көбірек ұшырайтындар, әдетте, олар туралы ақпаратқа төлеуге ең аз мүмкіндігі барлар, ал ақылы қабырға артындағы экологиялық карта — өз-өзіне қайшылық.",
+      "Табыс одан жоғары деңгейден күтіледі: қалалық экология басқармалары, мониторинг міндеттемелері бар өнеркәсіптік операторлар және тірі көрініс емес, тарихи қатарлар массиві қажет зерттеу топтары үшін лицензияланған дашборд орындары мен API-қолжетімділік.",
+      "Жақын мерзімде қаржыландыру жолы — гранттар мен институционалдық қаражат: облыстық экологиялық бағдарламалар мен бассейндерді қалпына келтірудің халықаралық қорлары дәл осындай мониторингті сатып алады, және нақты су мен өнеркәсіптік сенсорларды орналастыруды осы қаржыландырады.",
+      "Ашық айтамыз: бүгінде Aetheris-те төлейтін клиенттер жоқ. Бұл — біз ұмтылып жатқан модель, есеп беріп отырған нәтиже емес.",
     ],
   },
   press: {

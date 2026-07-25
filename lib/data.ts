@@ -329,6 +329,45 @@ export const LAYERS: Record<
   },
 };
 
+/* ── Climate reference ────────────────────────────────────────
+   The temperature anomaly is the one figure on the site that speaks to
+   climate change rather than day-to-day air quality, so it needs its
+   basis stated wherever it appears rather than floating as a bare
+   number. Baseline period and wording live here so the homepage and the
+   dashboard cannot describe it differently.
+
+   Note the honesty constraint: current temperature IS live (Open-Meteo),
+   but the anomaly is computed against a modeled regional baseline, not
+   a measured station record. It is badged Modeled everywhere. */
+export const CLIMATE_BASELINE = {
+  /** WMO standard reference period for climate normals. */
+  period: "1991–2020",
+  standard: "WMO climate normal",
+  note: "Modeled temperature anomaly against the 1991–2020 WMO climate normal. Current temperatures come from Open-Meteo; the departure from baseline is Aetheris's modeled regional estimate — indicative, not a measured station record.",
+  /** Years of annual means behind the trend indicator. */
+  years: 12,
+} as const;
+
+/**
+ * Annual mean anomaly over the last `years`, so the headline figure can
+ * show a direction of travel instead of a single static number.
+ * Deterministic, and modeled like the anomaly itself.
+ */
+export function anomalyTrend(years: number = CLIMATE_BASELINE.years) {
+  const series = genSeries("anomaly-annual", years, 1.05, 0.16, 0.055);
+  const first = series[0].v;
+  const last = series[series.length - 1].v;
+  const perDecade = ((last - first) / Math.max(1, years - 1)) * 10;
+  return {
+    series,
+    first: Math.round(first * 100) / 100,
+    last: Math.round(last * 100) / 100,
+    /** °C per decade across the modeled window. */
+    perDecade: Math.round(perDecade * 100) / 100,
+    years,
+  };
+}
+
 /* ── Data provenance ──────────────────────────────────────────
    Single source of truth for "is this number measured or modeled?".
    Every surface that renders a value reads its badge from here, so the

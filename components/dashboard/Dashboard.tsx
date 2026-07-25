@@ -1,17 +1,22 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { motion, useReducedMotion } from "framer-motion";
+import { nearestCityForHotspot } from "@/lib/brief";
 import {
   EASE,
   GlassCard,
   OriginBadge,
   Reveal,
+  SourceNote,
   TelemetryTag,
 } from "@/components/ui/primitives";
 import {
+  CLIMATE_BASELINE,
   HOTSPOTS,
   METRIC_ORIGIN,
+  anomalyTrend,
   type Station,
   aqiBand,
   genSeries,
@@ -30,6 +35,10 @@ import {
   statusLabel,
 } from "@/lib/i18n";
 import { useDict, useLocale } from "@/lib/useLocale";
+
+// Modeled annual-mean anomaly trend — deterministic, module-level so the
+// server and client render the same figure.
+const TREND = anomalyTrend();
 
 const TONE = {
   emerald: "text-emerald",
@@ -331,10 +340,17 @@ export default function Dashboard() {
                 <div className="telemetry mb-1 flex items-center gap-2">
                   {dict.dashboard.anomalyTitle}
                   <OriginBadge origin={METRIC_ORIGIN.tempAnomaly} />
+                  <SourceNote source={CLIMATE_BASELINE.note} />
                 </div>
                 <div className="readout text-2xl text-amber">
                   +{sum.meanAnomaly} °C
                   <span className="text-xs text-ink-faint ml-2">{dict.dashboard.vsBaseline}</span>
+                </div>
+                {/* Trend, not just level: the anomaly on its own says
+                    nothing about direction of travel. */}
+                <div className="telemetry !text-[9px] text-amber mt-1">
+                  ▲ +{TREND.perDecade.toFixed(2)} °C/decade over the last{" "}
+                  {TREND.years} modeled years
                 </div>
               </div>
               <span className="telemetry hidden sm:inline">{dict.dashboard.window90}</span>
@@ -436,7 +452,7 @@ export default function Dashboard() {
               <table className="w-full text-left">
                 <thead>
                   <tr className="border-b border-line">
-                    {[dict.dashboard.th.site, dict.dashboard.th.region, dict.dashboard.th.type, dict.dashboard.th.severity, dict.dashboard.th.status].map((h) => (
+                    {[dict.dashboard.th.site, dict.dashboard.th.region, dict.dashboard.th.type, dict.dashboard.th.severity, dict.dashboard.th.status, dict.dashboard.th.action].map((h) => (
                       <th key={h} className="telemetry px-5 py-3.5 font-normal whitespace-nowrap">
                         {h}
                       </th>
@@ -472,6 +488,16 @@ export default function Dashboard() {
                           <span className={`readout text-xs capitalize ${STATUS_TONE[h.status]}`}>
                             {statusLabel(h.status, locale)}
                           </span>
+                        </td>
+                        {/* "Act": jump to the printable brief for whichever city
+                            would actually have to respond to this hotspot. */}
+                        <td className="px-5 py-3.5 whitespace-nowrap">
+                          <Link
+                            href={`/city/${nearestCityForHotspot(h).id}/brief/`}
+                            className="text-xs text-emerald hover:underline"
+                          >
+                            {dict.dashboard.th.action} →
+                          </Link>
                         </td>
                       </tr>
                     ))}

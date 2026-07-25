@@ -122,6 +122,21 @@ export function MissionContent() {
           </p>
         ))}
       </div>
+
+      {/* Business model — judges ask who pays for this and why it does not
+          disappear after the demo, and nothing on the site answered it. */}
+      <div className="mt-16 border-t border-line pt-10 max-w-xl">
+        <h2 className="font-[family-name:var(--font-syne)] font-bold text-2xl mb-6">
+          {c.mission.sustainTitle}
+        </h2>
+        <div className="flex flex-col gap-6">
+          {c.mission.sustainParagraphs.map((p, i) => (
+            <p key={i} className="text-ink-dim leading-relaxed font-light">
+              {p}
+            </p>
+          ))}
+        </div>
+      </div>
     </Shell>
   );
 }

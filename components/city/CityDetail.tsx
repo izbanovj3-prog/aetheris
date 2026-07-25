@@ -129,7 +129,12 @@ export default function CityDetail({ id }: { id: string }) {
       </div>
 
       <div className="flex flex-wrap items-center gap-4 mt-14">
-        <GlowButton href={localePath("/map", locale)}>{dict.city.ctaAtlas(name)}</GlowButton>
+        {/* The "Act" step: a printable, ranked action brief for this city.
+            EN-only route, so it is not run through localePath. */}
+        <GlowButton href={`/city/${s.id}/brief/`}>Generate action brief</GlowButton>
+        <GlowButton href={localePath("/map", locale)} variant="ghost">
+          {dict.city.ctaAtlas(name)}
+        </GlowButton>
         <GlowButton href={localePath("/dashboard", locale)} variant="ghost">
           {dict.city.ctaIntel}
         </GlowButton>

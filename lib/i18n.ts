@@ -368,7 +368,7 @@ export interface Dict {
     aiInsightsMeta: string;
     insights: Array<{ severity: string; title: string; body: string }>;
     hotspotsTitle: string;
-    th: { site: string; region: string; type: string; severity: string; status: string };
+    th: { site: string; region: string; type: string; severity: string; status: string; action: string };
   };
   map: {
     loading: string;
@@ -647,7 +647,7 @@ const en: Dict = {
       },
     ],
     hotspotsTitle: "Environmental hotspots & industrial zones",
-    th: { site: "Site", region: "Region", type: "Type", severity: "Severity", status: "Status" },
+    th: { site: "Site", region: "Region", type: "Type", severity: "Severity", status: "Status", action: "Action brief" },
   },
   map: {
     loading: "Acquiring satellite feed",
@@ -938,7 +938,7 @@ const ru: Dict = {
       },
     ],
     hotspotsTitle: "Экологические горячие точки и промышленные зоны",
-    th: { site: "Объект", region: "Регион", type: "Тип", severity: "Тяжесть", status: "Статус" },
+    th: { site: "Объект", region: "Регион", type: "Тип", severity: "Тяжесть", status: "Статус", action: "План действий" },
   },
   map: {
     loading: "Получение спутникового сигнала",
@@ -1229,7 +1229,7 @@ const kk: Dict = {
       },
     ],
     hotspotsTitle: "Экологиялық ошақтар және өнеркәсіп аймақтары",
-    th: { site: "Нысан", region: "Өңір", type: "Түрі", severity: "Ауырлық", status: "Мәртебе" },
+    th: { site: "Нысан", region: "Өңір", type: "Түрі", severity: "Ауырлық", status: "Мәртебе", action: "Іс-қимыл жоспары" },
   },
   map: {
     loading: "Спутник сигналын алу",

@@ -4,12 +4,21 @@ import dynamic from "next/dynamic";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useMemo, useRef } from "react";
 import { EASE, GlowButton, SourceNote, TelemetryTag } from "@/components/ui/primitives";
-import { HOTSPOTS, networkStats, planetSummary } from "@/lib/data";
+import {
+  CLIMATE_BASELINE,
+  HOTSPOTS,
+  anomalyTrend,
+  networkStats,
+  planetSummary,
+} from "@/lib/data";
 import { localePath, numberLocale } from "@/lib/i18n";
 import { useDict, useLocale } from "@/lib/useLocale";
 import { useLiveStations } from "@/lib/useLiveStations";
 
 const NET = networkStats();
+// Modeled annual-mean trend behind the anomaly chip — deterministic, so
+// the server and client render the same figure.
+const TREND = anomalyTrend();
 
 const Globe = dynamic(() => import("./Globe"), { ssr: false });
 
@@ -95,10 +104,30 @@ export function Hero() {
                   className="ml-1.5 pointer-events-auto"
                 />
               )}
+              {/* The climate figure used to be a bare number. State its
+                  baseline period and that the anomaly is modeled. */}
+              {c.key === "anomaly" && (
+                <SourceNote
+                  source={CLIMATE_BASELINE.note}
+                  className="ml-1.5 pointer-events-auto"
+                />
+              )}
             </div>
             <div className={`readout text-lg font-medium ${c.tone}`}>
               {chipValues[c.key]}
             </div>
+            {/* Direction of travel, not just a level — a single anomaly
+                number says nothing about trend. */}
+            {c.key === "anomaly" && (
+              <div className="flex items-center gap-1.5 mt-1.5">
+                <span className="telemetry !text-[8px] text-ink-faint">
+                  vs {CLIMATE_BASELINE.period}
+                </span>
+                <span className="telemetry !text-[8px] text-amber">
+                  ▲ +{TREND.perDecade.toFixed(2)} °C/decade
+                </span>
+              </div>
+            )}
           </motion.div>
         ))}
       </div>

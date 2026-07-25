@@ -406,6 +406,41 @@ body {
     transform: none !important;
     filter: none !important;
   }
+
+  /* City action briefs are meant to be printed and handed over, so flip
+     the sheet to ink-economical light-on-white and drop the chrome. */
+  .brief-sheet {
+    color: #000;
+    padding-top: 0;
+  }
+  .brief-sheet .glass,
+  .brief-sheet .panel-glow {
+    background: #fff !important;
+    border-color: #bbb !important;
+    box-shadow: none !important;
+  }
+  .brief-sheet .text-ink,
+  .brief-sheet .text-ink-dim,
+  .brief-sheet .readout,
+  .brief-sheet h1,
+  .brief-sheet h2,
+  .brief-sheet h3 {
+    color: #000 !important;
+  }
+  .brief-sheet .text-ink-faint,
+  .brief-sheet .telemetry {
+    color: #444 !important;
+  }
+  .brief-sheet li {
+    break-inside: avoid;
+  }
+  .brief-noprint,
+  body > .atmosphere,
+  body > .gridlines,
+  header,
+  footer {
+    display: none !important;
+  }
 }
 
 /* Reduced-motion users get no whileInView transition worth waiting for —
