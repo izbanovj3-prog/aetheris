@@ -14,10 +14,12 @@ import { AnimatePresence, motion, type Variants } from "framer-motion";
 import {
   HOTSPOTS,
   LAYERS,
+  METRIC_ORIGIN,
   aqiBand,
   genSeries,
   getStations,
   scoreBand,
+  type DataOrigin,
   type LayerKey,
   type Station,
 } from "@/lib/data";
@@ -34,7 +36,7 @@ import {
 } from "@/lib/i18n";
 import { useDict, useLocale } from "@/lib/useLocale";
 import type { Dict } from "@/lib/i18n";
-import { EASE } from "@/components/ui/primitives";
+import { EASE, OriginBadge } from "@/components/ui/primitives";
 import { AtlasBoot } from "./AtlasBoot";
 import { GlobalPulse } from "./GlobalPulse";
 import { LayerLegend } from "./LayerLegend";
@@ -890,17 +892,22 @@ const MetricRow = memo(function MetricRow({
   value,
   max,
   color,
+  origin,
 }: {
   label: string;
   value: number;
   max: number;
   color: string;
+  origin: DataOrigin;
 }) {
   return (
     <div className="flex flex-col gap-1.5">
-      <div className="flex items-baseline justify-between">
-        <span className="text-[12px] text-ink-dim">{label}</span>
-        <span className="readout text-sm" style={{ color }}>{value}</span>
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="text-[12px] text-ink-dim flex items-center gap-1.5 min-w-0">
+          <span className="truncate">{label}</span>
+          <OriginBadge origin={origin} className="shrink-0" />
+        </span>
+        <span className="readout text-sm shrink-0" style={{ color }}>{value}</span>
       </div>
       <div className="h-1 rounded-full bg-carbon-3 overflow-hidden">
         <motion.div
@@ -1039,7 +1046,10 @@ const StationPanel = memo(function StationPanel({
             <span className="readout text-sm">{s.humidity}%</span>
           </div>
           <div className="px-3 py-2.5 flex flex-col gap-0.5">
-            <span className="telemetry !text-[8px]">{dict.map.pollutionIdx}</span>
+            <span className="telemetry !text-[8px] flex items-center gap-1.5">
+              {dict.map.pollutionIdx}
+              <OriginBadge origin={METRIC_ORIGIN.pollutionIndex} />
+            </span>
             <span className="readout text-sm text-amber">{s.pollutionIndex}</span>
           </div>
         </div>
@@ -1050,13 +1060,13 @@ const StationPanel = memo(function StationPanel({
         </div>
 
         <div className="flex flex-col gap-4">
-          <MetricRow label={dict.map.airMetric(aqiBandLabel(air.label, locale))} value={s.aqi} max={300} color={TONE_HEX[air.tone]} />
-          <MetricRow label={dict.map.pm25} value={s.pm25} max={150} color={TONE_HEX.cyan} />
-          <MetricRow label={dict.map.pm10} value={s.pm10} max={250} color={TONE_HEX.cyan} />
-          <MetricRow label={dict.map.industrial} value={s.industrialEmissions} max={100} color={TONE_HEX.coral} />
-          <MetricRow label={dict.map.water} value={s.waterQuality} max={100} color="#4f9dde" />
-          <MetricRow label={dict.map.bio} value={s.biodiversity} max={100} color={TONE_HEX.emerald} />
-          <MetricRow label={dict.map.risk} value={s.climateRisk} max={100} color={TONE_HEX.amber} />
+          <MetricRow label={dict.map.airMetric(aqiBandLabel(air.label, locale))} value={s.aqi} max={300} color={TONE_HEX[air.tone]} origin={METRIC_ORIGIN.aqi} />
+          <MetricRow label={dict.map.pm25} value={s.pm25} max={150} color={TONE_HEX.cyan} origin={METRIC_ORIGIN.pm25} />
+          <MetricRow label={dict.map.pm10} value={s.pm10} max={250} color={TONE_HEX.cyan} origin={METRIC_ORIGIN.pm10} />
+          <MetricRow label={dict.map.industrial} value={s.industrialEmissions} max={100} color={TONE_HEX.coral} origin={METRIC_ORIGIN.industrialEmissions} />
+          <MetricRow label={dict.map.water} value={s.waterQuality} max={100} color="#4f9dde" origin={METRIC_ORIGIN.waterQuality} />
+          <MetricRow label={dict.map.bio} value={s.biodiversity} max={100} color={TONE_HEX.emerald} origin={METRIC_ORIGIN.biodiversity} />
+          <MetricRow label={dict.map.risk} value={s.climateRisk} max={100} color={TONE_HEX.amber} origin={METRIC_ORIGIN.climateRisk} />
         </div>
 
         <div className="glass rounded-xl p-4">

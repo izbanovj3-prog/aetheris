@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { motion, type Variants } from "framer-motion";
 import type { ReactNode } from "react";
+import type { DataOrigin } from "@/lib/data";
+import { useDict } from "@/lib/useLocale";
 
 /* ── Motion grammar ───────────────────────────────────────────
    One easing family across the product: long, weighted ease-out.
@@ -230,6 +232,49 @@ export function StatReadout({
         {source && <SourceNote source={source} className="ml-1.5" />}
       </span>
     </div>
+  );
+}
+
+/* ── Data provenance badge ────────────────────────────────────
+   The single Live / Modeled marker used across every surface that
+   renders a measurement (homepage, dashboard, atlas, city pages,
+   competition page). Classification comes from LAYER_ORIGIN /
+   METRIC_ORIGIN in lib/data.ts — never hand-typed per page, so the
+   disclosure can't drift.
+   ───────────────────────────────────────────────────────────── */
+
+export function OriginBadge({
+  origin,
+  className = "",
+}: {
+  origin: DataOrigin;
+  className?: string;
+}) {
+  const dict = useDict();
+  const isLive = origin === "live";
+  const label = isLive ? dict.dataOrigin.live : dict.dataOrigin.modeled;
+  const note = isLive ? dict.dataOrigin.liveNote : dict.dataOrigin.modeledNote;
+
+  return (
+    <span
+      role="note"
+      tabIndex={0}
+      title={note}
+      aria-label={`${label} — ${note}`}
+      className={`telemetry !text-[9px] inline-flex items-center gap-1.5 rounded-full border px-2 py-[3px] cursor-help align-middle whitespace-nowrap ${
+        isLive
+          ? "text-emerald border-emerald/30 bg-emerald/[0.07]"
+          : "text-atmos border-atmos/30 bg-atmos/[0.07]"
+      } ${className}`}
+    >
+      {isLive ? (
+        <span className="dot-live" />
+      ) : (
+        // Hollow ring — deliberately reads as "derived", not a pulsing feed.
+        <span className="w-1.5 h-1.5 rounded-full border border-current opacity-70" />
+      )}
+      {label}
+    </span>
   );
 }
 

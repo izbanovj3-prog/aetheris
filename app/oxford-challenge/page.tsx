@@ -5,11 +5,14 @@ import { Pillars } from "@/components/landing/Sections";
 import {
   GlassCard,
   GlowButton,
+  OriginBadge,
   Reveal,
   SectionHeading,
   StatReadout,
   TelemetryTag,
 } from "@/components/ui/primitives";
+import { LAYERS, LAYER_ORIGIN, networkStats, type LayerKey } from "@/lib/data";
+import { SEED_REPORTS } from "@/lib/reports";
 
 /* ─────────────────────────────────────────────────────────────
    AETHERIS · Oxford Saïd Global Climate Tech Challenge 2026
@@ -36,6 +39,21 @@ const BASIN_WQI = [
   { city: "Kyzylorda", region: "Kyzylorda oblast", wqi: 32 },
   { city: "Zhanaozen", region: "Mangystau oblast", wqi: 38 },
 ] as const;
+
+// Ordered for the proof panel: the layer this page is about goes first.
+const LAYER_ROWS: Array<{ key: LayerKey; label: string }> = [
+  { key: "water", label: "Water Quality (WQI)" },
+  { key: "air", label: "Air Quality (AQI)" },
+  { key: "industrial", label: "Industrial Load (IEI)" },
+  { key: "biodiversity", label: "Biodiversity (BII)" },
+  { key: "risk", label: "Environmental Risk (ERI)" },
+];
+
+// Real figures, read from the code that actually backs them — never typed by
+// hand, so the limitations block can't drift from what the platform ships.
+const NET = networkStats();
+const PILOT_REPORTS = SEED_REPORTS.length;
+const PILOT_CONTRIBUTORS = new Set(SEED_REPORTS.map((r) => r.author)).size;
 
 // TODO: replace with the real team member names before submission.
 const TEAM = "the Aetheris team";
@@ -105,6 +123,7 @@ export default function OxfordChallengePage() {
                   </div>
                   <TelemetryTag tone="coral">Critical</TelemetryTag>
                 </div>
+                <OriginBadge origin={LAYER_ORIGIN.water} className="self-start" />
                 <StatReadout
                   value={s.wqi}
                   label="Water Quality Index · 0–100"
@@ -131,48 +150,36 @@ export default function OxfordChallengePage() {
                   Live proof
                 </TelemetryTag>
                 <h2 className="font-[family-name:var(--font-syne)] font-bold text-3xl sm:text-4xl leading-tight">
-                  It's not a mockup. It's running.
+                  What's live, and what isn't.
                 </h2>
                 <p className="text-ink-dim font-light leading-relaxed max-w-md">
-                  The Aral basin figures above come from the same Water Quality layer
-                  that ships on the live platform today — one of five environmental
-                  layers over every Kazakhstan region. Open the Atlas and read the
-                  water layer for yourself.
+                  Air quality readings are live today — fetched per city from
+                  Open-Meteo's CAMS satellite and forecast models, refreshed hourly.
+                  Water quality is currently a deterministic regional baseline, not a
+                  sensor feed; real-time ingestion is the next build milestone. Every
+                  number on the platform carries the badge that says which it is.
                 </p>
                 <GlowButton href="/map" className="mt-1">
                   View live data
                 </GlowButton>
               </div>
+              {/* Layer provenance, read straight from LAYER_ORIGIN so this list
+                  can never disagree with the badges on the rest of the site. */}
               <div className="flex flex-col gap-4">
-                {[
-                  "Water Quality (WQI)",
-                  "Air Quality (AQI)",
-                  "Industrial Load (IEI)",
-                  "Biodiversity (BII)",
-                  "Environmental Risk (ERI)",
-                ].map((layer, i) => (
+                {LAYER_ROWS.map(({ key, label }) => (
                   <div
-                    key={layer}
+                    key={key}
                     className="flex items-center gap-3 border-b border-line pb-3"
                   >
                     <span
-                      className={`w-2 h-2 rounded-full ${i === 0 ? "bg-cyan" : "bg-ink-faint"}`}
-                      style={
-                        i === 0
-                          ? { boxShadow: "0 0 10px var(--color-cyan)" }
-                          : undefined
-                      }
+                      className="w-2 h-2 rounded-full shrink-0"
+                      style={{
+                        background: LAYERS[key].color,
+                        boxShadow: `0 0 10px ${LAYERS[key].color}`,
+                      }}
                     />
-                    <span
-                      className={`text-sm font-light ${i === 0 ? "text-ink" : "text-ink-faint"}`}
-                    >
-                      {layer}
-                    </span>
-                    {i === 0 && (
-                      <span className="telemetry telemetry-bright ml-auto">
-                        This story
-                      </span>
-                    )}
+                    <span className="text-sm font-light text-ink">{label}</span>
+                    <OriginBadge origin={LAYER_ORIGIN[key]} className="ml-auto" />
                   </div>
                 ))}
               </div>
@@ -203,7 +210,102 @@ export default function OxfordChallengePage() {
         </Reveal>
       </section>
 
-      {/* 6 ── Footer CTA ─────────────────────────────────────── */}
+      {/* 6 ── Known limitations ──────────────────────────────── */}
+      <section className="max-w-6xl mx-auto px-6 pt-28">
+        <Reveal>
+          <GlassCard className="p-8 sm:p-10">
+            <div className="flex items-center gap-3 mb-6">
+              <h2 className="font-[family-name:var(--font-syne)] font-bold text-2xl">
+                Known limitations
+              </h2>
+              <TelemetryTag>As of this submission</TelemetryTag>
+            </div>
+            <ul className="flex flex-col gap-4">
+              {[
+                <>
+                  <span className="text-ink">One of five layers is live.</span>{" "}
+                  Air quality (AQI, PM2.5, PM10, NO₂) and weather come from
+                  Open-Meteo / CAMS at page load. Water, biodiversity, industrial
+                  load and environmental risk are a deterministic regional
+                  baseline — indicative, not measured.
+                </>,
+                <>
+                  <span className="text-ink">
+                    The Aral WQI figures above are modeled, not sampled.
+                  </span>{" "}
+                  They encode known basin conditions rather than readings from
+                  instruments in the water. Treat them as a demonstration of the
+                  pipeline, not as survey data.
+                </>,
+                <>
+                  <span className="text-ink">
+                    Community reports are a {PILOT_REPORTS}-report pilot feed.
+                  </span>{" "}
+                  Illustrative entries from {PILOT_CONTRIBUTORS} contributors, not a
+                  live user base. Reports you submit are real, but persist only to
+                  your own browser — there is no backend yet.
+                </>,
+                <>
+                  <span className="text-ink">Shipped vs roadmap.</span> Live now:{" "}
+                  {NET.cities} city stations across {NET.regions} regions, the Atlas,
+                  dashboard and assistant. Not yet built: real-time water sensor
+                  ingestion and the SMS/USSD alerting described above.
+                </>,
+              ].map((item, i) => (
+                <li key={i} className="flex gap-3.5 text-ink-dim font-light leading-relaxed">
+                  <span className="readout text-ink-faint text-sm shrink-0 pt-0.5">
+                    {String(i + 1).padStart(2, "0")}
+                  </span>
+                  <span>{item}</span>
+                </li>
+              ))}
+            </ul>
+          </GlassCard>
+        </Reveal>
+      </section>
+
+      {/* 7 ── Multilingual access ────────────────────────────── */}
+      <section className="max-w-6xl mx-auto px-6 pt-28">
+        <Reveal>
+          <GlassCard className="p-8 sm:p-10 flex flex-col items-start gap-5">
+            <TelemetryTag tone="cyan">
+              <span className="w-1 h-1 rounded-full bg-cyan" />
+              Built for the people it's about
+            </TelemetryTag>
+            <h2 className="font-[family-name:var(--font-syne)] font-bold text-2xl sm:text-3xl leading-tight max-w-2xl">
+              The whole platform speaks Kazakh, Russian and English.
+            </h2>
+            <p className="text-ink-dim font-light leading-relaxed max-w-2xl">
+              Climate tools written only in English exclude the communities living
+              the crisis. Every page, index and AI answer on Aetheris is fully
+              localized — the Priaralye residents this work is for can read it in
+              the language they actually speak, not a translated summary.
+            </p>
+            <div className="flex flex-wrap gap-3 mt-1">
+              <Link
+                href="/"
+                className="glass border border-line-bright rounded-xl px-4 py-2.5 text-sm text-ink hover:border-emerald/40 hover:text-emerald transition-colors duration-300"
+              >
+                English
+              </Link>
+              <Link
+                href="/ru/"
+                className="glass border border-line-bright rounded-xl px-4 py-2.5 text-sm text-ink hover:border-emerald/40 hover:text-emerald transition-colors duration-300"
+              >
+                Русский
+              </Link>
+              <Link
+                href="/kk/"
+                className="glass border border-line-bright rounded-xl px-4 py-2.5 text-sm text-ink hover:border-emerald/40 hover:text-emerald transition-colors duration-300"
+              >
+                Қазақша
+              </Link>
+            </div>
+          </GlassCard>
+        </Reveal>
+      </section>
+
+      {/* 8 ── Footer CTA ─────────────────────────────────────── */}
       <section className="relative max-w-3xl mx-auto px-6 pt-28 pb-4 text-center">
         <Reveal>
           <p className="text-ink-dim text-lg font-light leading-relaxed">

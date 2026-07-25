@@ -243,6 +243,13 @@ export interface Dict {
     networkMean: string;
     critical: string;
   };
+  /** Provenance badge shown next to every displayed measurement. */
+  dataOrigin: {
+    live: string;
+    modeled: string;
+    liveNote: string;
+    modeledNote: string;
+  };
   pillars: {
     tag: string;
     titleA: string;
@@ -440,7 +447,7 @@ const en: Dict = {
     h1a: "The operating",
     h1b: "system for",
     h1Accent: "Kazakhstan.",
-    lede: "Aetheris fuses satellites, ground stations, and AI into a single living picture of Kazakhstan — air, water, industry, and ecology, across every region in real time.",
+    lede: "Aetheris fuses satellites, ground stations, and AI into a single living picture of Kazakhstan — live air quality across every region, with water, industry, and ecology on a modeled baseline.",
     ctaAtlas: "Open the Atlas",
     ctaIntel: "View intelligence",
     statCities: (c, r) => `${c} cities · ${r} regions`,
@@ -454,6 +461,14 @@ const en: Dict = {
   ticker: {
     networkMean: "NETWORK MEAN AQI",
     critical: "CRITICAL",
+  },
+  dataOrigin: {
+    live: "Live",
+    modeled: "Modeled",
+    liveNote:
+      "Live measurement — fetched at page load from Open-Meteo (CAMS air quality and forecast weather), refreshed hourly upstream.",
+    modeledNote:
+      "Modeled value — a deterministic regional baseline, not a real-time sensor feed. Indicative, not measured. See /methodology.",
   },
   pillars: {
     tag: "System architecture",
@@ -499,7 +514,7 @@ const en: Dict = {
     tag: "Environmental AI",
     titleA: "Ask the network",
     titleAccent: "anything.",
-    lede: "The Aetheris analyst reads every layer of the live Kazakhstan model — and answers in plain language, with citations back to the sensors.",
+    lede: "The Aetheris analyst reads every layer of the Kazakhstan model — live air quality and the modeled baseline alike — and answers in plain language, with citations back to the source.",
     cta: "Start a conversation",
     analyst: "Environmental analyst",
     reasoning: "Reasoning",
@@ -510,7 +525,7 @@ const en: Dict = {
     online: "Online",
     emptyTitle: "Ask the network anything.",
     emptyLede:
-      "I analyze live environmental telemetry across Kazakhstan — air, water, industry, biodiversity, and ecological risk — and answer with sources.",
+      "I read Kazakhstan's environmental model — live air quality, plus modeled water, industry, biodiversity and ecological risk — and answer with sources.",
     reading: "Reading sensor field…",
     placeholder: "Ask about any city, risk, or metric…",
     sendAria: "Send",
@@ -525,9 +540,9 @@ const en: Dict = {
     lede: "Every Aetheris layer is sharpened by citizen scientists — photographing waterways, logging species, flagging pollution events. Reports are cross-checked against sensor data and rewarded.",
     cta: "Join the network",
     statLabels: [
-      "Verified field reports",
-      "Active missions",
-      "Contribution points awarded this week",
+      "Field reports in the pilot feed",
+      "Cities represented",
+      "Community upvotes",
     ],
   },
   finalCta: {
@@ -599,7 +614,7 @@ const en: Dict = {
   },
   dashboard: {
     badgeLive: "Live · Open-Meteo feed",
-    badgeModel: "Intelligence · live model",
+    badgeModel: "Modeled baseline · live feed unavailable",
     title: "State of Kazakhstan",
     ingestRate: "Ingest rate",
     modelLatency: "Model latency",
@@ -613,7 +628,7 @@ const en: Dict = {
     strongest: "Strongest cities · sustainability",
     stressed: "Most stressed cities",
     aiInsights: "AI insights",
-    aiInsightsMeta: "Generated from live model · refreshed 6 min ago",
+    aiInsightsMeta: "Analyst notes · written against the modeled baseline",
     insights: [
       {
         severity: "High",
@@ -692,7 +707,7 @@ const en: Dict = {
   meta: {
     homeTitle: "AETHERIS — Kazakhstan Environmental Intelligence",
     homeDescription:
-      "National environmental intelligence for Kazakhstan — real-time air quality, water, industrial emissions and ecological risk across every region and major city, in one living model.",
+      "National environmental intelligence for Kazakhstan — real-time air quality plus modeled water, industrial emissions and ecological risk across every region and major city, in one living model.",
     cityTitle: (city) => `${city} air quality`,
     cityDescription: (city, region) =>
       `Live air quality in ${city}, ${region} — AQI, PM2.5, NO₂ and health guidance, plus modeled water, biodiversity and industrial-load indices.`,
@@ -723,7 +738,7 @@ const ru: Dict = {
     h1a: "Операционная",
     h1b: "система для",
     h1Accent: "Казахстана.",
-    lede: "Aetheris соединяет спутники, наземные станции и ИИ в единую живую картину Казахстана — воздух, вода, промышленность и экология по всем регионам в реальном времени.",
+    lede: "Aetheris соединяет спутники, наземные станции и ИИ в единую живую картину Казахстана — качество воздуха в реальном времени по всем регионам, вода, промышленность и экология на модельной базовой линии.",
     ctaAtlas: "Открыть Атлас",
     ctaIntel: "Смотреть аналитику",
     statCities: (c, r) => `${c} городов · ${r} регионов`,
@@ -737,6 +752,14 @@ const ru: Dict = {
   ticker: {
     networkMean: "СРЕДНИЙ AQI СЕТИ",
     critical: "КРИТИЧНО",
+  },
+  dataOrigin: {
+    live: "Live",
+    modeled: "Модель",
+    liveNote:
+      "Живое измерение — загружается при открытии страницы из Open-Meteo (качество воздуха CAMS и прогноз погоды), обновление ежечасно на стороне источника.",
+    modeledNote:
+      "Модельное значение — детерминированная региональная базовая линия, а не поток датчиков в реальном времени. Индикативно, не измерено. См. /methodology.",
   },
   pillars: {
     tag: "Архитектура системы",
@@ -782,7 +805,7 @@ const ru: Dict = {
     tag: "Экологический ИИ",
     titleA: "Спросите сеть",
     titleAccent: "о чём угодно.",
-    lede: "Аналитик Aetheris читает каждый слой живой модели Казахстана и отвечает простым языком — со ссылками на сенсоры.",
+    lede: "Аналитик Aetheris читает каждый слой модели Казахстана — и живое качество воздуха, и модельную базовую линию — и отвечает простым языком со ссылками на источники.",
     cta: "Начать диалог",
     analyst: "Экологический аналитик",
     reasoning: "Анализ",
@@ -793,7 +816,7 @@ const ru: Dict = {
     online: "Онлайн",
     emptyTitle: "Спросите сеть о чём угодно.",
     emptyLede:
-      "Я анализирую живую экологическую телеметрию по Казахстану — воздух, воду, промышленность, биоразнообразие и экологический риск — и отвечаю со ссылками на источники.",
+      "Я читаю экологическую модель Казахстана — живое качество воздуха плюс модельные вода, промышленность, биоразнообразие и экологический риск — и отвечаю со ссылками на источники.",
     reading: "Читаю поле сенсоров…",
     placeholder: "Спросите о городе, риске или показателе…",
     sendAria: "Отправить",
@@ -808,9 +831,9 @@ const ru: Dict = {
     lede: "Каждый слой Aetheris уточняют гражданские учёные: фотографируют водоёмы, фиксируют виды, отмечают загрязнения. Отчёты сверяются с данными сенсоров и вознаграждаются.",
     cta: "Присоединиться",
     statLabels: [
-      "Проверенных полевых отчётов",
-      "Активных миссий",
-      "Баллов вклада за эту неделю",
+      "Полевых отчётов в пилотной ленте",
+      "Городов представлено",
+      "Голосов сообщества",
     ],
   },
   finalCta: {
@@ -882,7 +905,7 @@ const ru: Dict = {
   },
   dashboard: {
     badgeLive: "Live · поток Open-Meteo",
-    badgeModel: "Аналитика · живая модель",
+    badgeModel: "Модельная база · живой поток недоступен",
     title: "Состояние Казахстана",
     ingestRate: "Скорость приёма",
     modelLatency: "Задержка модели",
@@ -896,7 +919,7 @@ const ru: Dict = {
     strongest: "Сильнейшие города · устойчивость",
     stressed: "Города под наибольшей нагрузкой",
     aiInsights: "Выводы ИИ",
-    aiInsightsMeta: "Сгенерировано живой моделью · обновлено 6 мин назад",
+    aiInsightsMeta: "Заметки аналитика · составлены по модельной базовой линии",
     insights: [
       {
         severity: "Высокий",
@@ -975,7 +998,7 @@ const ru: Dict = {
   meta: {
     homeTitle: "Экологический интеллект Казахстана",
     homeDescription:
-      "Национальная экологическая аналитика Казахстана — качество воздуха в реальном времени, вода, промышленные выбросы и экологические риски по всем регионам и крупным городам в одной живой модели.",
+      "Национальная экологическая аналитика Казахстана — качество воздуха в реальном времени плюс модельные вода, промышленные выбросы и экологические риски по всем регионам и крупным городам в одной живой модели.",
     cityTitle: (city) => `Качество воздуха — ${city}`,
     cityDescription: (city, region) =>
       `Живое качество воздуха: ${city}, ${region} — AQI, PM2.5, NO₂ и рекомендации для здоровья, плюс модельные индексы воды, биоразнообразия и промышленной нагрузки.`,
@@ -1006,7 +1029,7 @@ const kk: Dict = {
     h1a: "Қазақстанның",
     h1b: "операциялық",
     h1Accent: "жүйесі.",
-    lede: "Aetheris жерсеріктерді, жер станцияларын және ЖИ-ді Қазақстанның біртұтас тірі бейнесіне біріктіреді — ауа, су, өнеркәсіп және экология, барлық өңірлерде нақты уақытта.",
+    lede: "Aetheris жерсеріктерді, жер станцияларын және ЖИ-ді Қазақстанның біртұтас тірі бейнесіне біріктіреді — барлық өңірлерде нақты уақыттағы ауа сапасы, ал су, өнеркәсіп және экология модельдік базалық сызықта.",
     ctaAtlas: "Атласты ашу",
     ctaIntel: "Аналитиканы көру",
     statCities: (c, r) => `${c} қала · ${r} өңір`,
@@ -1020,6 +1043,14 @@ const kk: Dict = {
   ticker: {
     networkMean: "ЖЕЛІНІҢ ОРТАША AQI",
     critical: "КРИТИКАЛЫҚ",
+  },
+  dataOrigin: {
+    live: "Live",
+    modeled: "Модель",
+    liveNote:
+      "Тірі өлшем — бет ашылғанда Open-Meteo дереккөзінен (CAMS ауа сапасы және ауа райы болжамы) алынады, дереккөзде сағат сайын жаңарады.",
+    modeledNote:
+      "Модельдік мән — детерминистік аймақтық базалық сызық, нақты уақыттағы сенсор ағыны емес. Индикативті, өлшенген емес. /methodology қараңыз.",
   },
   pillars: {
     tag: "Жүйе архитектурасы",
@@ -1065,7 +1096,7 @@ const kk: Dict = {
     tag: "Экологиялық ЖИ",
     titleA: "Желіден кез келгенін",
     titleAccent: "сұраңыз.",
-    lede: "Aetheris аналитигі Қазақстанның тірі моделінің әр қабатын оқиды және қарапайым тілмен, сенсорларға сілтеме жасай отырып жауап береді.",
+    lede: "Aetheris аналитигі Қазақстан моделінің әр қабатын оқиды — тірі ауа сапасын да, модельдік базалық сызықты да — және қарапайым тілмен, дереккөздерге сілтеме жасай отырып жауап береді.",
     cta: "Диалог бастау",
     analyst: "Экологиялық аналитик",
     reasoning: "Талдау",
@@ -1076,7 +1107,7 @@ const kk: Dict = {
     online: "Онлайн",
     emptyTitle: "Желіден кез келгенін сұраңыз.",
     emptyLede:
-      "Мен Қазақстан бойынша тірі экологиялық телеметрияны талдаймын — ауа, су, өнеркәсіп, биоалуантүрлілік және экологиялық тәуекел — және дереккөздермен жауап беремін.",
+      "Мен Қазақстанның экологиялық моделін оқимын — тірі ауа сапасы, сондай-ақ модельдік су, өнеркәсіп, биоалуантүрлілік және экологиялық тәуекел — және дереккөздермен жауап беремін.",
     reading: "Сенсор өрісін оқып жатырмын…",
     placeholder: "Қала, тәуекел немесе көрсеткіш туралы сұраңыз…",
     sendAria: "Жіберу",
@@ -1091,9 +1122,9 @@ const kk: Dict = {
     lede: "Aetheris-тің әр қабатын азаматтық ғалымдар нақтылайды: су айдындарын суретке түсіреді, түрлерді тіркейді, ластануды белгілейді. Есептер сенсор деректерімен салыстырылып, марапатталады.",
     cta: "Желіге қосылу",
     statLabels: [
-      "Расталған далалық есептер",
-      "Белсенді миссиялар",
-      "Осы аптадағы үлес ұпайлары",
+      "Пилоттық таспадағы далалық есептер",
+      "Қалалар қамтылған",
+      "Қоғамдастық дауыстары",
     ],
   },
   finalCta: {
@@ -1165,7 +1196,7 @@ const kk: Dict = {
   },
   dashboard: {
     badgeLive: "Live · Open-Meteo ағыны",
-    badgeModel: "Аналитика · тірі модель",
+    badgeModel: "Модельдік база · тірі ағын қолжетімсіз",
     title: "Қазақстан жағдайы",
     ingestRate: "Қабылдау жылдамдығы",
     modelLatency: "Модель кідірісі",
@@ -1179,7 +1210,7 @@ const kk: Dict = {
     strongest: "Ең мықты қалалар · тұрақтылық",
     stressed: "Ең жоғары жүктемедегі қалалар",
     aiInsights: "ЖИ тұжырымдары",
-    aiInsightsMeta: "Тірі модельден жасалды · 6 мин бұрын жаңарды",
+    aiInsightsMeta: "Талдаушы жазбалары · модельдік базалық сызық бойынша",
     insights: [
       {
         severity: "Жоғары",
@@ -1258,7 +1289,7 @@ const kk: Dict = {
   meta: {
     homeTitle: "Қазақстанның экологиялық интеллектісі",
     homeDescription:
-      "Қазақстанның ұлттық экологиялық аналитикасы — нақты уақыттағы ауа сапасы, су, өнеркәсіптік шығарындылар және экологиялық тәуекелдер, барлық өңірлер мен ірі қалалар бір тірі модельде.",
+      "Қазақстанның ұлттық экологиялық аналитикасы — нақты уақыттағы ауа сапасы, сондай-ақ модельдік су, өнеркәсіптік шығарындылар және экологиялық тәуекелдер, барлық өңірлер мен ірі қалалар бір тірі модельде.",
     cityTitle: (city) => `${city} — ауа сапасы`,
     cityDescription: (city, region) =>
       `${city} (${region}) бойынша тірі ауа сапасы — AQI, PM2.5, NO₂ және денсаулық ұсыныстары, қоса модельдік су, биоалуантүрлілік және өнеркәсіп индекстері.`,

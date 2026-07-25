@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 import {
   GlassCard,
   GlowButton,
+  OriginBadge,
   Reveal,
   SectionHeading,
   SourceNote,
@@ -15,6 +16,7 @@ import {
 import {
   HOTSPOTS,
   LAYERS,
+  LAYER_ORIGIN,
   genSeries,
   getStations,
   networkStats,
@@ -22,6 +24,7 @@ import {
   type LayerKey,
   type Station,
 } from "@/lib/data";
+import { SEED_REPORTS } from "@/lib/reports";
 import {
   cityName,
   getDict,
@@ -236,6 +239,7 @@ export function AtlasShowcase() {
                         <span className="font-[family-name:var(--font-syne)] font-bold text-lg">
                           {copy.label}
                         </span>
+                        <OriginBadge origin={LAYER_ORIGIN[k]} />
                       </div>
                       <span className="telemetry">{layer.unit}</span>
                     </div>
@@ -342,12 +346,23 @@ export function AssistantPreview() {
 
 /* ── Community strip ──────────────────────────────────────── */
 
-const COMMUNITY_VALUES = ["31,408", "1,962", "412k"];
+/* Derived from the actual seeded feed in lib/reports.ts — these used to be
+   hand-written marketing numbers ("31,408 reports", "1,962 missions") that no
+   data in the codebase backed, and that contradicted the pilot-scale feed the
+   /community page actually renders. */
+function communityStats() {
+  return {
+    reports: SEED_REPORTS.length,
+    cities: new Set(SEED_REPORTS.map((r) => r.city)).size,
+    upvotes: SEED_REPORTS.reduce((a, r) => a + r.upvotes, 0),
+  };
+}
 
 export function CommunityStrip() {
   const dict = useDict();
-  const stats = COMMUNITY_VALUES.map((v, i) => ({
-    v,
+  const c = communityStats();
+  const stats = [c.reports, c.cities, c.upvotes].map((v, i) => ({
+    v: String(v),
     l: dict.community.statLabels[i],
   }));
   return (

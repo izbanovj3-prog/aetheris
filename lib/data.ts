@@ -328,3 +328,47 @@ export const LAYERS: Record<
     describe: "Composite exposure: heat, drought, desertification and legacy contamination",
   },
 };
+
+/* ── Data provenance ──────────────────────────────────────────
+   Single source of truth for "is this number measured or modeled?".
+   Every surface that renders a value reads its badge from here, so the
+   disclosure can never drift page to page.
+
+   live    — fetched from an upstream feed at runtime (lib/live.ts):
+             Open-Meteo Air Quality (CAMS) + Open-Meteo Forecast.
+   modeled — deterministic regional baseline generated in this file.
+             Indicative, not measured; no free real-time point feed
+             exists for these layers yet. See /methodology.
+   ───────────────────────────────────────────────────────────── */
+
+export type DataOrigin = "live" | "modeled";
+
+/** Which of the five Atlas layers is backed by a live upstream feed. */
+export const LAYER_ORIGIN: Record<LayerKey, DataOrigin> = {
+  air: "live",
+  industrial: "modeled",
+  water: "modeled",
+  biodiversity: "modeled",
+  risk: "modeled",
+};
+
+/** Per-metric provenance for the individual `Station` fields. */
+export const METRIC_ORIGIN = {
+  // Open-Meteo Air Quality (CAMS)
+  aqi: "live",
+  pm25: "live",
+  pm10: "live",
+  no2: "live",
+  // Open-Meteo Forecast
+  temperature: "live",
+  humidity: "live",
+  // Deterministic regional baseline
+  waterQuality: "modeled",
+  biodiversity: "modeled",
+  industrialEmissions: "modeled",
+  climateRisk: "modeled",
+  tempAnomaly: "modeled",
+  // Composites blending both classes — labeled modeled, the weaker claim.
+  pollutionIndex: "modeled",
+  sustainability: "modeled",
+} as const satisfies Record<string, DataOrigin>;

@@ -164,7 +164,7 @@ const en: PageContent = {
     lede: "Covering Aetheris? Use the boilerplate and assets below verbatim.",
     boilerplateTitle: "Boilerplate",
     boilerplate:
-      "National environmental intelligence for Kazakhstan — real-time air quality, water, industrial emissions and ecological risk across every region and major city, in one living model.",
+      "National environmental intelligence for Kazakhstan — real-time air quality plus modeled water, industrial emissions and ecological risk across every region and major city, in one living model.",
     nameNote:
       "The product name is written AETHERIS (all caps) or Aetheris in running text; the company is Aetheris Systems.",
     assetsTitle: "Assets",
@@ -189,7 +189,7 @@ const en: PageContent = {
       },
       {
         title: "Platform & data questions",
-        body: "The AI analyst reads every layer of the live model and answers with citations back to the sensors — usually the fastest route.",
+        body: "The AI analyst reads every layer of the model — live air quality and the modeled baseline alike — and answers with citations back to the source. Usually the fastest route.",
         actionLabel: "Ask the analyst",
         href: "/assistant",
       },
@@ -297,7 +297,7 @@ const ru: PageContent = {
     lede: "Пишете об Aetheris? Используйте текст и материалы ниже дословно.",
     boilerplateTitle: "Официальный текст",
     boilerplate:
-      "Национальная экологическая аналитика Казахстана — качество воздуха в реальном времени, вода, промышленные выбросы и экологические риски по всем регионам и крупным городам в одной живой модели.",
+      "Национальная экологическая аналитика Казахстана — качество воздуха в реальном времени плюс модельные вода, промышленные выбросы и экологические риски по всем регионам и крупным городам в одной живой модели.",
     nameNote:
       "Название продукта пишется AETHERIS (заглавными) или Aetheris в тексте; компания — Aetheris Systems.",
     assetsTitle: "Материалы",
@@ -322,7 +322,7 @@ const ru: PageContent = {
       },
       {
         title: "Вопросы о платформе и данных",
-        body: "ИИ-аналитик читает каждый слой живой модели и отвечает со ссылками на сенсоры — обычно это самый быстрый путь.",
+        body: "ИИ-аналитик читает каждый слой модели — и живое качество воздуха, и модельную базовую линию — и отвечает со ссылками на источники. Обычно это самый быстрый путь.",
         actionLabel: "Спросить аналитика",
         href: "/assistant",
       },
@@ -430,7 +430,7 @@ const kk: PageContent = {
     lede: "Aetheris туралы жазып жатырсыз ба? Төмендегі мәтін мен материалдарды сөзбе-сөз пайдаланыңыз.",
     boilerplateTitle: "Ресми мәтін",
     boilerplate:
-      "Қазақстанның ұлттық экологиялық аналитикасы — нақты уақыттағы ауа сапасы, су, өнеркәсіптік шығарындылар және экологиялық тәуекелдер, барлық өңірлер мен ірі қалалар бір тірі модельде.",
+      "Қазақстанның ұлттық экологиялық аналитикасы — нақты уақыттағы ауа сапасы, сондай-ақ модельдік су, өнеркәсіптік шығарындылар және экологиялық тәуекелдер, барлық өңірлер мен ірі қалалар бір тірі модельде.",
     nameNote:
       "Өнім атауы AETHERIS (бас әріппен) немесе мәтінде Aetheris деп жазылады; компания — Aetheris Systems.",
     assetsTitle: "Материалдар",
@@ -455,7 +455,7 @@ const kk: PageContent = {
       },
       {
         title: "Платформа мен деректер сұрақтары",
-        body: "ЖИ-аналитик тірі модельдің әр қабатын оқып, сенсорларға сілтемемен жауап береді — әдетте ең жылдам жол.",
+        body: "ЖИ-аналитик модельдің әр қабатын оқиды — тірі ауа сапасын да, модельдік базалық сызықты да — және дереккөздерге сілтемемен жауап береді. Әдетте ең жылдам жол.",
         actionLabel: "Аналитиктен сұрау",
         href: "/assistant",
       },

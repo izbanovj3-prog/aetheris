@@ -4,6 +4,7 @@ import Link from "next/link";
 import {
   GlassCard,
   GlowButton,
+  OriginBadge,
   SourceNote,
   TelemetryTag,
 } from "@/components/ui/primitives";
@@ -68,9 +69,13 @@ export default function CityDetail({ id }: { id: string }) {
       <div className="grid lg:grid-cols-[1.1fr_1fr] gap-5 items-stretch">
         <GlassCard bright ticks className="p-8">
           <div className="flex items-center justify-between mb-1">
-            <span className="telemetry telemetry-bright">
+            <span className="telemetry telemetry-bright flex items-center gap-2">
               {dict.city.aqiLabel}
-              <SourceNote source={airSource} asOf={asOf} className="ml-1.5" />
+              {/* Falls back to the modeled baseline when the upstream fetch
+                  fails — the badge must follow the actual source, not the
+                  layer's usual one. */}
+              <OriginBadge origin={live ? "live" : "modeled"} />
+              <SourceNote source={airSource} asOf={asOf} />
             </span>
             <span className={`telemetry ${TONE_TEXT[band.tone]}`}>
               {dict.city.band[band.label]}
@@ -104,6 +109,7 @@ export default function CityDetail({ id }: { id: string }) {
       <div className="mt-12">
         <div className="flex items-center gap-2 mb-5">
           <span className="telemetry telemetry-bright">{dict.city.modeledTitle}</span>
+          <OriginBadge origin="modeled" />
           <SourceNote source="Aetheris modeled baseline" />
         </div>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
