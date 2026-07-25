@@ -100,10 +100,27 @@ const ACHIEVEMENTS = [
   { icon: "◉", name: "Ground Truth", desc: "Sensor-confirmed ×50", unlocked: false },
 ];
 
+/* Event dates are illustrative, so derive them from the build moment
+   rather than hardcoding: the previous "JUN 14 / 20 / 27" had drifted into
+   the past, which reads as a dead page. NEXT_PUBLIC_BUILD_TIME is inlined
+   at build into both bundles, so server and client render the same string
+   (a module-level `new Date()` would desync and break hydration).
+   Month names come from a literal table, not toLocaleDateString, so Node's
+   and the browser's locale data can't disagree either. */
+const BUILD_AT = process.env.NEXT_PUBLIC_BUILD_TIME ?? "2026-07-25T00:00:00.000Z";
+
+const MONTHS = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+
+function eventDate(daysAhead: number): string {
+  const d = new Date(BUILD_AT);
+  d.setUTCDate(d.getUTCDate() + daysAhead);
+  return `${MONTHS[d.getUTCMonth()]} ${String(d.getUTCDate()).padStart(2, "0")}`;
+}
+
 const EVENTS = [
-  { date: "JUN 14", title: "Ile-Alatau foothills cleanup", place: "Almaty", attendees: 86 },
-  { date: "JUN 20", title: "Urban heat-island mapping walk", place: "Astana", attendees: 41 },
-  { date: "JUN 27", title: "Lake Balkhash shoreline survey", place: "Balkhash", attendees: 23 },
+  { date: eventDate(14), title: "Ile-Alatau foothills cleanup", place: "Almaty", attendees: 86 },
+  { date: eventDate(21), title: "Urban heat-island mapping walk", place: "Astana", attendees: 41 },
+  { date: eventDate(28), title: "Lake Balkhash shoreline survey", place: "Balkhash", attendees: 23 },
 ];
 
 /* ── Report card ──────────────────────────────────────────────── */
