@@ -55,8 +55,10 @@ const NET = networkStats();
 const PILOT_REPORTS = SEED_REPORTS.length;
 const PILOT_CONTRIBUTORS = new Set(SEED_REPORTS.map((r) => r.author)).size;
 
-// TODO: replace with the real team member names before submission.
-const TEAM = "the Aetheris team";
+// Submission team. Names are transliterated to Latin for this English-language
+// page (Жанболат Избанов, Александр Токарев, Инсар Туртаев).
+const TEAM = ["Zhanbolat Izbanov", "Alexander Tokarev", "Insar Turtaev"];
+const TEAM_LINE = `${TEAM.slice(0, -1).join(", ")} and ${TEAM[TEAM.length - 1]}`;
 
 export default function OxfordChallengePage() {
   return (
@@ -309,7 +311,7 @@ export default function OxfordChallengePage() {
       <section className="relative max-w-3xl mx-auto px-6 pt-28 pb-4 text-center">
         <Reveal>
           <p className="text-ink-dim text-lg font-light leading-relaxed">
-            Built by {TEAM} for the{" "}
+            Built by {TEAM_LINE} for the{" "}
             <span className="text-ink">
               Oxford Saïd Global Climate Tech Challenge 2026
             </span>
