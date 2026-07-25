@@ -1,20 +1,18 @@
 import type { Metadata } from "next";
-import type { ReactNode } from "react";
 import Link from "next/link";
 import { Footer } from "@/components/chrome/Footer";
+import { Pillars } from "@/components/landing/Sections";
 import {
   GlassCard,
   GlowButton,
   OriginBadge,
-  SourceNote,
+  Reveal,
+  SectionHeading,
+  StatReadout,
   TelemetryTag,
 } from "@/components/ui/primitives";
 import { LAYERS, LAYER_ORIGIN, networkStats, type LayerKey } from "@/lib/data";
-import { getDict } from "@/lib/i18n";
 import { SEED_REPORTS } from "@/lib/reports";
-
-// Same copy the homepage renders — single source, no duplicated strings.
-const DICT = getDict("en");
 
 /* ─────────────────────────────────────────────────────────────
    AETHERIS · Oxford Saïd Global Climate Tech Challenge 2026
@@ -41,118 +39,6 @@ const BASIN_WQI = [
   { city: "Kyzylorda", region: "Kyzylorda oblast", wqi: 32 },
   { city: "Zhanaozen", region: "Mangystau oblast", wqi: 38 },
 ] as const;
-
-/* The site's shared <Reveal> renders at opacity:0 and only fades in once
-   framer-motion's whileInView fires. On the rest of the site that's fine —
-   people scroll. On a judge-facing submission page it is a liability:
-   verified in headed Chrome that with JS disabled the entire page body
-   renders blank, and with JS enabled but no scrolling (exactly what
-   print-to-PDF and full-page screenshot capture do) everything below the
-   hero is blank, including the Known limitations block.
-
-   So this page renders its content unconditionally. Block is a drop-in
-   replacement — same layout, same props — minus the scroll-gated fade.
-   Scoped here deliberately: changing the shared Reveal would alter every
-   other page on the site. */
-function Block({
-  children,
-  className,
-}: {
-  children: ReactNode;
-  className?: string;
-  /** Accepted and ignored — kept so the call sites read like Reveal's. */
-  index?: number;
-}) {
-  return className ? <div className={className}>{children}</div> : <>{children}</>;
-}
-
-/* Local copies of SectionHeading and Pillars for the same reason: both
-   wrap their content in the shared Reveal, so on this page they'd print
-   blank. Same markup and the same dictionary copy — only the scroll-gated
-   fade is dropped. Editing the shared components instead would change the
-   homepage and every other surface. */
-function Heading({ tag, title, lede }: { tag: string; title: ReactNode; lede?: string }) {
-  return (
-    <div className="flex flex-col gap-5">
-      <div>
-        <TelemetryTag tone="emerald">
-          <span className="w-1 h-1 rounded-full bg-emerald" />
-          {tag}
-        </TelemetryTag>
-      </div>
-      <h2 className="font-[family-name:var(--font-syne)] font-bold text-3xl sm:text-4xl lg:text-5xl leading-[1.08] tracking-tight max-w-2xl">
-        {title}
-      </h2>
-      {lede && (
-        <p className="text-ink-dim text-base sm:text-lg leading-relaxed max-w-xl font-light">
-          {lede}
-        </p>
-      )}
-    </div>
-  );
-}
-
-/* Same reasoning again, and this one matters most: the shared StatReadout
-   wraps its number in a motion.span (opacity 0 until in view) and runs a
-   count-up that *arms itself back to 0* while off-screen. Measured on this
-   page: with JS on and no scrolling the three WQI figures render "0 0 0"
-   and are invisible; with JS off they hold the right values but at
-   opacity 0. Either way the headline data of the submission is lost in a
-   PDF. This renders the number flat — no count-up, no fade. */
-function Stat({ value, label, source }: { value: number; label: string; source: string }) {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <span className="readout text-3xl sm:text-4xl font-medium text-amber">{value}</span>
-      <span className="telemetry">
-        {label}
-        <SourceNote source={source} className="ml-1.5" />
-      </span>
-    </div>
-  );
-}
-
-const PILLAR_ACCENTS = ["from-cyan/60", "from-emerald/60", "from-atmos/60"];
-
-/** Sense → Reason → Act, reading the same dict.pillars copy the homepage uses. */
-function HowItWorks() {
-  const p = DICT.pillars;
-  const readings = NET.dailyReadings.toLocaleString("en-US");
-  return (
-    <section className="max-w-6xl mx-auto px-6 pt-28">
-      <Heading
-        tag={p.tag}
-        title={
-          <>
-            {p.titleA}
-            <span className="display-gradient">{p.titleAccent}</span>
-          </>
-        }
-        lede={p.lede}
-      />
-      <div className="grid md:grid-cols-3 gap-5 mt-14">
-        {p.items.map((item, i) => (
-          <GlassCard
-            key={item.title}
-            className="group p-7 h-full relative overflow-hidden transition-colors duration-500 hover:border-line-bright"
-          >
-            <div
-              className={`absolute top-0 left-0 right-0 h-px bg-gradient-to-r ${PILLAR_ACCENTS[i]} to-transparent`}
-            />
-            <span className="readout text-ink-faint text-sm">
-              {String(i + 1).padStart(2, "0")}
-            </span>
-            <h3 className="font-[family-name:var(--font-syne)] font-bold text-2xl mt-3 mb-3 group-hover:text-emerald transition-colors duration-500">
-              {item.title}
-            </h3>
-            <p className="text-ink-dim leading-relaxed text-[15px] font-light">
-              {item.body.replace("{readings}", readings)}
-            </p>
-          </GlassCard>
-        ))}
-      </div>
-    </section>
-  );
-}
 
 // Ordered for the proof panel: the layer this page is about goes first.
 const LAYER_ROWS: Array<{ key: LayerKey; label: string }> = [
@@ -186,37 +72,37 @@ export default function OxfordChallengePage() {
               "radial-gradient(ellipse 55% 60% at 50% 35%, rgba(79,157,222,0.12), transparent 65%)",
           }}
         />
-        <Block className="flex justify-center">
+        <Reveal className="flex justify-center">
           <TelemetryTag tone="cyan">
             <span className="w-1 h-1 rounded-full bg-cyan" />
             Oxford Saïd · Global Climate Tech Challenge 2026
           </TelemetryTag>
-        </Block>
-        <Block index={1}>
+        </Reveal>
+        <Reveal index={1}>
           <h1 className="font-[family-name:var(--font-syne)] font-bold tracking-tight text-4xl sm:text-5xl lg:text-6xl leading-[1.06] mt-6">
             Aral Sea Early Warning
             <br />
             <span className="display-gradient">Water Crisis Intelligence</span>
           </h1>
-        </Block>
-        <Block index={2}>
+        </Reveal>
+        <Reveal index={2}>
           <p className="text-ink-dim text-lg font-light leading-relaxed max-w-2xl mx-auto mt-6">
             Aetheris already monitors Kazakhstan's water quality region by region.
             Pointed at the Aral Sea basin, that same Water Quality layer becomes an
             early-warning system for the world's most-cited water-scarcity collapse.
           </p>
-        </Block>
-        <Block index={3} className="flex justify-center gap-4 mt-9 flex-wrap">
+        </Reveal>
+        <Reveal index={3} className="flex justify-center gap-4 mt-9 flex-wrap">
           <GlowButton href="/map">View live data</GlowButton>
           <GlowButton href="/contact" variant="ghost">
             Talk to the team
           </GlowButton>
-        </Block>
+        </Reveal>
       </section>
 
       {/* 2 ── Problem + WQI stat cards ───────────────────────── */}
       <section className="max-w-6xl mx-auto px-6 pt-28">
-        <Heading
+        <SectionHeading
           tag="The crisis"
           title={
             <>
@@ -228,7 +114,7 @@ export default function OxfordChallengePage() {
         />
         <div className="grid sm:grid-cols-3 gap-5 mt-14">
           {BASIN_WQI.map((s, i) => (
-            <Block key={s.city} index={i}>
+            <Reveal key={s.city} index={i}>
               <GlassCard className="p-6 h-full flex flex-col gap-4">
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex flex-col">
@@ -240,23 +126,24 @@ export default function OxfordChallengePage() {
                   <TelemetryTag tone="coral">Critical</TelemetryTag>
                 </div>
                 <OriginBadge origin={LAYER_ORIGIN.water} className="self-start" />
-                <Stat
+                <StatReadout
                   value={s.wqi}
                   label="Water Quality Index · 0–100"
+                  tone="amber"
                   source="Aetheris modeled water-quality baseline · Aral Sea basin (reference figure)"
                 />
               </GlassCard>
-            </Block>
+            </Reveal>
           ))}
         </div>
       </section>
 
       {/* 3 ── How it works: Sense → Reason → Act ─────────────── */}
-      <HowItWorks />
+      <Pillars />
 
       {/* 4 ── Proof ──────────────────────────────────────────── */}
       <section className="max-w-6xl mx-auto px-6 pt-28">
-        <Block>
+        <Reveal>
           <GlassCard bright ticks className="scanline p-8 sm:p-12">
             <div className="grid lg:grid-cols-[1.3fr_1fr] gap-10 items-center">
               <div className="flex flex-col items-start gap-5">
@@ -300,12 +187,12 @@ export default function OxfordChallengePage() {
               </div>
             </div>
           </GlassCard>
-        </Block>
+        </Reveal>
       </section>
 
       {/* 5 ── Roadmap ────────────────────────────────────────── */}
       <section className="max-w-6xl mx-auto px-6 pt-28">
-        <Block>
+        <Reveal>
           <GlassCard className="p-8 sm:p-10 flex flex-col items-start gap-5">
             <TelemetryTag tone="amber">
               <span className="w-1 h-1 rounded-full bg-amber" />
@@ -322,12 +209,12 @@ export default function OxfordChallengePage() {
               the roadmap, not yet shipped.
             </p>
           </GlassCard>
-        </Block>
+        </Reveal>
       </section>
 
       {/* 6 ── Known limitations ──────────────────────────────── */}
       <section className="max-w-6xl mx-auto px-6 pt-28">
-        <Block>
+        <Reveal>
           <GlassCard className="p-8 sm:p-10">
             <div className="flex items-center gap-3 mb-6">
               <h2 className="font-[family-name:var(--font-syne)] font-bold text-2xl">
@@ -376,12 +263,12 @@ export default function OxfordChallengePage() {
               ))}
             </ul>
           </GlassCard>
-        </Block>
+        </Reveal>
       </section>
 
       {/* 7 ── Multilingual access ────────────────────────────── */}
       <section className="max-w-6xl mx-auto px-6 pt-28">
-        <Block>
+        <Reveal>
           <GlassCard className="p-8 sm:p-10 flex flex-col items-start gap-5">
             <TelemetryTag tone="cyan">
               <span className="w-1 h-1 rounded-full bg-cyan" />
@@ -417,12 +304,12 @@ export default function OxfordChallengePage() {
               </Link>
             </div>
           </GlassCard>
-        </Block>
+        </Reveal>
       </section>
 
       {/* 8 ── Footer CTA ─────────────────────────────────────── */}
       <section className="relative max-w-3xl mx-auto px-6 pt-28 pb-4 text-center">
-        <Block>
+        <Reveal>
           <p className="text-ink-dim text-lg font-light leading-relaxed">
             Built by {TEAM_LINE} for the{" "}
             <span className="text-ink">
@@ -430,15 +317,15 @@ export default function OxfordChallengePage() {
             </span>
             .
           </p>
-        </Block>
-        <Block index={1} className="flex justify-center mt-7">
+        </Reveal>
+        <Reveal index={1} className="flex justify-center mt-7">
           <Link
             href="/contact"
             className="telemetry telemetry-bright link-sweep hover:text-emerald transition-colors duration-300"
           >
             Contact the team →
           </Link>
-        </Block>
+        </Reveal>
       </section>
 
       <Footer />
