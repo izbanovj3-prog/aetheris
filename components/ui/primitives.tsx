@@ -21,6 +21,12 @@ export const riseIn: Variants = {
   }),
 };
 
+/* `reveal-root` is a styling hook, not a look: these elements render at
+   opacity:0 until whileInView fires, so anything that never scrolls them
+   into view — a printed page, a reader with JS disabled — would otherwise
+   get blank space where the content should be. globals.css and the
+   <noscript> block in app/layout.tsx force them visible in exactly those
+   cases. Keep the class on any element whose initial state is hidden. */
 export function Reveal({
   children,
   index = 0,
@@ -34,7 +40,7 @@ export function Reveal({
 }) {
   return (
     <motion.div
-      className={className}
+      className={className ? `reveal-root ${className}` : "reveal-root"}
       variants={riseIn}
       custom={index}
       initial="hidden"
@@ -219,7 +225,7 @@ export function StatReadout({
   return (
     <div className="flex flex-col gap-1.5">
       <motion.span
-        className={`readout text-3xl sm:text-4xl font-medium ${toneClass}`}
+        className={`reveal-root readout text-3xl sm:text-4xl font-medium ${toneClass}`}
         initial={{ opacity: 0 }}
         whileInView={{ opacity: 1 }}
         viewport={{ once: true }}
@@ -328,6 +334,17 @@ function Counter({ target, decimals }: { target: number; decimals: number }) {
   // Seed with the real value: the static export ships this initial render,
   // so crawlers and users without JS get the number, never a "0".
   const [val, setVal] = useState(target);
+
+  // Printing never scrolls, so an off-screen readout would go to paper as the
+  // armed "0" below. Snap every counter to its real value before the print
+  // snapshot is taken (the CSS in globals.css handles the opacity half).
+  useEffect(() => {
+    const snap = () => setVal(target);
+    window.addEventListener("beforeprint", snap);
+    const mq = window.matchMedia?.("print");
+    mq?.addEventListener?.("change", (e) => e.matches && snap());
+    return () => window.removeEventListener("beforeprint", snap);
+  }, [target]);
 
   useEffect(() => {
     if (reduce) {

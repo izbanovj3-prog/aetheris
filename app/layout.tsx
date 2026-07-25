@@ -123,6 +123,18 @@ export default function RootLayout({
       className={`${syne.variable} ${albert.variable} ${plexMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col grain">
+        {/* Framer-motion ships its `initial` state as an inline style and
+            animates it away on mount. With JS off that never happens, so the
+            page body renders blank — the hero, every Reveal section, every
+            stat readout. Inside <noscript> nothing will ever animate, so any
+            element still sitting at inline opacity:0 is by definition stuck:
+            force the lot visible. Scoped to no-JS only, so it cannot affect
+            normal rendering. */}
+        <noscript>
+          {/* filter is reset too — the hero's hidden variant is
+              blur(6px), which would otherwise print/render smeared. */}
+          <style>{`.reveal-root,[style*="opacity:0"]{opacity:1!important;transform:none!important;filter:none!important}`}</style>
+        </noscript>
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}

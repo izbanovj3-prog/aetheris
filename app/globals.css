@@ -393,6 +393,31 @@ body {
   to { opacity: 1; transform: translateY(0); }
 }
 
+/* ── Scroll-reveal safety net ─────────────────────────────────
+   Reveal/StatReadout render at opacity:0 and only fade in when
+   framer-motion's whileInView fires. Printing never scrolls, so without
+   this every section below the fold goes to paper blank — verified in
+   headed Chrome. `!important` is required: it has to beat the inline
+   style framer-motion writes. The <noscript> block in app/layout.tsx
+   does the same for readers without JS. */
+@media print {
+  .reveal-root {
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+  }
+}
+
+/* Reduced-motion users get no whileInView transition worth waiting for —
+   show the content rather than risk it sitting at opacity:0. */
+@media (prefers-reduced-motion: reduce) {
+  .reveal-root {
+    opacity: 1 !important;
+    transform: none !important;
+    filter: none !important;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
