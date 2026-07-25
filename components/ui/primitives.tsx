@@ -1,8 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { motion, type Variants } from "framer-motion";
-import type { ReactNode } from "react";
+import { motion, useInView, useReducedMotion } from "framer-motion";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import type { DataOrigin } from "@/lib/data";
 import { useDict } from "@/lib/useLocale";
 
@@ -12,21 +12,20 @@ import { useDict } from "@/lib/useLocale";
 
 export const EASE = [0.22, 1, 0.36, 1] as const;
 
-export const riseIn: Variants = {
-  hidden: { opacity: 0, y: 26 },
-  show: (i: number = 0) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.9, delay: i * 0.08, ease: EASE },
-  }),
-};
+/* ── Reveal ───────────────────────────────────────────────────
+   Reveals move, they never fade. The section slides up into place on
+   scroll; its opacity is always 1.
 
-/* `reveal-root` is a styling hook, not a look: these elements render at
-   opacity:0 until whileInView fires, so anything that never scrolls them
-   into view — a printed page, a reader with JS disabled — would otherwise
-   get blank space where the content should be. globals.css and the
-   <noscript> block in app/layout.tsx force them visible in exactly those
-   cases. Keep the class on any element whose initial state is hidden. */
+   That is a deliberate constraint, not an oversight. An opacity-based
+   reveal is fundamentally incompatible with any capture that does not
+   scroll — print, a full-page screenshot, a crawler snapshot, a reader
+   with JS disabled — because hiding off-screen content is precisely what
+   the effect does. Animating transform instead, the worst case is a
+   section sitting 26px low: still fully legible, still captured. Losing
+   the fade is a cheap price for content that can never go missing.
+
+   `reveal-root` stays as the hook for the print / no-JS rules, which
+   also flatten the transform so nothing prints nudged out of place. */
 export function Reveal({
   children,
   index = 0,
@@ -41,11 +40,10 @@ export function Reveal({
   return (
     <motion.div
       className={className ? `reveal-root ${className}` : "reveal-root"}
-      variants={riseIn}
-      custom={index}
-      initial="hidden"
-      whileInView="show"
+      initial={{ y: 26 }}
+      whileInView={{ y: 0 }}
       viewport={{ once, margin: "-60px" }}
+      transition={{ duration: 0.9, delay: index * 0.08, ease: EASE }}
     >
       {children}
     </motion.div>
@@ -224,15 +222,12 @@ export function StatReadout({
 
   return (
     <div className="flex flex-col gap-1.5">
-      <motion.span
-        className={`reveal-root readout text-3xl sm:text-4xl font-medium ${toneClass}`}
-        initial={{ opacity: 0 }}
-        whileInView={{ opacity: 1 }}
-        viewport={{ once: true }}
-      >
+      {/* No fade of its own: every StatReadout already sits inside a Reveal,
+          so this was a second opacity:0 that could strand the number. */}
+      <span className={`readout text-3xl sm:text-4xl font-medium ${toneClass}`}>
         <Counter target={value} decimals={decimals} />
         <span className="text-xl">{suffix}</span>
-      </motion.span>
+      </span>
       <span className="telemetry">
         {label}
         {source && <SourceNote source={source} className="ml-1.5" />}
@@ -324,8 +319,6 @@ export function SourceNote({
   );
 }
 
-import { useEffect, useRef, useState } from "react";
-import { useInView, useReducedMotion } from "framer-motion";
 
 function Counter({ target, decimals }: { target: number; decimals: number }) {
   const ref = useRef<HTMLSpanElement>(null);
@@ -335,14 +328,10 @@ function Counter({ target, decimals }: { target: number; decimals: number }) {
   // so crawlers and users without JS get the number, never a "0".
   const [val, setVal] = useState(target);
 
-  // Printing never scrolls, so an off-screen readout would go to paper as the
-  // armed "0" below. Snap every counter to its real value before the print
-  // snapshot is taken (the CSS in globals.css handles the opacity half).
+  // Belt and braces for the print path, which never scrolls.
   useEffect(() => {
     const snap = () => setVal(target);
     window.addEventListener("beforeprint", snap);
-    const mq = window.matchMedia?.("print");
-    mq?.addEventListener?.("change", (e) => e.matches && snap());
     return () => window.removeEventListener("beforeprint", snap);
   }, [target]);
 
@@ -351,12 +340,14 @@ function Counter({ target, decimals }: { target: number; decimals: number }) {
       setVal(target);
       return;
     }
-    if (!inView) {
-      // JS is running, so the count-up will play — arm it back to zero while
-      // the readout is still off-screen (and opacity-0 via the parent).
-      setVal(0);
-      return;
-    }
+    // Off-screen readouts keep their real value. They used to be armed back
+    // to 0 here, which meant any snapshot taken without scrolling — a
+    // screenshot, a crawler — captured "0" instead of the figure.
+    if (!inView) return;
+    // In view, so the count-up is about to play: start it from zero. This
+    // lands in the same tick as the animation, so it reads as a count-up
+    // rather than a flash.
+    setVal(0);
     const t0 = performance.now();
     const dur = 1600;
     let raf: number;

@@ -288,11 +288,13 @@ export function AssistantPreview() {
               {DEMO_EXCHANGE.map((m, i) => (
                 <motion.div
                   key={i}
-                  initial={{ opacity: 0, y: 12 }}
-                  whileInView={{ opacity: 1, y: 0 }}
+                  // Slide, don't fade — same rule as Reveal: this is readable
+                  // copy, so it must survive a capture that never scrolls.
+                  initial={{ y: 12 }}
+                  whileInView={{ y: 0 }}
                   viewport={{ once: true }}
                   transition={{ delay: 0.3 + i * 0.5, duration: 0.8 }}
-                  className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
+                  className={`reveal-root max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed ${
                     m.role === "user"
                       ? "self-end bg-carbon-3 border border-line-bright"
                       : "self-start bg-emerald/[0.06] border border-emerald/20 text-ink-dim"
@@ -301,12 +303,14 @@ export function AssistantPreview() {
                   {m.text}
                 </motion.div>
               ))}
+              {/* Decorative typing dots — a fade is fine here, but tag it so
+                  print and no-JS still show the indicator. */}
               <motion.div
                 initial={{ opacity: 0 }}
                 whileInView={{ opacity: 1 }}
                 viewport={{ once: true }}
                 transition={{ delay: 1.6 }}
-                className="self-start flex gap-1.5 px-4 py-3"
+                className="reveal-root self-start flex gap-1.5 px-4 py-3"
               >
                 {[0, 1, 2].map((i) => (
                   <motion.span
