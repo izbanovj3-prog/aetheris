@@ -335,6 +335,12 @@ export interface Dict {
     healthTitle: string;
     healthSource: string;
     modeledTitle: string;
+    gbifTitle: string;
+    gbifSpecies: string;
+    gbifRecords: string;
+    gbifWindow: string;
+    gbifPending: string;
+    gbifNote: (km: number, from: number, to: number) => string;
     pm25: string;
     pm10: string;
     no2: string;
@@ -587,6 +593,13 @@ const en: Dict = {
     healthTitle: "Health guidance",
     healthSource: "Guidance: US EPA AirNow activity recommendations",
     modeledTitle: "Modeled indices",
+    gbifTitle: "Species occurrence · GBIF",
+    gbifSpecies: "Distinct species",
+    gbifRecords: "Occurrence records",
+    gbifWindow: "What this is",
+    gbifPending: "Querying GBIF for occurrence records near this city…",
+    gbifNote: (km, from, to) =>
+      `Species recorded within ${km} km and published to GBIF between ${from} and ${to}. This reflects recording effort as well as ecology — a well-surveyed area scores higher partly because more people looked. It sits beside the modeled Biodiversity Intactness Index above; it does not replace it.`,
     pm25: "PM2.5",
     pm10: "PM10",
     no2: "NO₂",
@@ -878,6 +891,13 @@ const ru: Dict = {
     healthTitle: "Рекомендации для здоровья",
     healthSource: "Рекомендации: US EPA AirNow",
     modeledTitle: "Модельные индексы",
+    gbifTitle: "Встречаемость видов · GBIF",
+    gbifSpecies: "Различных видов",
+    gbifRecords: "Записей наблюдений",
+    gbifWindow: "Что это такое",
+    gbifPending: "Запрашиваем в GBIF записи наблюдений рядом с городом…",
+    gbifNote: (km, from, to) =>
+      `Виды, зафиксированные в радиусе ${km} км и опубликованные в GBIF с ${from} по ${to} год. Показатель отражает не только экологию, но и интенсивность наблюдений: где больше наблюдателей, там выше цифра. Он дополняет модельный индекс сохранности биоразнообразия выше, а не заменяет его.`,
     pm25: "PM2.5",
     pm10: "PM10",
     no2: "NO₂",
@@ -1169,6 +1189,13 @@ const kk: Dict = {
     healthTitle: "Денсаулық бойынша ұсыныстар",
     healthSource: "Ұсыныстар: US EPA AirNow",
     modeledTitle: "Модельдік индекстер",
+    gbifTitle: "Түрлердің кездесуі · GBIF",
+    gbifSpecies: "Түрлер саны",
+    gbifRecords: "Бақылау жазбалары",
+    gbifWindow: "Бұл не",
+    gbifPending: "GBIF-тен қала маңындағы бақылау жазбалары сұралуда…",
+    gbifNote: (km, from, to) =>
+      `${km} км радиуста тіркеліп, GBIF-те ${from}–${to} жылдары жарияланған түрлер. Бұл көрсеткіш экологияны ғана емес, бақылау белсенділігін де көрсетеді: бақылаушы көп жерде сан жоғары. Ол жоғарыдағы модельдік биоалуантүрлілік индексін алмастырмайды, толықтырады.`,
     pm25: "PM2.5",
     pm10: "PM10",
     no2: "NO₂",

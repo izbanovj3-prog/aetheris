@@ -9,7 +9,9 @@ import {
   TelemetryTag,
 } from "@/components/ui/primitives";
 import { aqiBand, scoreBand } from "@/lib/data";
+import { RADIUS_KM, gbifSource } from "@/lib/gbif";
 import { cityName, localePath, regionLabel } from "@/lib/i18n";
+import { useBiodiversity } from "@/lib/useBiodiversity";
 import { useDict, useLocale } from "@/lib/useLocale";
 import { useLiveStations } from "@/lib/useLiveStations";
 
@@ -25,6 +27,8 @@ export default function CityDetail({ id }: { id: string }) {
   const dict = useDict();
   const { stations, live, fetchedAt } = useLiveStations();
   const s = stations.find((st) => st.id === id);
+  // Called before the early return — hooks cannot sit behind a conditional.
+  const bio = useBiodiversity(s);
   if (!s) return null; // the server page 404s unknown ids before this renders
 
   const band = aqiBand(s.aqi);
@@ -125,6 +129,44 @@ export default function CityDetail({ id }: { id: string }) {
               </GlassCard>
             );
           })}
+        </div>
+      </div>
+
+      {/* ── Live species-occurrence signal (GBIF) ──────────────
+          Sits beside the modeled BII above rather than replacing it:
+          BII stays a modeled index, this is a real observation count. */}
+      <div className="mt-12">
+        <div className="flex flex-wrap items-center gap-2 mb-5">
+          <span className="telemetry telemetry-bright">{dict.city.gbifTitle}</span>
+          <OriginBadge origin={bio.live ? "live" : "modeled"} />
+          <SourceNote source={gbifSource(bio.data)} />
+        </div>
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <GlassCard className="p-5">
+            <span className="telemetry">{dict.city.gbifSpecies}</span>
+            <div className="readout text-2xl mt-2 text-emerald">
+              {bio.loading || !bio.data ? "—" : bio.data.species}
+              {bio.data?.speciesCapped && (
+                <span className="text-ink-faint text-xs ml-1">+</span>
+              )}
+            </div>
+          </GlassCard>
+          <GlassCard className="p-5">
+            <span className="telemetry">{dict.city.gbifRecords}</span>
+            <div className="readout text-2xl mt-2 text-cyan">
+              {bio.loading || !bio.data
+                ? "—"
+                : bio.data.records.toLocaleString(locale === "en" ? "en-US" : "ru-RU")}
+            </div>
+          </GlassCard>
+          <GlassCard className="p-5 col-span-2">
+            <span className="telemetry">{dict.city.gbifWindow}</span>
+            <div className="text-[13px] text-ink-dim font-light leading-relaxed mt-2">
+              {bio.data
+                ? dict.city.gbifNote(RADIUS_KM, bio.data.fromYear, bio.data.toYear)
+                : dict.city.gbifPending}
+            </div>
+          </GlassCard>
         </div>
       </div>
 

@@ -90,7 +90,7 @@ const en: PageContent = {
       },
       {
         title: "Water, biodiversity & industry",
-        body: "The Water Quality (WQI), Biodiversity Intactness (BII) and Industrial Load (IEI) indices are currently modeled from a deterministic regional baseline — no free real-time point feed exists for these layers yet. Treat them as indicative, not measured.",
+        body: "Water Quality (WQI) and Industrial Load (IEI) are modeled from a deterministic regional baseline — no free real-time point feed exists for those layers yet, so treat them as indicative, not measured. Biodiversity is now split: the Biodiversity Intactness Index (BII) shown on the map and city pages is still that same modeled baseline, while a separate species-occurrence signal is live from GBIF — distinct species and occurrence records published within 50 km of each city over the last 10 years. The live signal reflects recording effort as well as ecology and does not feed into BII; the two are displayed side by side and badged separately.",
       },
       {
         title: "Composite risk",
@@ -120,8 +120,14 @@ const en: PageContent = {
         status: "Live — fetched client-side on each visit",
       },
       {
+        name: "GBIF occurrence search",
+        provides:
+          "Species-occurrence signal per city — distinct species and occurrence records within 50 km over the last 10 years (api.gbif.org, no key required)",
+        status: "Live — fetched client-side when a city page is opened",
+      },
+      {
         name: "Aetheris baseline model",
-        provides: "Water quality (WQI), biodiversity (BII), industrial load (IEI) and risk (ERI) indices",
+        provides: "Water quality (WQI), biodiversity intactness (BII), industrial load (IEI) and risk (ERI) indices",
         status: "Modeled — deterministic regional baseline, refreshed per build",
       },
       {
@@ -230,7 +236,7 @@ const ru: PageContent = {
       },
       {
         title: "Вода, биоразнообразие и промышленность",
-        body: "Индексы качества воды (WQI), сохранности биоразнообразия (BII) и промышленной нагрузки (IEI) сейчас моделируются из детерминированной региональной базы — бесплатного потока данных в реальном времени для этих слоёв пока нет. Считайте их ориентировочными, а не измеренными.",
+        body: "Индексы качества воды (WQI) и промышленной нагрузки (IEI) моделируются из детерминированной региональной базы — бесплатного потока в реальном времени для них пока нет, считайте их ориентировочными, а не измеренными. С биоразнообразием теперь два разных показателя: индекс сохранности (BII) на карте и страницах городов остаётся модельным, а рядом появился живой сигнал встречаемости видов из GBIF — число видов и записей наблюдений в радиусе 50 км за последние 10 лет. Живой сигнал отражает и интенсивность наблюдений, а не только экологию, и в BII не входит: показатели выводятся рядом и маркируются отдельно.",
       },
       {
         title: "Совокупный риск",
@@ -258,6 +264,12 @@ const ru: PageContent = {
         name: "Open-Meteo Weather API",
         provides: "Температура и относительная влажность по каждому городу",
         status: "Живой — запрашивается на клиенте при каждом заходе",
+      },
+      {
+        name: "GBIF occurrence search",
+        provides:
+          "Сигнал встречаемости видов по городам — число видов и записей наблюдений в радиусе 50 км за последние 10 лет (api.gbif.org, без ключа)",
+        status: "Живой — запрашивается на клиенте при открытии страницы города",
       },
       {
         name: "Базовая модель Aetheris",
@@ -370,7 +382,7 @@ const kk: PageContent = {
       },
       {
         title: "Су, биоалуантүрлілік және өнеркәсіп",
-        body: "Су сапасы (WQI), биоалуантүрлілік сақталуы (BII) және өнеркәсіп жүктемесі (IEI) индекстері қазір детерминирленген өңірлік базадан модельденеді — бұл қабаттар үшін тегін нақты уақыт деректер ағыны әлі жоқ. Оларды өлшенген емес, бағдарлы деп есептеңіз.",
+        body: "Су сапасы (WQI) және өнеркәсіп жүктемесі (IEI) индекстері детерминирленген өңірлік базадан модельденеді — олар үшін тегін нақты уақыт ағыны әлі жоқ, сондықтан оларды өлшенген емес, бағдарлы деп есептеңіз. Биоалуантүрлілік енді екіге бөлінді: картадағы және қала беттеріндегі сақталу индексі (BII) сол модельдік база күйінде қалады, ал қасында GBIF-тен тірі түрлер кездесуінің сигналы пайда болды — әр қаладан 50 км радиуста соңғы 10 жылда жарияланған түрлер мен бақылау жазбаларының саны. Тірі сигнал экологияны ғана емес, бақылау белсенділігін де көрсетеді және BII-ге кірмейді: екеуі қатар шығып, бөлек таңбаланады.",
       },
       {
         title: "Жиынтық тәуекел",
@@ -398,6 +410,12 @@ const kk: PageContent = {
         name: "Open-Meteo Weather API",
         provides: "Әр қала бойынша температура және салыстырмалы ылғалдылық",
         status: "Тірі — әр кіргенде клиент жағында сұралады",
+      },
+      {
+        name: "GBIF occurrence search",
+        provides:
+          "Қалалар бойынша түрлердің кездесу сигналы — 50 км радиуста соңғы 10 жылдағы түрлер мен бақылау жазбаларының саны (api.gbif.org, кілтсіз)",
+        status: "Тірі — қала беті ашылғанда клиент жағында сұралады",
       },
       {
         name: "Aetheris базалық моделі",
