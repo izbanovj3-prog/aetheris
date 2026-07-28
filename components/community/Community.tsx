@@ -12,6 +12,7 @@ import {
 import {
   CATEGORIES,
   SEED_REPORTS,
+  getRemoteReports,
   SEVERITIES,
   STATUS_META,
   displayTime,
@@ -149,6 +150,24 @@ function ReportCard({ r, highlight }: { r: Report; highlight?: boolean }) {
               {r.userCreated && (
                 <span className="telemetry !text-[8px] text-emerald border border-emerald/30 rounded-full px-1.5 py-0.5">
                   You
+                </span>
+              )}
+              {/* Seeded illustrative rows carry the mark; real submissions
+                  never do, so the two can't be confused either way. */}
+              {!r.remote && !r.createdAt && (
+                <span
+                  title="Illustrative example written to demonstrate the feed — not a real submission."
+                  className="telemetry !text-[8px] text-amber border border-amber/30 rounded-full px-1.5 py-0.5 cursor-help"
+                >
+                  Sample
+                </span>
+              )}
+              {r.remote && (
+                <span
+                  title="Real submission, stored in the shared database and visible to every visitor."
+                  className="telemetry !text-[8px] text-cyan border border-cyan/30 rounded-full px-1.5 py-0.5 cursor-help"
+                >
+                  Filed
                 </span>
               )}
             </div>
@@ -304,6 +323,9 @@ export default function Community() {
   const [modalOpen, setModalOpen] = useState(false);
   const [justAddedId, setJustAddedId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
+  // Only true once Postgres has actually answered — drives the copy that
+  // claims reports persist. Never assumed.
+  const [backendLive, setBackendLive] = useState(false);
 
   // Merge this device's previously-submitted reports after mount (avoids any
   // SSR/localStorage hydration mismatch — the seed feed renders identically
@@ -311,6 +333,21 @@ export default function Community() {
   useEffect(() => {
     const mine = getUserReports();
     if (mine.length) setReports([...mine, ...SEED_REPORTS]);
+  }, []);
+
+  // Real submissions from Postgres, newest first, ahead of the seeded six.
+  // Local-only rows that already exist remotely are dropped so a report
+  // filed on this device is not shown twice.
+  useEffect(() => {
+    const ac = new AbortController();
+    getRemoteReports(ac.signal).then((rows) => {
+      if (!rows) return; // backend unreachable — keep the local view
+      setBackendLive(true);
+      const remoteIds = new Set(rows.map((r) => r.id));
+      const localOnly = getUserReports().filter((r) => !remoteIds.has(r.id));
+      setReports([...rows, ...localOnly, ...SEED_REPORTS]);
+    });
+    return () => ac.abort();
   }, []);
 
   function handleCreated(report: Report) {
@@ -383,9 +420,13 @@ export default function Community() {
                     from real people. Anything you post yourself IS real — it
                     just lives in this browser's localStorage, no backend. */}
                 <SampleTag
-                  note={`Seeded sample data — ${PILOT.reports} illustrative reports from ${PILOT.contributors} example contributors, written to demonstrate the feed. Not real submissions. Reports you file yourself are real but persist only to this browser (localStorage); there is no backend yet.`}
+                  note={
+                    backendLive
+                      ? `The ${PILOT.reports} entries marked "Sample" are illustrative, written to demonstrate the feed. Anything without that mark is a real submission stored in the shared database and visible to every visitor.`
+                      : `Seeded sample data — ${PILOT.reports} illustrative reports from ${PILOT.contributors} example contributors, written to demonstrate the feed. Not real submissions. Reports you file yourself are real but persist only to this browser; the shared datastore is unreachable right now.`
+                  }
                 >
-                  Sample data · {PILOT.reports} seeded reports
+                  {PILOT.reports} seeded examples
                 </SampleTag>
               </div>
               <button

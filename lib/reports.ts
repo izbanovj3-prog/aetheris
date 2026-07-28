@@ -8,6 +8,12 @@
    drop-in change with no UI rewrite.
    ───────────────────────────────────────────────────────────── */
 
+import {
+  insertRemoteReport,
+  listRemoteReports,
+  type RemoteReport,
+} from "./supabase";
+
 export type ReportCategory =
   | "air"
   | "water"
@@ -40,6 +46,8 @@ export interface Report {
   upvotes: number;
   comments: number;
   userCreated?: boolean;
+  /** True when this row came back from Postgres, not seed or localStorage. */
+  remote?: boolean;
 }
 
 export const CATEGORIES: Record<
@@ -180,10 +188,75 @@ export const SEED_REPORTS: Report[] = [
   },
 ];
 
-/* ── Persistence (localStorage) ──────────────────────────────── */
+/* ── Persistence ─────────────────────────────────────────────
+   Two tiers. Supabase is the real store: a report written there is
+   visible to every visitor, in any browser. localStorage remains as the
+   fallback for when the backend is unreachable or the table is missing,
+   so submission never simply fails.
+
+   `remote: true` on a Report means it came back from Postgres — the feed
+   uses that to separate real submissions from the six seeded examples,
+   and nothing marked remote is ever labelled sample data. */
 
 const STORAGE_KEY = "aetheris.community.reports.v1";
+const ANON_KEY = "aetheris.community.anon.v1";
 const MAX_STORED = 40;
+
+/**
+ * Stable anonymous device identifier. Not an account and not identity:
+ * it only lets a device recognise rows it wrote. Cleared with site data.
+ */
+export function anonId(): string {
+  if (typeof window === "undefined") return "server";
+  try {
+    const existing = window.localStorage.getItem(ANON_KEY);
+    if (existing) return existing;
+    const id =
+      typeof crypto !== "undefined" && crypto.randomUUID
+        ? crypto.randomUUID()
+        : `a-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+    window.localStorage.setItem(ANON_KEY, id);
+    return id;
+  } catch {
+    return `a-${Math.random().toString(36).slice(2, 10)}`;
+  }
+}
+
+const initials = (name: string) =>
+  name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .join("") || "AN";
+
+/** Map a Postgres row onto the Report shape the feed already renders. */
+function fromRemote(r: RemoteReport): Report {
+  return {
+    id: r.id,
+    author: r.author,
+    initials: initials(r.author),
+    city: r.city,
+    createdAt: new Date(r.created_at).getTime(),
+    category: r.category,
+    severity: r.severity,
+    title: r.title,
+    body: r.body,
+    status: r.status,
+    upvotes: r.upvotes,
+    comments: 0,
+    userCreated: r.anon_id === anonId(),
+    remote: true,
+  };
+}
+
+/** Every real submission, newest first. Null when the backend is down. */
+export async function getRemoteReports(signal?: AbortSignal): Promise<Report[] | null> {
+  const rows = await listRemoteReports(50, signal);
+  return rows ? rows.map(fromRemote) : null;
+}
+
+/** Whether the datastore is actually reachable right now. */
+export { backendReachable } from "./supabase";
 
 function newId(): string {
   try {
@@ -245,6 +318,37 @@ export async function createReport(input: NewReportInput): Promise<Report> {
   if (typeof window === "undefined") {
     throw new Error("Reports can only be submitted in the browser.");
   }
+
+  // Try the real datastore first. On success the report is public and
+  // survives this browser; the row's own id and timestamp win.
+  const stored = await insertRemoteReport({
+    anon_id: anonId(),
+    author: "Anonymous",
+    city: input.city,
+    lat: null,
+    lon: null,
+    category: input.category,
+    severity: input.severity,
+    title: report.title,
+    body: report.body,
+  });
+  if (stored) {
+    // Keep a local copy too: the photo lives only on this device (the
+    // table stores no image), and it keeps the feed populated offline.
+    const merged: Report = { ...fromRemote(stored), photo: input.photo, userCreated: true };
+    try {
+      const existing = getUserReports();
+      window.localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify([merged, ...existing].slice(0, MAX_STORED)),
+      );
+    } catch {
+      /* local mirror is best-effort — the durable copy is already in Postgres */
+    }
+    return merged;
+  }
+
+  // Backend unreachable or table missing — fall back to device-only storage.
 
   const existing = getUserReports();
   const next = [report, ...existing].slice(0, MAX_STORED);
