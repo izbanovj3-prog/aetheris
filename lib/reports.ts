@@ -229,6 +229,21 @@ const initials = (name: string) =>
     .map((w) => w[0]?.toUpperCase() ?? "")
     .join("") || "AN";
 
+/**
+ * Thrown when the datastore refuses a submission because the device has
+ * filed too many recently. Its own type so the UI can say "come back
+ * later" rather than showing a generic failure — the report was not
+ * saved anywhere, and the user needs to know that.
+ */
+export class RateLimitError extends Error {
+  readonly scope: "hourly" | "daily";
+  constructor(scope: "hourly" | "daily") {
+    super(`rate limit reached (${scope})`);
+    this.name = "RateLimitError";
+    this.scope = scope;
+  }
+}
+
 /** Map a Postgres row onto the Report shape the feed already renders. */
 function fromRemote(r: RemoteReport): Report {
   return {
@@ -321,7 +336,7 @@ export async function createReport(input: NewReportInput): Promise<Report> {
 
   // Try the real datastore first. On success the report is public and
   // survives this browser; the row's own id and timestamp win.
-  const stored = await insertRemoteReport({
+  const result = await insertRemoteReport({
     anon_id: anonId(),
     author: "Anonymous",
     city: input.city,
@@ -332,10 +347,17 @@ export async function createReport(input: NewReportInput): Promise<Report> {
     title: report.title,
     body: report.body,
   });
-  if (stored) {
+
+  // A refusal is an answer, not an outage: falling back to localStorage here
+  // would show the user a success toast for a report the database declined.
+  if (!result.ok && result.reason === "rate-limited") {
+    throw new RateLimitError(result.scope);
+  }
+
+  if (result.ok) {
     // Keep a local copy too: the photo lives only on this device (the
     // table stores no image), and it keeps the feed populated offline.
-    const merged: Report = { ...fromRemote(stored), photo: input.photo, userCreated: true };
+    const merged: Report = { ...fromRemote(result.row), photo: input.photo, userCreated: true };
     try {
       const existing = getUserReports();
       window.localStorage.setItem(

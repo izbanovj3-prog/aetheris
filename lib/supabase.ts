@@ -77,12 +77,24 @@ export async function listRemoteReports(
   }
 }
 
-/** Insert one report. Returns the stored row, or null if it did not persist. */
+/**
+ * Result of an insert. "rate-limited" has to be distinguishable from
+ * "unavailable": the first is a real answer from the server that the user
+ * must be told about, the second is a transport failure we quietly absorb
+ * by writing locally. Collapsing them would mean telling someone their
+ * report was filed when the database refused it.
+ */
+export type InsertResult =
+  | { ok: true; row: RemoteReport }
+  | { ok: false; reason: "rate-limited"; scope: "hourly" | "daily" }
+  | { ok: false; reason: "unavailable" };
+
+/** Insert one report. Never throws. */
 export async function insertRemoteReport(
   report: NewRemoteReport,
   signal?: AbortSignal,
-): Promise<RemoteReport | null> {
-  if (!isConfigured()) return null;
+): Promise<InsertResult> {
+  if (!isConfigured()) return { ok: false, reason: "unavailable" };
   try {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/${REPORTS_TABLE}`, {
       method: "POST",
@@ -92,11 +104,28 @@ export async function insertRemoteReport(
       body: JSON.stringify(report),
       signal,
     });
-    if (!res.ok) return null;
-    const rows = (await res.json()) as RemoteReport[];
-    return rows[0] ?? null;
+
+    if (res.ok) {
+      const rows = (await res.json()) as RemoteReport[];
+      return rows[0]
+        ? { ok: true, row: rows[0] }
+        : { ok: false, reason: "unavailable" };
+    }
+
+    // The rate-limit trigger raises P0001 with a message we tagged.
+    const body = (await res.json().catch(() => null)) as
+      | { code?: string; message?: string }
+      | null;
+    const msg = body?.message ?? "";
+    if (msg.includes("rate_limit_hourly")) {
+      return { ok: false, reason: "rate-limited", scope: "hourly" };
+    }
+    if (msg.includes("rate_limit_daily")) {
+      return { ok: false, reason: "rate-limited", scope: "daily" };
+    }
+    return { ok: false, reason: "unavailable" };
   } catch {
-    return null;
+    return { ok: false, reason: "unavailable" };
   }
 }
 

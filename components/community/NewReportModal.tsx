@@ -19,6 +19,7 @@ import {
   type ReportCategory,
   type Severity,
   type Tone,
+  RateLimitError,
 } from "@/lib/reports";
 
 const TONE_TEXT: Record<Tone, string> = {
@@ -159,7 +160,18 @@ export function NewReportModal({
       });
       onCreated(report);
     } catch (err) {
-      setSubmitError(err instanceof Error ? err.message : "Submission failed. Please try again.");
+      // A rate-limit refusal is expected behaviour, not a fault — say so
+      // plainly. The modal stays open with the fields intact, so the text
+      // genuinely is still there; the report was not stored anywhere.
+      if (err instanceof RateLimitError) {
+        setSubmitError(
+          err.scope === "hourly"
+            ? "You've hit the submission limit for now — your text is still here, try again in a little while."
+            : "You've hit today's submission limit — your text is still here, try again tomorrow.",
+        );
+      } else {
+        setSubmitError(err instanceof Error ? err.message : "Submission failed. Please try again.");
+      }
       setSubmitting(false);
     }
   }
