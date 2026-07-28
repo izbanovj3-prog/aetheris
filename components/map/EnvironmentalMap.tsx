@@ -24,6 +24,7 @@ import {
   type Station,
 } from "@/lib/data";
 import { fetchLiveStations } from "@/lib/live";
+import { useBiodiversity, type BiodiversityState } from "@/lib/useBiodiversity";
 import {
   aqiBandLabel,
   cityName,
@@ -480,6 +481,14 @@ export default function EnvironmentalMap() {
     }
   }, [selected, isDesktop, ready, reducedMotion]);
 
+  /* Lazy by construction: GBIF is queried only when the biodiversity layer
+     is the active one AND a city is actually selected. Opening the map
+     fetches nothing — there is no bulk pass over the 28 stations, which is
+     also why this is per-city rather than a source-wide overlay. Results
+     are memoised in the hook, so re-selecting a city costs no request. */
+  const bioTarget = activeLayer === "biodiversity" ? selected ?? undefined : undefined;
+  const bio = useBiodiversity(bioTarget);
+
   const closePanel = useCallback(() => setSelected(null), []);
   const zoomIn = useCallback(() => mapRef.current?.zoomIn({ duration: 400 }), []);
   const zoomOut = useCallback(() => mapRef.current?.zoomOut({ duration: 400 }), []);
@@ -610,6 +619,21 @@ export default function EnvironmentalMap() {
         unit={LAYERS[activeLayer].unit}
         ramp={vis.ramp}
         domain={vis.domain}
+        liveRow={
+          activeLayer === "biodiversity"
+            ? {
+                label: dict.map.gbifLegend,
+                value: bio.data
+                  ? dict.map.gbifValue(
+                      bio.data.species,
+                      bio.data.speciesCapped,
+                      bio.data.records,
+                    )
+                  : null,
+                hint: bio.loading ? dict.map.gbifLoading : dict.map.gbifHint,
+              }
+            : null
+        }
       />
 
       {/* zoom / home controls */}
@@ -642,6 +666,7 @@ export default function EnvironmentalMap() {
             onClose={closePanel}
             dict={dict}
             locale={locale}
+            bio={activeLayer === "biodiversity" ? bio : null}
           />
         )}
       </AnimatePresence>
@@ -964,12 +989,15 @@ const StationPanel = memo(function StationPanel({
   onClose,
   dict,
   locale,
+  bio,
 }: {
   station: Station;
   isDesktop: boolean;
   onClose: () => void;
   dict: Dict;
   locale: Locale;
+  /** Live GBIF signal — present only while the biodiversity layer is active. */
+  bio: BiodiversityState | null;
 }) {
   const air = aqiBand(s.aqi);
   const sus = scoreBand(s.sustainability);
@@ -1066,6 +1094,30 @@ const StationPanel = memo(function StationPanel({
           <MetricRow label={dict.map.industrial} value={s.industrialEmissions} max={100} color={TONE_HEX.coral} origin={METRIC_ORIGIN.industrialEmissions} />
           <MetricRow label={dict.map.water} value={s.waterQuality} max={100} color="#4f9dde" origin={METRIC_ORIGIN.waterQuality} />
           <MetricRow label={dict.map.bio} value={s.biodiversity} max={100} color={TONE_HEX.emerald} origin={METRIC_ORIGIN.biodiversity} />
+          {/* The live counterpart to the modeled BII row above. Deliberately
+              its own row with its own badge — the two measure different
+              things and must not read as a single figure. */}
+          {bio && (
+            <div className="flex flex-col gap-1.5 -mt-1.5 pl-3 border-l border-line">
+              <div className="flex items-baseline justify-between gap-2">
+                <span className="text-[12px] text-ink-dim flex items-center gap-1.5 min-w-0">
+                  <span className="truncate">{dict.map.gbifLegend}</span>
+                  <OriginBadge origin="live" className="shrink-0" />
+                </span>
+                <span className="readout text-sm shrink-0 text-emerald">
+                  {bio.data ? bio.data.species : bio.loading ? "…" : "—"}
+                  {bio.data?.speciesCapped && "+"}
+                </span>
+              </div>
+              <span className="telemetry !text-[8px] leading-snug">
+                {bio.data
+                  ? dict.map.gbifRecordsLine(bio.data.records, bio.data.fromYear, bio.data.toYear)
+                  : bio.loading
+                    ? dict.map.gbifLoading
+                    : dict.map.gbifUnavailable}
+              </span>
+            </div>
+          )}
           <MetricRow label={dict.map.risk} value={s.climateRisk} max={100} color={TONE_HEX.amber} origin={METRIC_ORIGIN.climateRisk} />
         </div>
 

@@ -7,18 +7,30 @@ import { EASE, OriginBadge } from "@/components/ui/primitives";
 
 /* Compact gradient legend for the active layer — gives the color field on the
    map a readable scale, reinforcing that markers encode a real measurement. */
+/** Second legend row for biodiversity: the live GBIF signal shown beside —
+ *  never merged into — the modeled intactness index. */
+export interface LiveLegendRow {
+  label: string;
+  /** Rendered value, or null while the request is in flight. */
+  value: string | null;
+  /** Shown instead of a value when no city has been picked yet. */
+  hint: string;
+}
+
 export const LayerLegend = memo(function LayerLegend({
   layer,
   label,
   unit,
   ramp,
   domain,
+  liveRow,
 }: {
   layer: LayerKey;
   label: string;
   unit: string;
   ramp: [string, string, string];
   domain: [number, number];
+  liveRow?: LiveLegendRow | null;
 }) {
   const [lo, hi] = domain;
   const mid = Math.round((lo + hi) / 2);
@@ -61,6 +73,26 @@ export const LayerLegend = memo(function LayerLegend({
           <span className="readout text-[9px] text-ink-faint">{mid}</span>
           <span className="readout text-[9px] text-ink-faint">{hi}</span>
         </div>
+
+        {/* Biodiversity carries two independent readings. They get two rows
+            and two badges — merging them into one number would imply the
+            modeled index had become live, which it has not. The row above
+            stays the modeled BII scale; this one is the GBIF signal. */}
+        {liveRow && (
+          <div className="mt-2.5 pt-2.5 border-t border-line flex flex-col gap-1.5">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[10px] font-semibold text-ink leading-tight">
+                {liveRow.label}
+              </span>
+              <OriginBadge origin="live" />
+            </div>
+            {liveRow.value ? (
+              <span className="readout text-[11px] text-emerald">{liveRow.value}</span>
+            ) : (
+              <span className="telemetry !text-[8px] leading-snug">{liveRow.hint}</span>
+            )}
+          </div>
+        )}
       </motion.div>
     </div>
   );

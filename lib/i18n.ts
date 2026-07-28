@@ -401,6 +401,12 @@ export interface Dict {
     industrial: string;
     water: string;
     bio: string;
+    gbifLegend: string;
+    gbifHint: string;
+    gbifLoading: string;
+    gbifUnavailable: string;
+    gbifValue: (species: number, capped: boolean, records: number) => string;
+    gbifRecordsLine: (records: number, from: number, to: number) => string;
     risk: string;
     aiRead: string;
     aiLead: (name: string, val: string) => string;
@@ -687,6 +693,14 @@ const en: Dict = {
     industrial: "Industrial emission load",
     water: "Water quality index",
     bio: "Biodiversity intactness",
+    gbifLegend: "Species occurrence · GBIF",
+    gbifHint: "Select a city to load its live species signal",
+    gbifLoading: "Querying GBIF…",
+    gbifUnavailable: "GBIF unavailable",
+    gbifValue: (sp, capped, rec) =>
+      `${sp}${capped ? "+" : ""} species · ${rec.toLocaleString("en-US")} records`,
+    gbifRecordsLine: (rec, from, to) =>
+      `${rec.toLocaleString("en-US")} records within 50 km, ${from}–${to}`,
     risk: "Environmental risk exposure",
     aiRead: "AI read",
     aiLead: (name, val) => `${name} is running ${val} °C above its climate baseline. `,
@@ -985,6 +999,14 @@ const ru: Dict = {
     industrial: "Промышленная эмиссионная нагрузка",
     water: "Индекс качества воды",
     bio: "Сохранность биоразнообразия",
+    gbifLegend: "Встречаемость видов · GBIF",
+    gbifHint: "Выберите город, чтобы загрузить живой сигнал",
+    gbifLoading: "Запрос к GBIF…",
+    gbifUnavailable: "GBIF недоступен",
+    gbifValue: (sp, capped, rec) =>
+      `${sp}${capped ? "+" : ""} видов · ${rec.toLocaleString("ru-RU")} записей`,
+    gbifRecordsLine: (rec, from, to) =>
+      `${rec.toLocaleString("ru-RU")} записей в радиусе 50 км, ${from}–${to}`,
     risk: "Экологический риск",
     aiRead: "Прочтение ИИ",
     aiLead: (name, val) => `${name} на ${val} °C выше своей климатической базы. `,
@@ -1283,6 +1305,14 @@ const kk: Dict = {
     industrial: "Өнеркәсіптік шығарынды жүктемесі",
     water: "Су сапасы индексі",
     bio: "Биоалуантүрлілік сақталуы",
+    gbifLegend: "Түрлердің кездесуі · GBIF",
+    gbifHint: "Тірі сигналды жүктеу үшін қаланы таңдаңыз",
+    gbifLoading: "GBIF сұралуда…",
+    gbifUnavailable: "GBIF қолжетімсіз",
+    gbifValue: (sp, capped, rec) =>
+      `${sp}${capped ? "+" : ""} түр · ${rec.toLocaleString("ru-RU")} жазба`,
+    gbifRecordsLine: (rec, from, to) =>
+      `50 км радиуста ${rec.toLocaleString("ru-RU")} жазба, ${from}–${to}`,
     risk: "Экологиялық тәуекел",
     aiRead: "ЖИ оқуы",
     aiLead: (name, val) => `${name} климаттық базасынан ${val} °C жоғары. `,
