@@ -105,3 +105,31 @@ export async function insertRemoteReport(
 export async function backendReachable(signal?: AbortSignal): Promise<boolean> {
   return (await listRemoteReports(1, signal)) !== null;
 }
+
+/**
+ * Date the shared datastore went live. Nothing exists before it, so the
+ * counter below is a true running total rather than a backfilled estimate.
+ */
+export const TRACKING_SINCE = "2026-07-25";
+
+/**
+ * Exact row count, read from the Content-Range header rather than by
+ * downloading rows. Returns null on failure so the UI can stay silent
+ * instead of printing a zero it cannot stand behind.
+ */
+export async function countRemoteReports(signal?: AbortSignal): Promise<number | null> {
+  if (!isConfigured()) return null;
+  try {
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/${REPORTS_TABLE}?select=id`,
+      { method: "HEAD", headers: headers({ Prefer: "count=exact" }), signal },
+    );
+    if (!res.ok) return null;
+    // Content-Range looks like "0-24/137"; the total is after the slash.
+    const total = res.headers.get("content-range")?.split("/")[1];
+    const n = total ? Number(total) : NaN;
+    return Number.isFinite(n) ? n : null;
+  } catch {
+    return null;
+  }
+}

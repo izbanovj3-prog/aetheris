@@ -264,11 +264,16 @@ export default function OxfordChallengePage() {
                 </>,
                 <>
                   <span className="text-ink">
-                    Community reports are a {PILOT_REPORTS}-report pilot feed.
+                    Community reports persist, but nothing verifies them.
                   </span>{" "}
-                  Illustrative entries from {PILOT_CONTRIBUTORS} contributors, not a
-                  live user base. Reports you submit are real, but persist only to
-                  your own browser — there is no backend yet.
+                  Submissions are written to a shared Postgres database and are
+                  visible to every visitor in any browser. What does not exist is
+                  a moderation or verification pipeline: reporting is anonymous,
+                  every report lands as &ldquo;awaiting review&rdquo;, and nothing
+                  promotes it beyond that yet. The feed also carries{" "}
+                  {PILOT_REPORTS} clearly marked illustrative entries from{" "}
+                  {PILOT_CONTRIBUTORS} example contributors, kept to show the
+                  format.
                 </>,
                 <>
                   <span className="text-ink">Shipped vs roadmap.</span> Live now:{" "}

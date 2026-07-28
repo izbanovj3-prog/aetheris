@@ -1,7 +1,10 @@
 "use client";
 
+import { useEffect, useState } from "react";
+
 import Link from "next/link";
 import { BRAND } from "@/lib/site";
+import { TRACKING_SINCE, countRemoteReports } from "@/lib/supabase";
 import { getStations } from "@/lib/data";
 import { cityName, localePath } from "@/lib/i18n";
 import { useLocale, usePageContent } from "@/lib/useLocale";
@@ -136,8 +139,41 @@ export function MissionContent() {
             </p>
           ))}
         </div>
+        <Traction />
       </div>
     </Shell>
+  );
+}
+
+/* Real traction, or nothing. The count is read live from the reports
+   table; if that read fails the block renders nothing rather than
+   printing a zero we cannot stand behind. Nothing here is backfilled —
+   the datastore did not exist before TRACKING_SINCE, so this is a true
+   running total from a standing start. */
+function Traction() {
+  const [count, setCount] = useState<number | null>(null);
+  useEffect(() => {
+    const ac = new AbortController();
+    countRemoteReports(ac.signal).then(setCount);
+    return () => ac.abort();
+  }, []);
+
+  if (count === null) return null;
+  return (
+    <div className="mt-10 border-t border-line pt-6 flex flex-col gap-2">
+      <span className="telemetry telemetry-bright">Where it stands</span>
+      <p className="text-ink-dim leading-relaxed font-light">
+        <span className="readout text-emerald">{count}</span>{" "}
+        {count === 1 ? "field report has" : "field reports have"} been filed to
+        the shared datastore since {TRACKING_SINCE}, when it went live. Small
+        numbers, honestly counted: nothing here is estimated or backfilled,
+        because there was nothing to backfill.
+      </p>
+      <p className="telemetry">
+        Visitor analytics is collected via Vercel Analytics but is not surfaced
+        here — reading those figures needs an API token this build does not hold.
+      </p>
+    </div>
   );
 }
 
