@@ -630,7 +630,12 @@ export default function EnvironmentalMap() {
                       bio.data.records,
                     )
                   : null,
-                hint: bio.loading ? dict.map.gbifLoading : dict.map.gbifHint,
+                hint:
+                  bio.phase === "loading"
+                    ? dict.map.gbifLoading
+                    : bio.phase === "unavailable"
+                      ? dict.map.gbifUnavailable
+                      : dict.map.gbifHint,
               }
             : null
         }
@@ -1105,14 +1110,14 @@ const StationPanel = memo(function StationPanel({
                   <OriginBadge origin="live" className="shrink-0" />
                 </span>
                 <span className="readout text-sm shrink-0 text-emerald">
-                  {bio.data ? bio.data.species : bio.loading ? "…" : "—"}
+                  {bio.data ? bio.data.species : bio.phase === "loading" ? "…" : "—"}
                   {bio.data?.speciesCapped && "+"}
                 </span>
               </div>
               <span className="telemetry !text-[8px] leading-snug">
                 {bio.data
                   ? dict.map.gbifRecordsLine(bio.data.records, bio.data.fromYear, bio.data.toYear)
-                  : bio.loading
+                  : bio.phase === "loading"
                     ? dict.map.gbifLoading
                     : dict.map.gbifUnavailable}
               </span>

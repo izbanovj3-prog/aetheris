@@ -244,17 +244,41 @@ export function StatReadout({
    disclosure can't drift.
    ───────────────────────────────────────────────────────────── */
 
+/**
+ * Third variant beyond live/modeled: "community". Kept distinct on purpose
+ * — plain "Live" on this site has meant an instrument or satellite feed,
+ * and community reports are people saying what they saw. Same component,
+ * its own colour and its own caveat, so the distinction survives a glance.
+ */
+export type BadgeOrigin = DataOrigin | "community";
+
 export function OriginBadge({
   origin,
   className = "",
 }: {
-  origin: DataOrigin;
+  origin: BadgeOrigin;
   className?: string;
 }) {
   const dict = useDict();
-  const isLive = origin === "live";
-  const label = isLive ? dict.dataOrigin.live : dict.dataOrigin.modeled;
-  const note = isLive ? dict.dataOrigin.liveNote : dict.dataOrigin.modeledNote;
+  const label =
+    origin === "live"
+      ? dict.dataOrigin.live
+      : origin === "community"
+        ? dict.dataOrigin.community
+        : dict.dataOrigin.modeled;
+  const note =
+    origin === "live"
+      ? dict.dataOrigin.liveNote
+      : origin === "community"
+        ? dict.dataOrigin.communityNote
+        : dict.dataOrigin.modeledNote;
+
+  const tone =
+    origin === "live"
+      ? "text-emerald border-emerald/30 bg-emerald/[0.07]"
+      : origin === "community"
+        ? "text-amber border-amber/30 bg-amber/[0.07]"
+        : "text-atmos border-atmos/30 bg-atmos/[0.07]";
 
   return (
     <span
@@ -262,14 +286,13 @@ export function OriginBadge({
       tabIndex={0}
       title={note}
       aria-label={`${label} — ${note}`}
-      className={`telemetry !text-[9px] inline-flex items-center gap-1.5 rounded-full border px-2 py-[3px] cursor-help align-middle whitespace-nowrap ${
-        isLive
-          ? "text-emerald border-emerald/30 bg-emerald/[0.07]"
-          : "text-atmos border-atmos/30 bg-atmos/[0.07]"
-      } ${className}`}
+      className={`telemetry !text-[9px] inline-flex items-center gap-1.5 rounded-full border px-2 py-[3px] cursor-help align-middle whitespace-nowrap ${tone} ${className}`}
     >
-      {isLive ? (
+      {origin === "live" ? (
         <span className="dot-live" />
+      ) : origin === "community" ? (
+        // Filled but not pulsing: real and current, but not an instrument.
+        <span className="w-1.5 h-1.5 rounded-full bg-current opacity-80" />
       ) : (
         // Hollow ring — deliberately reads as "derived", not a pulsing feed.
         <span className="w-1.5 h-1.5 rounded-full border border-current opacity-70" />

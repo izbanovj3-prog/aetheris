@@ -264,16 +264,20 @@ export default function OxfordChallengePage() {
                 </>,
                 <>
                   <span className="text-ink">
-                    Community reports persist, but nothing verifies them.
+                    Community reports are corroborated, never verified.
                   </span>{" "}
-                  Submissions are written to a shared Postgres database and are
-                  visible to every visitor in any browser. What does not exist is
-                  a moderation or verification pipeline: reporting is anonymous,
-                  every report lands as &ldquo;awaiting review&rdquo;, and nothing
-                  promotes it beyond that yet. The feed also carries{" "}
-                  {PILOT_REPORTS} clearly marked illustrative entries from{" "}
-                  {PILOT_CONTRIBUTORS} example contributors, kept to show the
-                  format.
+                  Submissions persist to a shared Postgres database and are
+                  visible to every visitor in any browser, rate-limited to five
+                  per hour per device. Everything arrives as &ldquo;awaiting
+                  review&rdquo;; when two or more different devices report the
+                  same category in the same city within 72 hours, that group
+                  moves to &ldquo;corroborated&rdquo;. That is independent people
+                  describing the same thing — not proof they are right, and no
+                  instrument checks them. Nothing is ever auto-promoted to
+                  &ldquo;verified&rdquo;, and there is still no human moderator.
+                  The feed also carries {PILOT_REPORTS} clearly marked
+                  illustrative entries from {PILOT_CONTRIBUTORS} example
+                  contributors.
                 </>,
                 <>
                   <span className="text-ink">Shipped vs roadmap.</span> Live now:{" "}

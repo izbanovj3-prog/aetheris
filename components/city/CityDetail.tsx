@@ -9,7 +9,10 @@ import {
   TelemetryTag,
 } from "@/components/ui/primitives";
 import { aqiBand, scoreBand } from "@/lib/data";
+import { WINDOW_DAYS, communitySource } from "@/lib/community";
 import { RADIUS_KM, gbifSource } from "@/lib/gbif";
+import { CATEGORIES, type ReportCategory } from "@/lib/reports";
+import { useCommunitySignal } from "@/lib/useCommunitySignal";
 import { cityName, localePath, regionLabel } from "@/lib/i18n";
 import { useBiodiversity } from "@/lib/useBiodiversity";
 import { useDict, useLocale } from "@/lib/useLocale";
@@ -29,6 +32,7 @@ export default function CityDetail({ id }: { id: string }) {
   const s = stations.find((st) => st.id === id);
   // Called before the early return — hooks cannot sit behind a conditional.
   const bio = useBiodiversity(s);
+  const sig = useCommunitySignal(s?.name);
   if (!s) return null; // the server page 404s unknown ids before this renders
 
   const band = aqiBand(s.aqi);
@@ -138,14 +142,14 @@ export default function CityDetail({ id }: { id: string }) {
       <div className="mt-12">
         <div className="flex flex-wrap items-center gap-2 mb-5">
           <span className="telemetry telemetry-bright">{dict.city.gbifTitle}</span>
-          <OriginBadge origin={bio.live ? "live" : "modeled"} />
+          <OriginBadge origin={bio.phase === "ready" ? "live" : "modeled"} />
           <SourceNote source={gbifSource(bio.data)} />
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           <GlassCard className="p-5">
             <span className="telemetry">{dict.city.gbifSpecies}</span>
             <div className="readout text-2xl mt-2 text-emerald">
-              {bio.loading || !bio.data ? "—" : bio.data.species}
+              {bio.phase === "ready" && bio.data ? bio.data.species : "—"}
               {bio.data?.speciesCapped && (
                 <span className="text-ink-faint text-xs ml-1">+</span>
               )}
@@ -154,20 +158,92 @@ export default function CityDetail({ id }: { id: string }) {
           <GlassCard className="p-5">
             <span className="telemetry">{dict.city.gbifRecords}</span>
             <div className="readout text-2xl mt-2 text-cyan">
-              {bio.loading || !bio.data
-                ? "—"
-                : bio.data.records.toLocaleString(locale === "en" ? "en-US" : "ru-RU")}
+              {bio.phase === "ready" && bio.data
+                ? bio.data.records.toLocaleString(locale === "en" ? "en-US" : "ru-RU")
+                : "—"}
             </div>
           </GlassCard>
           <GlassCard className="p-5 col-span-2">
             <span className="telemetry">{dict.city.gbifWindow}</span>
             <div className="text-[13px] text-ink-dim font-light leading-relaxed mt-2">
-              {bio.data
+              {/* "idle" is what a reader without JS sees, and what the page
+                  source shows: no request has been made, so say that rather
+                  than claiming to be querying — an indefinite "loading…"
+                  reads as broken even when nothing is wrong. */}
+              {bio.phase === "ready" && bio.data
                 ? dict.city.gbifNote(RADIUS_KM, bio.data.fromYear, bio.data.toYear)
-                : dict.city.gbifPending}
+                : bio.phase === "loading"
+                  ? dict.city.gbifPending
+                  : bio.phase === "unavailable"
+                    ? dict.city.gbifUnavailable
+                    : dict.city.gbifIdle}
             </div>
           </GlassCard>
         </div>
+      </div>
+
+      {/* ── Community-sourced signal ───────────────────────────
+          The only layer that is neither instrument nor model. Badged
+          "Live · community" rather than "Live" because plain Live has
+          meant instrument-grade everywhere else on this site. */}
+      <div className="mt-12">
+        <div className="flex flex-wrap items-center gap-2 mb-5">
+          <span className="telemetry telemetry-bright">{dict.city.communityTitle}</span>
+          <OriginBadge origin="community" />
+          <SourceNote source={communitySource(sig.signal)} />
+        </div>
+
+        {sig.phase !== "ready" || !sig.signal ? (
+          <GlassCard className="p-5">
+            <span className="text-[13px] text-ink-dim font-light leading-relaxed">
+              {sig.phase === "loading"
+                ? dict.city.communityLoading
+                : sig.phase === "unavailable"
+                  ? dict.city.communityUnavailable
+                  : dict.city.communityIdle}
+            </span>
+          </GlassCard>
+        ) : sig.signal.total === 0 ? (
+          // An honest empty state, not a zero plotted as if it were a reading.
+          <GlassCard className="p-5">
+            <span className="text-[13px] text-ink-dim font-light leading-relaxed">
+              {dict.city.communityNone(name, WINDOW_DAYS)}
+            </span>
+          </GlassCard>
+        ) : (
+          <>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <GlassCard className="p-5">
+                <span className="telemetry">{dict.city.communityReports}</span>
+                <div className="readout text-2xl mt-2 text-amber">{sig.signal.total}</div>
+              </GlassCard>
+              <GlassCard className="p-5">
+                <span className="telemetry">{dict.city.communityReporters}</span>
+                <div className="readout text-2xl mt-2 text-amber">
+                  {sig.signal.reporters}
+                </div>
+              </GlassCard>
+              <GlassCard className="p-5 col-span-2">
+                <span className="telemetry">{dict.city.communityByCategory}</span>
+                <div className="flex flex-wrap gap-2 mt-2.5">
+                  {(Object.keys(sig.signal.byCategory) as ReportCategory[])
+                    .filter((k) => sig.signal!.byCategory[k] > 0)
+                    .map((k) => (
+                      <span
+                        key={k}
+                        className="telemetry !text-[9px] border border-line rounded-full px-2 py-0.5"
+                      >
+                        {CATEGORIES[k].glyph} {CATEGORIES[k].label} · {sig.signal!.byCategory[k]}
+                      </span>
+                    ))}
+                </div>
+              </GlassCard>
+            </div>
+            <p className="text-[13px] text-ink-dim font-light leading-relaxed mt-4 max-w-2xl">
+              {dict.city.communityCaveat(WINDOW_DAYS)}
+            </p>
+          </>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-4 mt-14">

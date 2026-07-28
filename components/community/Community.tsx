@@ -176,7 +176,10 @@ function ReportCard({ r, highlight }: { r: Report; highlight?: boolean }) {
             </div>
           </div>
         </div>
-        <span className={`telemetry !text-[9px] !tracking-[0.14em] border rounded-full px-2.5 py-1 whitespace-nowrap ${TONE_CHIP[status.tone]}`}>
+        <span
+          title={status.note}
+          className={`telemetry !text-[9px] !tracking-[0.14em] border rounded-full px-2.5 py-1 whitespace-nowrap cursor-help ${TONE_CHIP[status.tone]}`}
+        >
           {status.label}
         </span>
       </div>

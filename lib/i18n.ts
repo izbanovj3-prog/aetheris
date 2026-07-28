@@ -249,6 +249,8 @@ export interface Dict {
     modeled: string;
     liveNote: string;
     modeledNote: string;
+    community: string;
+    communityNote: string;
   };
   pillars: {
     tag: string;
@@ -340,6 +342,17 @@ export interface Dict {
     gbifRecords: string;
     gbifWindow: string;
     gbifPending: string;
+    gbifIdle: string;
+    communityTitle: string;
+    communityReports: string;
+    communityReporters: string;
+    communityByCategory: string;
+    communityIdle: string;
+    communityLoading: string;
+    communityUnavailable: string;
+    communityNone: (city: string, days: number) => string;
+    communityCaveat: (days: number) => string;
+    gbifUnavailable: string;
     gbifNote: (km: number, from: number, to: number) => string;
     pm25: string;
     pm10: string;
@@ -481,6 +494,9 @@ const en: Dict = {
       "Live measurement — fetched at page load from Open-Meteo (CAMS air quality and forecast weather), refreshed hourly upstream.",
     modeledNote:
       "Modeled value — a deterministic regional baseline, not a real-time sensor feed. Indicative, not measured. See /methodology.",
+    community: "Live · community",
+    communityNote:
+      "Filed by people, not instruments. Real and current, but self-reported, unverified against any sensor, and shaped by who happens to be looking — a city with no reports is not a clean city, it is a city nobody reported from.",
   },
   pillars: {
     tag: "System architecture",
@@ -604,6 +620,19 @@ const en: Dict = {
     gbifRecords: "Occurrence records",
     gbifWindow: "What this is",
     gbifPending: "Querying GBIF for occurrence records near this city…",
+    gbifIdle: "Live species data loads in your browser — this figure is fetched from GBIF when the page is viewed, not baked into the page.",
+    communityTitle: "Community-sourced signal",
+    communityReports: "Reports (30 days)",
+    communityReporters: "Distinct reporters",
+    communityByCategory: "By category",
+    communityIdle: "Community reports load in your browser.",
+    communityLoading: "Reading community reports…",
+    communityUnavailable: "Community datastore unreachable — this is not the same as having no reports.",
+    communityNone: (city, days) =>
+      `No community reports for ${city} in the last ${days} days. That is an absence of reports, not evidence that conditions are fine — nobody has filed from here yet.`,
+    communityCaveat: (days) =>
+      `Counts cover the last ${days} days and are self-reported by the public. They are not verified against any instrument and reflect who is looking as much as what is happening. They sit beside the modeled Water Quality baseline above; they do not feed into it.`,
+    gbifUnavailable: "GBIF did not respond in time. The modeled indices above are unaffected.",
     gbifNote: (km, from, to) =>
       `Species recorded within ${km} km and published to GBIF between ${from} and ${to}. This reflects recording effort as well as ecology — a well-surveyed area scores higher partly because more people looked. It sits beside the modeled Biodiversity Intactness Index above; it does not replace it.`,
     pm25: "PM2.5",
@@ -787,6 +816,9 @@ const ru: Dict = {
       "Живое измерение — загружается при открытии страницы из Open-Meteo (качество воздуха CAMS и прогноз погоды), обновление ежечасно на стороне источника.",
     modeledNote:
       "Модельное значение — детерминированная региональная базовая линия, а не поток датчиков в реальном времени. Индикативно, не измерено. См. /methodology.",
+    community: "Live · сообщество",
+    communityNote:
+      "Присылают люди, а не приборы. Реально и актуально, но это самоотчёты, не сверенные ни с одним датчиком и зависящие от того, кто смотрит: город без отчётов — не чистый город, а город, откуда никто не написал.",
   },
   pillars: {
     tag: "Архитектура системы",
@@ -910,6 +942,19 @@ const ru: Dict = {
     gbifRecords: "Записей наблюдений",
     gbifWindow: "Что это такое",
     gbifPending: "Запрашиваем в GBIF записи наблюдений рядом с городом…",
+    gbifIdle: "Живые данные о видах загружаются в браузере — эта цифра запрашивается в GBIF при просмотре страницы, а не вшита в неё.",
+    communityTitle: "Сигнал от сообщества",
+    communityReports: "Отчётов (30 дней)",
+    communityReporters: "Разных авторов",
+    communityByCategory: "По категориям",
+    communityIdle: "Отчёты сообщества загружаются в браузере.",
+    communityLoading: "Читаем отчёты сообщества…",
+    communityUnavailable: "Хранилище отчётов недоступно — это не то же самое, что отсутствие отчётов.",
+    communityNone: (city, days) =>
+      `За последние ${days} дней по городу ${city} отчётов от сообщества нет. Это отсутствие сообщений, а не доказательство того, что всё в порядке: отсюда просто ещё никто не написал.`,
+    communityCaveat: (days) =>
+      `Подсчёт охватывает последние ${days} дней, данные присылают сами жители. Они не сверены ни с одним прибором и отражают в том числе то, кто именно смотрит. Показатель стоит рядом с модельным индексом качества воды выше и в него не входит.`,
+    gbifUnavailable: "GBIF не ответил вовремя. На модельные индексы выше это не влияет.",
     gbifNote: (km, from, to) =>
       `Виды, зафиксированные в радиусе ${km} км и опубликованные в GBIF с ${from} по ${to} год. Показатель отражает не только экологию, но и интенсивность наблюдений: где больше наблюдателей, там выше цифра. Он дополняет модельный индекс сохранности биоразнообразия выше, а не заменяет его.`,
     pm25: "PM2.5",
@@ -1093,6 +1138,9 @@ const kk: Dict = {
       "Тірі өлшем — бет ашылғанда Open-Meteo дереккөзінен (CAMS ауа сапасы және ауа райы болжамы) алынады, дереккөзде сағат сайын жаңарады.",
     modeledNote:
       "Модельдік мән — детерминистік аймақтық базалық сызық, нақты уақыттағы сенсор ағыны емес. Индикативті, өлшенген емес. /methodology қараңыз.",
+    community: "Live · қауымдастық",
+    communityNote:
+      "Аспаптар емес, адамдар жіберген. Нақты әрі өзекті, бірақ бұл өзін-өзі есептеу: ешбір сенсормен тексерілмеген және кім қарайтынына тәуелді — есебі жоқ қала таза қала емес, ол — ешкім жазбаған қала.",
   },
   pillars: {
     tag: "Жүйе архитектурасы",
@@ -1216,6 +1264,19 @@ const kk: Dict = {
     gbifRecords: "Бақылау жазбалары",
     gbifWindow: "Бұл не",
     gbifPending: "GBIF-тен қала маңындағы бақылау жазбалары сұралуда…",
+    gbifIdle: "Түрлер туралы тірі деректер браузерде жүктеледі — бұл сан бет ашылғанда GBIF-тен сұралады, бетке алдын ала жазылмаған.",
+    communityTitle: "Қауымдастық сигналы",
+    communityReports: "Есептер (30 күн)",
+    communityReporters: "Әртүрлі авторлар",
+    communityByCategory: "Санаттар бойынша",
+    communityIdle: "Қауымдастық есептері браузерде жүктеледі.",
+    communityLoading: "Қауымдастық есептері оқылуда…",
+    communityUnavailable: "Есептер қоймасы қолжетімсіз — бұл есептердің жоқтығы дегенді білдірмейді.",
+    communityNone: (city, days) =>
+      `Соңғы ${days} күнде ${city} бойынша қауымдастық есептері жоқ. Бұл — хабарламаның жоқтығы, жағдай жақсы дегеннің дәлелі емес: бұл жерден әлі ешкім жазбаған.`,
+    communityCaveat: (days) =>
+      `Есеп соңғы ${days} күнді қамтиды және оны тұрғындардың өздері жібереді. Ешбір аспаппен тексерілмеген және кім қарайтынын да көрсетеді. Көрсеткіш жоғарыдағы модельдік су сапасы индексінің қасында тұрады, оған кірмейді.`,
+    gbifUnavailable: "GBIF уақытында жауап бермеді. Жоғарыдағы модельдік индекстерге бұл әсер етпейді.",
     gbifNote: (km, from, to) =>
       `${km} км радиуста тіркеліп, GBIF-те ${from}–${to} жылдары жарияланған түрлер. Бұл көрсеткіш экологияны ғана емес, бақылау белсенділігін де көрсетеді: бақылаушы көп жерде сан жоғары. Ол жоғарыдағы модельдік биоалуантүрлілік индексін алмастырмайды, толықтырады.`,
     pm25: "PM2.5",

@@ -93,10 +93,30 @@ export const SEVERITIES: Record<Severity, { label: string; tone: Tone }> = {
   critical: { label: "Critical", tone: "coral" },
 };
 
-export const STATUS_META: Record<ReportStatus, { label: string; tone: Tone }> = {
-  verified: { label: "Verified", tone: "emerald" },
-  "cross-checking": { label: "Cross-checking vs sensors", tone: "cyan" },
-  pending: { label: "Awaiting review", tone: "amber" },
+/* Status vocabulary. `note` is surfaced as a tooltip on the chip so the
+   meaning travels with the label — "cross-checking" in particular used to
+   read "Cross-checking vs sensors", which promised an instrument check
+   that does not exist. What actually happens is corroboration between
+   independent reporters; see supabase/corroboration.sql. */
+export const STATUS_META: Record<
+  ReportStatus,
+  { label: string; tone: Tone; note: string }
+> = {
+  verified: {
+    label: "Verified",
+    tone: "emerald",
+    note: "Reserved for reports confirmed against an instrument or an official source. Nothing is promoted here automatically — no report on the platform currently holds this status.",
+  },
+  "cross-checking": {
+    label: "Corroborated",
+    tone: "cyan",
+    note: "At least two different devices reported this category in this city within 72 hours. That is corroboration, not verification: independent people described the same kind of problem in the same place. It does not mean the reports are accurate, and no instrument has checked them.",
+  },
+  pending: {
+    label: "Awaiting review",
+    tone: "amber",
+    note: "Filed and stored, with nothing else claimed about it. No moderator has read it and no other report has corroborated it yet.",
+  },
 };
 
 /* ── Seed feed — Kazakhstan field reports across every category ── */

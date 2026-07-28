@@ -90,7 +90,7 @@ const en: PageContent = {
       },
       {
         title: "Water, biodiversity & industry",
-        body: "Water Quality (WQI) and Industrial Load (IEI) are modeled from a deterministic regional baseline — no free real-time point feed exists for those layers yet, so treat them as indicative, not measured. Biodiversity is now split: the Biodiversity Intactness Index (BII) shown on the map and city pages is still that same modeled baseline, while a separate species-occurrence signal is live from GBIF — distinct species and occurrence records published within 50 km of each city over the last 10 years. The live signal reflects recording effort as well as ecology and does not feed into BII; the two are displayed side by side and badged separately. Industrial Load has a candidate live source that is not yet integrated: Copernicus Sentinel-5P / TROPOMI column densities for NO₂ and SO₂, which track industrial emission plumes. Adopting it means processing satellite scenes — through Google Earth Engine or equivalent — rather than the single REST call the air-quality and GBIF feeds need, so IEI stays modeled for now. For Water Quality no free real-time source covering Kazakhstan at this granularity has been identified at all.",
+        body: "Water Quality (WQI) and Industrial Load (IEI) are modeled from a deterministic regional baseline — no free real-time point feed exists for those layers yet, so treat them as indicative, not measured. Biodiversity is now split: the Biodiversity Intactness Index (BII) shown on the map and city pages is still that same modeled baseline, while a separate species-occurrence signal is live from GBIF — distinct species and occurrence records published within 50 km of each city over the last 10 years. The live signal reflects recording effort as well as ecology and does not feed into BII; the two are displayed side by side and badged separately. Industrial Load has a candidate live source that is not yet integrated: Copernicus Sentinel-5P / TROPOMI column densities for NO₂ and SO₂, which track industrial emission plumes. Adopting it means processing satellite scenes — through Google Earth Engine or equivalent — rather than the single REST call the air-quality and GBIF feeds need, so IEI stays modeled for now. For Water Quality no free real-time source covering Kazakhstan at this granularity has been identified at all. Alongside that gap sits the one signal here that is neither instrument nor model: community field reports, aggregated per city by category and severity over a rolling 30-day window and badged “Live · community”. It is real and current but self-reported, unverified against any instrument, and shaped by who happens to be looking — a city with no reports is a city nobody has reported from, not a clean one. It sits beside the modeled WQI and never feeds into it. Reports carry a status: everything arrives as “awaiting review”, and when two or more different devices report the same category in the same city within 72 hours the whole group moves to “corroborated”. That is corroboration between people, not verification — two reporters can be wrong together — and nothing is ever auto-promoted to “verified”.",
       },
       {
         title: "Composite risk",
@@ -124,6 +124,12 @@ const en: PageContent = {
         provides:
           "Species-occurrence signal per city — distinct species and occurrence records within 50 km over the last 10 years (api.gbif.org, no key required)",
         status: "Live — fetched client-side when a city page is opened",
+      },
+      {
+        name: "Aetheris community reports",
+        provides:
+          "Per-city counts of public field reports by category and severity over a rolling 30-day window, plus the number of distinct devices that filed them",
+        status: "Live · community — self-reported, unverified against instruments, and shaped by who is looking",
       },
       {
         name: "Aetheris baseline model",
@@ -236,7 +242,7 @@ const ru: PageContent = {
       },
       {
         title: "Вода, биоразнообразие и промышленность",
-        body: "Индексы качества воды (WQI) и промышленной нагрузки (IEI) моделируются из детерминированной региональной базы — бесплатного потока в реальном времени для них пока нет, считайте их ориентировочными, а не измеренными. С биоразнообразием теперь два разных показателя: индекс сохранности (BII) на карте и страницах городов остаётся модельным, а рядом появился живой сигнал встречаемости видов из GBIF — число видов и записей наблюдений в радиусе 50 км за последние 10 лет. Живой сигнал отражает и интенсивность наблюдений, а не только экологию, и в BII не входит: показатели выводятся рядом и маркируются отдельно. У промышленной нагрузки есть кандидат на живой источник, пока не подключённый: колоночные концентрации NO₂ и SO₂ со спутника Copernicus Sentinel-5P / TROPOMI — они отслеживают шлейфы промышленных выбросов. Чтобы их использовать, нужна обработка спутниковых сцен (через Google Earth Engine или аналог), а не один REST-запрос, как у воздуха и GBIF, поэтому IEI пока остаётся модельным. Для качества воды бесплатного источника реального времени с нужной детализацией по Казахстану не найдено вовсе.",
+        body: "Индексы качества воды (WQI) и промышленной нагрузки (IEI) моделируются из детерминированной региональной базы — бесплатного потока в реальном времени для них пока нет, считайте их ориентировочными, а не измеренными. С биоразнообразием теперь два разных показателя: индекс сохранности (BII) на карте и страницах городов остаётся модельным, а рядом появился живой сигнал встречаемости видов из GBIF — число видов и записей наблюдений в радиусе 50 км за последние 10 лет. Живой сигнал отражает и интенсивность наблюдений, а не только экологию, и в BII не входит: показатели выводятся рядом и маркируются отдельно. У промышленной нагрузки есть кандидат на живой источник, пока не подключённый: колоночные концентрации NO₂ и SO₂ со спутника Copernicus Sentinel-5P / TROPOMI — они отслеживают шлейфы промышленных выбросов. Чтобы их использовать, нужна обработка спутниковых сцен (через Google Earth Engine или аналог), а не один REST-запрос, как у воздуха и GBIF, поэтому IEI пока остаётся модельным. Для качества воды бесплатного источника реального времени с нужной детализацией по Казахстану не найдено вовсе. Рядом с этим пробелом стоит единственный показатель, который не является ни прибором, ни моделью: полевые отчёты сообщества, сведённые по городу в разрезе категорий и тяжести за скользящие 30 дней и помеченные «Live · сообщество». Он реален и актуален, но это самоотчёты, не сверенные ни с одним прибором и зависящие от того, кто смотрит: город без отчётов — это город, откуда никто не написал, а не чистый город. Он стоит рядом с модельным WQI и в него не входит. У отчётов есть статус: все приходят как «ожидает проверки», а когда два и более разных устройства сообщают об одной категории в одном городе в пределах 72 часов, вся группа переходит в «подтверждено другими». Это подтверждение людьми, а не верификация — двое могут ошибаться одинаково — и до статуса «проверено» автоматически не поднимается ничего.",
       },
       {
         title: "Совокупный риск",
@@ -270,6 +276,12 @@ const ru: PageContent = {
         provides:
           "Сигнал встречаемости видов по городам — число видов и записей наблюдений в радиусе 50 км за последние 10 лет (api.gbif.org, без ключа)",
         status: "Живой — запрашивается на клиенте при открытии страницы города",
+      },
+      {
+        name: "Отчёты сообщества Aetheris",
+        provides:
+          "Число публичных полевых отчётов по городу в разрезе категорий и тяжести за скользящие 30 дней, плюс количество разных устройств-авторов",
+        status: "Live · сообщество — самоотчёты, не сверенные с приборами, зависят от того, кто смотрит",
       },
       {
         name: "Базовая модель Aetheris",
@@ -382,7 +394,7 @@ const kk: PageContent = {
       },
       {
         title: "Су, биоалуантүрлілік және өнеркәсіп",
-        body: "Су сапасы (WQI) және өнеркәсіп жүктемесі (IEI) индекстері детерминирленген өңірлік базадан модельденеді — олар үшін тегін нақты уақыт ағыны әлі жоқ, сондықтан оларды өлшенген емес, бағдарлы деп есептеңіз. Биоалуантүрлілік енді екіге бөлінді: картадағы және қала беттеріндегі сақталу индексі (BII) сол модельдік база күйінде қалады, ал қасында GBIF-тен тірі түрлер кездесуінің сигналы пайда болды — әр қаладан 50 км радиуста соңғы 10 жылда жарияланған түрлер мен бақылау жазбаларының саны. Тірі сигнал экологияны ғана емес, бақылау белсенділігін де көрсетеді және BII-ге кірмейді: екеуі қатар шығып, бөлек таңбаланады. Өнеркәсіптік жүктеме үшін әзірге қосылмаған үміткер дереккөз бар: Copernicus Sentinel-5P / TROPOMI жерсерігінің NO₂ және SO₂ бағаналық концентрациялары — олар өнеркәсіптік шығарынды шлейфтерін бақылайды. Оны пайдалану үшін бір REST-сұрау емес, жерсерік кадрларын өңдеу керек (Google Earth Engine немесе баламасы арқылы), сондықтан IEI әзірге модельдік күйінде қалады. Су сапасы үшін Қазақстан бойынша қажетті егжей-тегжейлі тегін нақты уақыт дереккөзі мүлдем табылған жоқ.",
+        body: "Су сапасы (WQI) және өнеркәсіп жүктемесі (IEI) индекстері детерминирленген өңірлік базадан модельденеді — олар үшін тегін нақты уақыт ағыны әлі жоқ, сондықтан оларды өлшенген емес, бағдарлы деп есептеңіз. Биоалуантүрлілік енді екіге бөлінді: картадағы және қала беттеріндегі сақталу индексі (BII) сол модельдік база күйінде қалады, ал қасында GBIF-тен тірі түрлер кездесуінің сигналы пайда болды — әр қаладан 50 км радиуста соңғы 10 жылда жарияланған түрлер мен бақылау жазбаларының саны. Тірі сигнал экологияны ғана емес, бақылау белсенділігін де көрсетеді және BII-ге кірмейді: екеуі қатар шығып, бөлек таңбаланады. Өнеркәсіптік жүктеме үшін әзірге қосылмаған үміткер дереккөз бар: Copernicus Sentinel-5P / TROPOMI жерсерігінің NO₂ және SO₂ бағаналық концентрациялары — олар өнеркәсіптік шығарынды шлейфтерін бақылайды. Оны пайдалану үшін бір REST-сұрау емес, жерсерік кадрларын өңдеу керек (Google Earth Engine немесе баламасы арқылы), сондықтан IEI әзірге модельдік күйінде қалады. Су сапасы үшін Қазақстан бойынша қажетті егжей-тегжейлі тегін нақты уақыт дереккөзі мүлдем табылған жоқ. Осы олқылықтың қасында аспап та, модель де емес жалғыз көрсеткіш тұр: қала бойынша санаттар мен ауырлық бойынша соңғы 30 күнде жинақталған, «Live · қауымдастық» деп белгіленген қауымдастықтың далалық есептері. Ол нақты әрі өзекті, бірақ өзін-өзі есептеу: ешбір аспаппен тексерілмеген және кім қарайтынына тәуелді — есебі жоқ қала таза қала емес, одан ешкім жазбаған. Ол модельдік WQI-дың қасында тұрады және оған кірмейді. Есептердің мәртебесі бар: бәрі «тексеруді күтуде» болып келеді, ал бір қалада бір санат бойынша 72 сағат ішінде екі не одан көп түрлі құрылғы хабарласа, бүкіл топ «өзгелермен расталды» күйіне ауысады. Бұл адамдардың растауы, верификация емес — екеуі бірдей қателесуі мүмкін — және ешнәрсе автоматты түрде «тексерілді» дәрежесіне көтерілмейді.",
       },
       {
         title: "Жиынтық тәуекел",
@@ -416,6 +428,12 @@ const kk: PageContent = {
         provides:
           "Қалалар бойынша түрлердің кездесу сигналы — 50 км радиуста соңғы 10 жылдағы түрлер мен бақылау жазбаларының саны (api.gbif.org, кілтсіз)",
         status: "Тірі — қала беті ашылғанда клиент жағында сұралады",
+      },
+      {
+        name: "Aetheris қауымдастық есептері",
+        provides:
+          "Соңғы 30 күндегі қала бойынша қоғамдық далалық есептердің санаттар мен ауырлық бойынша саны, сондай-ақ жіберген құрылғылар саны",
+        status: "Live · қауымдастық — өзін-өзі есептеу, аспаппен тексерілмеген, кім қарайтынына тәуелді",
       },
       {
         name: "Aetheris базалық моделі",
