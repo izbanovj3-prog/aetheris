@@ -326,6 +326,7 @@ export interface Dict {
     mission: string;
     press: string;
     contact: string;
+    independence: string;
     bottomLeft: string;
     bottomRight: string;
   };
@@ -598,6 +599,8 @@ const en: Dict = {
     mission: "Mission",
     press: "Press kit",
     contact: "Contact",
+    independence:
+      "Aetheris is an independent student project. It is not affiliated with, endorsed by, or operated in partnership with Kazhydromet or any government agency unless explicitly stated.",
     bottomLeft: "© 2026 Aetheris Systems · Kazakhstan environmental intelligence",
     bottomRight: "51.17°N 71.43°E · Astana uplink nominal",
   },
@@ -920,6 +923,8 @@ const ru: Dict = {
     mission: "Миссия",
     press: "Пресс-кит",
     contact: "Контакты",
+    independence:
+      "Aetheris — независимый студенческий проект. Он не аффилирован с Казгидрометом или каким-либо государственным органом, не одобрен ими и не работает с ними в партнёрстве, если прямо не указано иное.",
     bottomLeft: "© 2026 Aetheris Systems · Экологический интеллект Казахстана",
     bottomRight: "51.17°N 71.43°E · Астана, связь в норме",
   },
@@ -1242,6 +1247,8 @@ const kk: Dict = {
     mission: "Миссия",
     press: "Баспасөз жинағы",
     contact: "Байланыс",
+    independence:
+      "Aetheris — тәуелсіз студенттік жоба. Ол Қазгидрометпен немесе кез келген мемлекеттік органмен аффилиирленбеген, олармен мақұлданбаған және серіктестікте жұмыс істемейді, егер тікелей өзгеше көрсетілмесе.",
     bottomLeft: "© 2026 Aetheris Systems · Қазақстанның экологиялық интеллектісі",
     bottomRight: "51.17°N 71.43°E · Астана, байланыс қалыпты",
   },

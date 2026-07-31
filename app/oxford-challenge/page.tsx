@@ -139,16 +139,24 @@ export default function OxfordChallengePage() {
           {BASIN_WQI.map((s, i) => (
             <Reveal key={s.city} index={i}>
               <GlassCard className="p-6 h-full flex flex-col gap-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex flex-col">
-                    <span className="font-[family-name:var(--font-syne)] font-bold text-xl">
-                      {s.city}
-                    </span>
-                    <span className="telemetry mt-1">{s.region}</span>
-                  </div>
-                  <TelemetryTag tone="coral">Critical</TelemetryTag>
+                <div className="flex flex-col">
+                  <span className="font-[family-name:var(--font-syne)] font-bold text-xl">
+                    {s.city}
+                  </span>
+                  <span className="telemetry mt-1">{s.region}</span>
                 </div>
-                <OriginBadge origin={LAYER_ORIGIN.water} className="self-start" />
+                {/* Severity and provenance sit on one line at the same weight.
+                    Previously "Critical" was a full-size tag and "Modeled" a
+                    9px chip below it, so a glance read an alarming claim as
+                    established fact with the caveat as a footnote. The claim
+                    is unchanged — only its balance against the caveat. */}
+                <div className="flex flex-wrap items-center gap-2">
+                  <TelemetryTag tone="coral">Critical</TelemetryTag>
+                  <OriginBadge
+                    origin={LAYER_ORIGIN.water}
+                    className="!text-[11px] !tracking-[0.22em] px-3 py-1.5"
+                  />
+                </div>
                 <StatReadout
                   value={s.wqi}
                   label="Water Quality Index · 0–100"

@@ -119,6 +119,50 @@ export const STATUS_META: Record<
   },
 };
 
+/* ── Named-organisation safety pass ───────────────────────────
+   A field report is one person's account. When it names an outside body
+   — a state agency, a monitoring service, an operator — the page starts
+   to read as though that body were involved in, or endorsing, the claim.
+   Neither is true: nothing here is verified, and Aetheris has no
+   relationship with any of them.
+
+   So any report whose text names an organisation gets an independence
+   disclaimer rendered beside it. This is a general rule, not a patch for
+   one report: reports are public and anonymous, so this will recur, and
+   it must also cover names nobody has thought of yet.
+
+   The watchlist is explicit rather than clever on purpose. Guessing at
+   organisations from capitalisation would tag "Ural Delta" and miss
+   "kazhydromet" in lower case; a readable table can be argued with and
+   extended. Matching is case-insensitive and covers Latin and Cyrillic
+   spellings, since reports arrive in three languages. */
+
+const ORGANISATION_PATTERNS: RegExp[] = [
+  // National agencies and services
+  /kazhydromet|казгидромет|қазгидромет/i,
+  /airkaz/i,
+  /\bakimat\b|акимат|әкімдік/i,
+  /ministry of\s+\w+|министерств\w*|министрлі\w*/i,
+  /\bkazselezashita\b|казселезащита/i,
+  // Major operators most likely to appear in pollution reports
+  /kazmunaygas|казмунайгаз|tengizchevroil|тенгизшевройл/i,
+  /arcelormittal|арселормиттал|qarmet|qarmet/i,
+  /kazakhmys|казахмыс|kazzinc|казцинк|kazatomprom|казатомпром/i,
+  /eurasian resources|erg\b|kegoc|кегок|samruk|самрук/i,
+  // Generic corporate forms — catches operators not on the list above
+  /\b(jsc|llp|ltd|inc)\b|\bао\s|\bтоо\s|\bжшс\s/i,
+];
+
+/**
+ * Returns true when a report names an outside organisation and therefore
+ * needs the independence disclaimer. Checks title and body together —
+ * a name in either is equally public.
+ */
+export function namesOrganisation(r: Pick<Report, "title" | "body">): boolean {
+  const text = `${r.title} ${r.body}`;
+  return ORGANISATION_PATTERNS.some((re) => re.test(text));
+}
+
 /* ── Seed feed — Kazakhstan field reports across every category ── */
 
 export const SEED_REPORTS: Report[] = [

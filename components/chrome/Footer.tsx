@@ -82,6 +82,18 @@ export function Footer() {
         ))}
       </div>
 
+      {/* Independence notice, sitewide. Aetheris names public agencies and
+          operators across the Atlas and the community feed; a reader — or a
+          stakeholder at one of those agencies — must never have to infer
+          from context that no relationship exists. */}
+      <div className="border-t border-line">
+        <div className="max-w-6xl mx-auto px-6 py-4">
+          <p className="text-[12px] text-ink-faint font-light leading-relaxed">
+            {dict.footer.independence}
+          </p>
+        </div>
+      </div>
+
       <div className="border-t border-line">
         <div className="max-w-6xl mx-auto px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-3">
           <span className="telemetry">{dict.footer.bottomLeft}</span>

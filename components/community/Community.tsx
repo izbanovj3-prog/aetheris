@@ -17,6 +17,7 @@ import {
   STATUS_META,
   displayTime,
   getUserReports,
+  namesOrganisation,
   type Report,
   type Tone,
 } from "@/lib/reports";
@@ -195,6 +196,22 @@ function ReportCard({ r, highlight }: { r: Report; highlight?: boolean }) {
         {r.title}
       </h3>
       <p className="text-[13.5px] text-ink-dim font-light leading-relaxed mb-4">{r.body}</p>
+
+      {/* The report's own words are never altered. When they name an outside
+          organisation, this sits beside them so nobody reads the mention as
+          involvement or endorsement — the report is unverified either way. */}
+      {namesOrganisation(r) && (
+        <div className="flex items-start gap-2.5 rounded-xl border border-amber/30 bg-amber/[0.05] px-3.5 py-2.5 mb-4">
+          <span className="text-amber text-sm leading-none mt-0.5 shrink-0" aria-hidden>
+            ⚠
+          </span>
+          <p className="text-[12px] text-ink-dim font-light leading-relaxed">
+            <span className="text-amber">Independent report.</span> This account
+            names an outside organisation. Aetheris is not affiliated with it, and
+            the organisation has neither reviewed nor verified this report.
+          </p>
+        </div>
+      )}
 
       {r.photo && (
         // eslint-disable-next-line @next/next/no-img-element
