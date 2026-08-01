@@ -276,22 +276,40 @@ export default function OxfordChallengePage() {
                   </span>{" "}
                   Submissions persist to a shared Postgres database and are
                   visible to every visitor in any browser, rate-limited to five
-                  per hour per device. Everything arrives as &ldquo;awaiting
-                  review&rdquo;; when two or more different devices report the
-                  same category in the same city within 72 hours, that group
-                  moves to &ldquo;corroborated&rdquo;. That is independent people
+                  per hour per device. A report moves through five statuses:
+                  &ldquo;Отправлен&rdquo; on arrival; &ldquo;AI-контекст
+                  добавлен&rdquo; when a live reading is placed beside it;
+                  &ldquo;Corroborated сообществом&rdquo; when two or more
+                  different devices report the same category in the same city
+                  within 72 hours; and &ldquo;Передано&rdquo; /
+                  &ldquo;Ответ организации&rdquo;, both of which only a team
+                  member can set by hand. That third one is independent people
                   describing the same thing — not proof they are right, and no
-                  instrument checks them. Nothing is ever auto-promoted to
-                  &ldquo;verified&rdquo;, and there is still no human moderator.
-                  The feed also carries {PILOT_REPORTS} clearly marked
-                  illustrative entries from {PILOT_CONTRIBUTORS} example
-                  contributors.
+                  instrument checks them. There is deliberately no
+                  &ldquo;verified&rdquo; and no &ldquo;resolved&rdquo; status,
+                  and there is still no human moderator. The feed also carries{" "}
+                  {PILOT_REPORTS} clearly marked illustrative entries from{" "}
+                  {PILOT_CONTRIBUTORS} example contributors.
+                </>,
+                <>
+                  <span className="text-ink">
+                    Eco-Points and badges are per-device, not accounts.
+                  </span>{" "}
+                  Points, ranks and the five geographic badges are computed in
+                  the visitor&rsquo;s own browser from the reports that browser
+                  filed, and clearing site data clears them. They carry no
+                  monetary value, cannot be transferred, and gate nothing.
+                  Because there is no login, one person on two devices is two
+                  contributors as far as the platform can tell.
                 </>,
                 <>
                   <span className="text-ink">Shipped vs roadmap.</span> Live now:{" "}
                   {NET.cities} city stations across {NET.regions} regions, the Atlas,
-                  dashboard and assistant. Not yet built: real-time water sensor
-                  ingestion and the SMS/USSD alerting described above.
+                  dashboard and assistant, plus community reports, events with
+                  geo-fenced check-in, and Eco-Points. Not yet built: real-time
+                  water sensor ingestion, the SMS/USSD alerting described above,
+                  petitions with a real akimat intake channel, and verified
+                  partner organisation profiles.
                 </>,
               ].map((item, i) => (
                 <li key={i} className="flex gap-3.5 text-ink-dim font-light leading-relaxed">

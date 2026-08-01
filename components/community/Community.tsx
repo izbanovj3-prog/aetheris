@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
+import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import {
   EASE,
@@ -9,19 +10,27 @@ import {
   SourceNote,
   TelemetryTag,
 } from "@/components/ui/primitives";
+import { useLiveStations } from "@/lib/useLiveStations";
+import { assistantPrompt, buildAiContext, type AiContext } from "@/lib/aiContext";
+import { POINTS } from "@/lib/points";
 import {
   CATEGORIES,
   SEED_REPORTS,
-  getRemoteReports,
   SEVERITIES,
   STATUS_META,
   displayTime,
+  getRemoteReports,
   getUserReports,
   namesOrganisation,
+  resolveStatus,
   type Report,
   type Tone,
 } from "@/lib/reports";
-import { NewReportModal } from "./NewReportModal";
+import { AiContextBubble } from "./AiContextBubble";
+import { BadgeShowcase } from "./BadgeShowcase";
+import { Events } from "./Events";
+import { ReportFlow } from "./ReportFlow";
+import { StatusChip, StatusLegend } from "./StatusChip";
 
 const TONE_TEXT: Record<Tone, string> = {
   emerald: "text-emerald",
@@ -40,28 +49,19 @@ const TONE_CHIP: Record<Tone, string> = {
 };
 
 /* ── Sample-data disclosure ───────────────────────────────────
-   Aetheris has no accounts, no auth and no backend: the profile block,
-   the gamification rail and the seeded feed below are a mockup of the
-   design, not a record of anyone's activity. Everything on this page is
-   labelled accordingly, and every headline figure is derived from
-   SEED_REPORTS so it can't drift from the pilot totals quoted on
-   /oxford-challenge.
+   Aetheris has no accounts and no auth. The seeded feed and the mission
+   rail are a mockup of the design, not a record of anyone's activity, and
+   they are labelled accordingly. The contributor panel is no longer part
+   of that: Eco-Points and badges are now computed from the reports this
+   device actually filed, so it shows zero rather than an invented score.
    ───────────────────────────────────────────────────────────── */
 
 /** Real totals of the seeded pilot feed — never hand-typed. */
 const PILOT = {
   reports: SEED_REPORTS.length,
   contributors: new Set(SEED_REPORTS.map((r) => r.author)).size,
-  verified: SEED_REPORTS.filter((r) => r.status === "verified").length,
-  upvotes: SEED_REPORTS.reduce((a, r) => a + r.upvotes, 0),
+  corroborated: SEED_REPORTS.filter((r) => r.status === "corroborated").length,
 };
-
-/** Points shown on the sample profile: upvotes earned by the pilot's
- *  verified reports. Derived, so it stays proportional to the feed. */
-const SAMPLE_POINTS = SEED_REPORTS.filter((r) => r.status === "verified").reduce(
-  (a, r) => a + r.upvotes,
-  0,
-);
 
 function SampleTag({ note, children }: { note: string; children: ReactNode }) {
   return (
@@ -72,7 +72,7 @@ function SampleTag({ note, children }: { note: string; children: ReactNode }) {
   );
 }
 
-/* ── Missions / achievements / events (static) ──────────────── */
+/* ── Missions (still illustrative, out of the 2.0 MVP scope) ─── */
 
 interface Mission {
   id: string;
@@ -90,49 +90,74 @@ const MISSIONS: Mission[] = [
   { id: "m3", title: "Night Sky Audit", desc: "Submit 3 light-pollution measurements after 23:00.", reward: 280, progress: 1, total: 3, joined: true },
 ];
 
-// Only badges the seeded pilot could actually have earned are shown unlocked.
-// "Field Naturalist — 25 species logged" and "Stream Keeper — 10 water samples"
-// used to render as unlocked, which a 6-report feed cannot support.
+/* The rank-shaped names (Sentinel, Constellation) that used to sit in this
+   grid have moved into the rank ladder in lib/points.ts, where the concept
+   puts them — keeping them here as well would have been exactly the
+   duplicated-nomenclature bug this project has been caught by before.
+   What is left is the achievements that are not ranks, with the wording
+   that promised a verification step the platform cannot perform removed. */
 const ACHIEVEMENTS = [
-  { icon: "◬", name: "First Signal", desc: "First verified report", unlocked: true },
+  { icon: "◬", name: "First Signal", desc: "First report filed", unlocked: true },
   { icon: "❋", name: "Field Naturalist", desc: "25 species logged", unlocked: false },
   { icon: "◈", name: "Stream Keeper", desc: "10 water samples", unlocked: false },
-  { icon: "⬡", name: "Sentinel", desc: "100 verified reports", unlocked: false },
-  { icon: "✦", name: "Constellation", desc: "Reports from 3 regions", unlocked: false },
-  { icon: "◉", name: "Ground Truth", desc: "Sensor-confirmed ×50", unlocked: false },
+  { icon: "◉", name: "Ground Truth", desc: "50 reports with a live reading beside them", unlocked: false },
 ];
 
-/* Event dates are illustrative, so derive them from the build moment
-   rather than hardcoding: the previous "JUN 14 / 20 / 27" had drifted into
-   the past, which reads as a dead page. NEXT_PUBLIC_BUILD_TIME is inlined
-   at build into both bundles, so server and client render the same string
-   (a module-level `new Date()` would desync and break hydration).
-   Month names come from a literal table, not toLocaleDateString, so Node's
-   and the browser's locale data can't disagree either. */
-const BUILD_AT = process.env.NEXT_PUBLIC_BUILD_TIME ?? "2026-07-25T00:00:00.000Z";
+/* ── AI context, per card ─────────────────────────────────────
+   Fetched in the browser from the same feeds the city pages use. Air and
+   industrial reports read from the shared live-station subscription, so
+   they cost no extra request at all; biodiversity reports make one GBIF
+   call each, and there are rarely many on screen. */
 
-const MONTHS = ["JAN","FEB","MAR","APR","MAY","JUN","JUL","AUG","SEP","OCT","NOV","DEC"];
+function useAiContext(
+  report: Report,
+  stations: ReturnType<typeof useLiveStations>,
+): { context: AiContext | null; loading: boolean } {
+  const [context, setContext] = useState<AiContext | null>(null);
+  const [loading, setLoading] = useState(true);
 
-function eventDate(daysAhead: number): string {
-  const d = new Date(BUILD_AT);
-  d.setUTCDate(d.getUTCDate() + daysAhead);
-  return `${MONTHS[d.getUTCMonth()]} ${String(d.getUTCDate()).padStart(2, "0")}`;
+  useEffect(() => {
+    const ac = new AbortController();
+    let alive = true;
+    setLoading(true);
+    buildAiContext(report, stations.stations, stations.live, stations.fetchedAt, ac.signal)
+      .then((c) => {
+        if (!alive) return;
+        setContext(c);
+        setLoading(false);
+      })
+      .catch(() => {
+        if (alive) setLoading(false);
+      });
+    return () => {
+      alive = false;
+      ac.abort();
+    };
+  }, [report, stations.stations, stations.live, stations.fetchedAt]);
+
+  return { context, loading };
 }
-
-const EVENTS = [
-  { date: eventDate(14), title: "Ile-Alatau foothills cleanup", place: "Almaty", attendees: 86 },
-  { date: eventDate(21), title: "Urban heat-island mapping walk", place: "Astana", attendees: 41 },
-  { date: eventDate(28), title: "Lake Balkhash shoreline survey", place: "Balkhash", attendees: 23 },
-];
 
 /* ── Report card ──────────────────────────────────────────────── */
 
-function ReportCard({ r, highlight }: { r: Report; highlight?: boolean }) {
+function ReportCard({
+  r,
+  highlight,
+  live,
+}: {
+  r: Report;
+  highlight?: boolean;
+  live: ReturnType<typeof useLiveStations>;
+}) {
   const [votes, setVotes] = useState(r.upvotes);
   const [voted, setVoted] = useState(false);
   const cat = CATEGORIES[r.category];
   const sev = SEVERITIES[r.severity];
-  const status = STATUS_META[r.status];
+
+  const { context, loading } = useAiContext(r, live);
+  // ② is derived: a report shows "AI-контекст добавлен" once real context
+  // has actually resolved for it, and not before.
+  const status = resolveStatus(r, Boolean(context) && context?.kind !== "none");
 
   return (
     <GlassCard
@@ -146,7 +171,7 @@ function ReportCard({ r, highlight }: { r: Report; highlight?: boolean }) {
             {r.initials}
           </span>
           <div>
-            <div className="text-sm font-medium flex items-center gap-2">
+            <div className="text-sm font-medium flex items-center gap-2 flex-wrap">
               {r.author}
               {r.userCreated && (
                 <span className="telemetry !text-[8px] text-emerald border border-emerald/30 rounded-full px-1.5 py-0.5">
@@ -171,18 +196,21 @@ function ReportCard({ r, highlight }: { r: Report; highlight?: boolean }) {
                   Filed
                 </span>
               )}
+              {r.parentId && (
+                <span
+                  title="A follow-up update on an earlier report."
+                  className="telemetry !text-[8px] text-atmos border border-atmos/30 rounded-full px-1.5 py-0.5 cursor-help"
+                >
+                  Update
+                </span>
+              )}
             </div>
             <div className="telemetry !text-[9px] mt-0.5">
               {r.city} · {displayTime(r)}
             </div>
           </div>
         </div>
-        <span
-          title={status.note}
-          className={`telemetry !text-[9px] !tracking-[0.14em] border rounded-full px-2.5 py-1 whitespace-nowrap cursor-help ${TONE_CHIP[status.tone]}`}
-        >
-          {status.label}
-        </span>
+        <StatusChip status={status} />
       </div>
 
       <div className="flex items-center gap-2 mb-1.5">
@@ -199,7 +227,7 @@ function ReportCard({ r, highlight }: { r: Report; highlight?: boolean }) {
 
       {/* The report's own words are never altered. When they name an outside
           organisation, this sits beside them so nobody reads the mention as
-          involvement or endorsement — the report is unverified either way. */}
+          involvement or endorsement — the report is unchecked either way. */}
       {namesOrganisation(r) && (
         <div className="flex items-start gap-2.5 rounded-xl border border-amber/30 bg-amber/[0.05] px-3.5 py-2.5 mb-4">
           <span className="text-amber text-sm leading-none mt-0.5 shrink-0" aria-hidden>
@@ -208,7 +236,7 @@ function ReportCard({ r, highlight }: { r: Report; highlight?: boolean }) {
           <p className="text-[12px] text-ink-dim font-light leading-relaxed">
             <span className="text-amber">Independent report.</span> This account
             names an outside organisation. Aetheris is not affiliated with it, and
-            the organisation has neither reviewed nor verified this report.
+            the organisation has neither reviewed nor commented on this report.
           </p>
         </div>
       )}
@@ -222,7 +250,33 @@ function ReportCard({ r, highlight }: { r: Report; highlight?: boolean }) {
         />
       )}
 
-      <div className="flex items-center gap-4">
+      {/* ② AI-контекст — collapsible, sitting under the photo. */}
+      <AiContextBubble context={context} loading={loading} />
+
+      {/* ④ / ⑤ — only ever present when an operator recorded them. */}
+      {r.forwardedAt && (
+        <div className="rounded-xl border border-amber/25 bg-amber/[0.04] px-3.5 py-2.5 mb-4">
+          <div className="telemetry !text-[9px] text-amber/80 mb-1">Transfer log</div>
+          <p className="text-[12px] text-ink-dim font-light leading-relaxed">
+            Passed to {r.forwardedTo} on{" "}
+            {new Date(r.forwardedAt).toISOString().slice(0, 10)}. This records that
+            the data was sent, and nothing about how it was received or whether
+            anything followed.
+          </p>
+        </div>
+      )}
+      {r.orgResponse && (
+        <div className="rounded-xl border border-coral/25 bg-coral/[0.04] px-3.5 py-2.5 mb-4">
+          <div className="telemetry !text-[9px] text-coral/80 mb-1">
+            {r.orgResponseOrg}
+          </div>
+          <p className="text-[12px] text-ink-dim font-light leading-relaxed">
+            {r.orgResponse}
+          </p>
+        </div>
+      )}
+
+      <div className="flex items-center gap-3 flex-wrap">
         <button
           type="button"
           onClick={() => {
@@ -230,25 +284,40 @@ function ReportCard({ r, highlight }: { r: Report; highlight?: boolean }) {
             setVotes((v) => (voted ? v - 1 : v + 1));
           }}
           aria-pressed={voted}
-          aria-label={voted ? "Remove upvote" : "Upvote report"}
+          aria-label={voted ? "Remove reaction" : "I see it too"}
+          title="I see it too"
           className={`flex items-center gap-2 text-[13px] rounded-full border px-3.5 py-1.5 transition-all duration-300 ${
             voted
               ? "border-emerald/40 text-emerald bg-emerald/[0.07]"
               : "border-line text-ink-dim hover:border-line-bright hover:text-ink"
           }`}
         >
-          <svg viewBox="0 0 16 16" className="w-3.5 h-3.5" fill="none" aria-hidden>
-            <path d="M8 13V3M4 7l4-4 4 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+          <span aria-hidden>👁</span>
           <span className="readout">{votes}</span>
         </button>
-        <span className="flex items-center gap-2 text-[13px] text-ink-faint">
-          <svg viewBox="0 0 16 16" className="w-3.5 h-3.5" fill="none" aria-hidden>
-            <path d="M14 8a6 6 0 0 1-6 6H2l1.5-2.6A6 6 0 1 1 14 8Z" stroke="currentColor" strokeWidth="1.3" strokeLinejoin="round" />
-          </svg>
-          {r.comments}
+
+        {/* Concept 5.2 — hands this specific report to the Analyst that
+            already exists on /assistant, rather than building a second
+            chat. The deep link is the ?q= the assistant already reads.
+
+            The Russian tree, not the English one: the prompt is written in
+            Russian (as the concept writes it, and as this button is
+            labelled), and the Analyst answers in the language of the route
+            it is opened on. Sending a Russian question to /assistant would
+            get an English answer back. */}
+        <Link
+          href={`/ru/assistant?q=${encodeURIComponent(assistantPrompt(r, context))}`}
+          className="flex items-center gap-2 text-[13px] rounded-full border border-line text-ink-dim hover:text-emerald hover:border-emerald/30 px-3.5 py-1.5 transition-colors duration-300"
+        >
+          <span className="text-[11px] font-bold" aria-hidden>
+            Æ
+          </span>
+          Спросить ИИ
+        </Link>
+
+        <span className="ml-auto telemetry !text-[9px] text-emerald/60">
+          +{POINTS.corroboration} Eco-Points on corroboration
         </span>
-        <span className="ml-auto telemetry !text-[9px] text-emerald/60">+25 pts on verification</span>
       </div>
     </GlassCard>
   );
@@ -262,7 +331,9 @@ function MissionCard({ m, index }: { m: Mission; index: number }) {
       <div className="glass rounded-xl p-5">
         <div className="flex items-start justify-between gap-3 mb-1.5">
           <h4 className="font-[family-name:var(--font-syne)] font-bold text-[15px]">{m.title}</h4>
-          <span className="readout text-xs text-emerald whitespace-nowrap">+{m.reward} pts</span>
+          <span className="readout text-xs text-emerald whitespace-nowrap">
+            +{m.reward} Eco-Points
+          </span>
         </div>
         <p className="text-[12.5px] text-ink-faint font-light leading-relaxed mb-3.5">{m.desc}</p>
         {joined ? (
@@ -320,7 +391,12 @@ function Toast({ message, onClose }: { message: string; onClose: () => void }) {
       </span>
       <div className="min-w-0">
         <div className="text-[13px] font-medium text-ink">{message}</div>
-        <div className="telemetry !text-[9px] mt-0.5">Pending sensor cross-check · +25 pts on verification</div>
+        {/* Status ① in its own words — the old line here read "Pending
+            sensor cross-check", which promised an instrument step that
+            does not exist. */}
+        <div className="telemetry !text-[9px] mt-0.5">
+          {STATUS_META.submitted.label} · nobody has reviewed it
+        </div>
       </div>
       <button
         type="button"
@@ -340,22 +416,28 @@ function Toast({ message, onClose }: { message: string; onClose: () => void }) {
 
 export default function Community() {
   const [reports, setReports] = useState<Report[]>(SEED_REPORTS);
-  const [modalOpen, setModalOpen] = useState(false);
+  const [mine, setMine] = useState<Report[]>([]);
+  const [flowOpen, setFlowOpen] = useState(false);
   const [justAddedId, setJustAddedId] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   // Only true once Postgres has actually answered — drives the copy that
   // claims reports persist. Never assumed.
   const [backendLive, setBackendLive] = useState(false);
 
+  // One live-station fetch for the whole page, shared by every card's AI
+  // context (the hook deduplicates at module level).
+  const live = useLiveStations();
+
   // Merge this device's previously-submitted reports after mount (avoids any
   // SSR/localStorage hydration mismatch — the seed feed renders identically
   // on server and first client paint, then user reports fold in).
   useEffect(() => {
-    const mine = getUserReports();
-    if (mine.length) setReports([...mine, ...SEED_REPORTS]);
+    const own = getUserReports();
+    setMine(own);
+    if (own.length) setReports([...own, ...SEED_REPORTS]);
   }, []);
 
-  // Real submissions from Postgres, newest first, ahead of the seeded six.
+  // Real submissions from Postgres, newest first, ahead of the seeded ones.
   // Local-only rows that already exist remotely are dropped so a report
   // filed on this device is not shown twice.
   useEffect(() => {
@@ -366,15 +448,18 @@ export default function Community() {
       const remoteIds = new Set(rows.map((r) => r.id));
       const localOnly = getUserReports().filter((r) => !remoteIds.has(r.id));
       setReports([...rows, ...localOnly, ...SEED_REPORTS]);
+      // Points come from the server's copy of your reports where it has
+      // one, so a corroboration that happened after you filed is counted.
+      setMine([...rows.filter((r) => r.userCreated), ...localOnly]);
     });
     return () => ac.abort();
   }, []);
 
   function handleCreated(report: Report) {
     setReports((prev) => [report, ...prev.filter((r) => r.id !== report.id)]);
+    setMine((prev) => [report, ...prev.filter((r) => r.id !== report.id)]);
     setJustAddedId(report.id);
-    setModalOpen(false);
-    setToast("Report submitted to the network");
+    setToast("Report filed");
     window.setTimeout(() => setJustAddedId((id) => (id === report.id ? null : id)), 4000);
   }
 
@@ -392,39 +477,6 @@ export default function Community() {
             </h1>
           </Reveal>
         </div>
-        <Reveal index={2}>
-          {/* Not "your" anything — there are no accounts. This is a mockup of
-              the contributor profile, scaled to the pilot feed: points are the
-              upvotes on its verified reports, and the verified count is the
-              pilot's actual one. Previously read 2,840 / Sentinel II / 38,
-              which contradicted the 6-report pilot stated on /oxford-challenge
-              and the locked "Sentinel — 100 verified reports" badge below. */}
-          <GlassCard bright className="px-6 py-4 flex flex-col gap-3">
-            <SampleTag
-              note={`Illustrative contributor profile — Aetheris has no accounts or logins. Figures are derived from the ${PILOT.reports}-report seeded pilot feed, not from any real user's activity.`}
-            >
-              Sample profile · illustrative
-            </SampleTag>
-            <div className="flex items-center gap-6">
-              <div>
-                <div className="telemetry mb-1">Points</div>
-                <div className="readout text-2xl text-emerald">{SAMPLE_POINTS}</div>
-              </div>
-              <div className="w-px h-10 bg-line-bright" />
-              <div>
-                <div className="telemetry mb-1">Rank</div>
-                <div className="font-[family-name:var(--font-syne)] font-bold text-lg">
-                  Observer I
-                </div>
-              </div>
-              <div className="w-px h-10 bg-line-bright hidden sm:block" />
-              <div className="hidden sm:block">
-                <div className="telemetry mb-1">Verified reports</div>
-                <div className="readout text-2xl text-cyan">{PILOT.verified}</div>
-              </div>
-            </div>
-          </GlassCard>
-        </Reveal>
       </div>
 
       <div className="grid lg:grid-cols-[1.6fr_1fr] gap-8 items-start">
@@ -437,8 +489,7 @@ export default function Community() {
                   Field reports
                 </h2>
                 {/* The seeded entries are written examples, not submissions
-                    from real people. Anything you post yourself IS real — it
-                    just lives in this browser's localStorage, no backend. */}
+                    from real people. Anything you post yourself IS real. */}
                 <SampleTag
                   note={
                     backendLive
@@ -451,7 +502,7 @@ export default function Community() {
               </div>
               <button
                 type="button"
-                onClick={() => setModalOpen(true)}
+                onClick={() => setFlowOpen(true)}
                 className="flex items-center gap-2 rounded-xl bg-emerald text-abyss text-[13px] font-semibold px-4 py-2.5 hover:shadow-[0_0_24px_rgba(45,226,166,0.4)] transition-shadow duration-300"
               >
                 <svg viewBox="0 0 16 16" className="w-3.5 h-3.5" fill="none" aria-hidden>
@@ -473,7 +524,7 @@ export default function Community() {
                   exit={{ opacity: 0, height: 0 }}
                   transition={{ duration: 0.45, ease: EASE }}
                 >
-                  <ReportCard r={r} highlight={r.id === justAddedId} />
+                  <ReportCard r={r} highlight={r.id === justAddedId} live={live} />
                 </motion.div>
               ))}
             </AnimatePresence>
@@ -482,6 +533,14 @@ export default function Community() {
 
         {/* rail */}
         <div className="flex flex-col gap-8 lg:sticky lg:top-24">
+          <Reveal>
+            <BadgeShowcase reports={mine} />
+          </Reveal>
+
+          <Reveal>
+            <StatusLegend />
+          </Reveal>
+
           <div>
             <Reveal>
               <div className="flex flex-wrap items-center gap-2.5 mb-4">
@@ -506,15 +565,13 @@ export default function Community() {
                 <h2 className="font-[family-name:var(--font-syne)] font-bold text-xl">
                   Achievements
                 </h2>
-                <SampleTag
-                  note={`Illustrative badge set. Only "First Signal" shows as earned, consistent with the ${PILOT.verified} verified reports in the seeded pilot feed.`}
-                >
+                <SampleTag note="Illustrative badge set — these four are not wired to anything yet. The geographic badges and the rank ladder above them are real and are computed from your own reports.">
                   Sample data
                 </SampleTag>
               </div>
             </Reveal>
             <Reveal index={1}>
-              <GlassCard className="p-4 grid grid-cols-3 gap-2.5">
+              <GlassCard className="p-4 grid grid-cols-4 gap-2.5">
                 {ACHIEVEMENTS.map((a) => (
                   <div
                     key={a.name}
@@ -535,47 +592,13 @@ export default function Community() {
             </Reveal>
           </div>
 
-          <div>
-            <Reveal>
-              <div className="flex flex-wrap items-center gap-2.5 mb-4">
-                <h2 className="font-[family-name:var(--font-syne)] font-bold text-xl">
-                  Local eco-events
-                </h2>
-                <SampleTag note="Example events with illustrative attendee counts — these are not scheduled gatherings and there is no sign-up behind them.">
-                  Sample data
-                </SampleTag>
-              </div>
-            </Reveal>
-            <div className="flex flex-col gap-3">
-              {EVENTS.map((e, i) => (
-                <Reveal key={e.title} index={i}>
-                  <div className="glass rounded-xl p-4 flex items-center gap-4 hover:border-line-bright transition-colors duration-300">
-                    <div className="grid place-items-center w-12 h-12 rounded-lg bg-carbon-3 border border-line-bright shrink-0">
-                      <span className="telemetry !text-[8px] !tracking-[0.1em] text-cyan text-center leading-tight">
-                        {e.date.split(" ")[0]}
-                        <br />
-                        <span className="text-ink text-[13px] font-semibold tracking-normal">
-                          {e.date.split(" ")[1]}
-                        </span>
-                      </span>
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="text-[13.5px] font-medium leading-snug">{e.title}</div>
-                      <div className="telemetry !text-[9px] mt-1">
-                        {e.place} · {e.attendees} attending
-                      </div>
-                    </div>
-                  </div>
-                </Reveal>
-              ))}
-            </div>
-          </div>
+          <Events />
         </div>
       </div>
 
       <AnimatePresence>
-        {modalOpen && (
-          <NewReportModal onClose={() => setModalOpen(false)} onCreated={handleCreated} />
+        {flowOpen && (
+          <ReportFlow onClose={() => setFlowOpen(false)} onCreated={handleCreated} />
         )}
       </AnimatePresence>
 

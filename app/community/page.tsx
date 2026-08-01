@@ -5,7 +5,7 @@ import { Footer } from "@/components/chrome/Footer";
 export const metadata: Metadata = {
   title: "Community",
   description:
-    "Field reports, eco missions, and the people verifying the planet's data.",
+    "Field reports from across Kazakhstan, corroborated between independent contributors — with Eco-Points, geographic badges and local eco-events.",
   alternates: { canonical: "/community/" },
 };
 
