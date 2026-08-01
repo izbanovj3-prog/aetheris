@@ -38,7 +38,12 @@ export function BadgeShowcase({ reports }: { reports: Report[] }) {
         </div>
         <div className="text-right">
           <div className="telemetry mb-1">Rank</div>
-          <div className="font-[family-name:var(--font-syne)] font-bold text-lg leading-none">
+          <div
+            title={rank.docName ? `Written «${rank.docName}» in the Community 2.0 concept.` : undefined}
+            className={`font-[family-name:var(--font-syne)] font-bold text-lg leading-none ${
+              rank.docName ? "cursor-help" : ""
+            }`}
+          >
             {rank.name}
           </div>
         </div>
@@ -150,7 +155,12 @@ export function BadgeShowcase({ reports }: { reports: Report[] }) {
                 r.name === rank.name ? "text-emerald" : "text-ink-faint"
               }`}
             >
-              <span>{r.name}</span>
+              <span
+                title={r.docName ? `Written «${r.docName}» in the Community 2.0 concept.` : undefined}
+                className={r.docName ? "cursor-help" : ""}
+              >
+                {r.name}
+              </span>
               <span className="readout text-[10.5px]">{r.at}</span>
             </li>
           ))}

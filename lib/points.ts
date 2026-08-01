@@ -97,10 +97,25 @@ export function computePoints(reports: Report[]): PointsBreakdown {
 export interface Rank {
   name: string;
   at: number;
+  /**
+   * Set only where the concept writes the rank differently from how it is
+   * shown. Applies to exactly one rung — see below.
+   */
+  docName?: string;
 }
 
+/*
+ * On the entry rank: the concept writes it «Новичок» and every other rung
+ * in Latin script. The status and badge names are kept verbatim because
+ * they are coined names — «Стражи Арала» is what that badge is called. A
+ * rank meaning "beginner" is not; rendering it in Russian inside an
+ * otherwise English ladder read as a bug rather than as fidelity to the
+ * document. So it shows as "Newcomer" and carries the concept's word in
+ * its tooltip, which is the same both-things-present treatment the
+ * statuses get, applied the other way round.
+ */
 export const RANKS: Rank[] = [
-  { name: "Новичок", at: 0 },
+  { name: "Newcomer", at: 0, docName: "Новичок" },
   { name: "Observer I", at: 10 },
   { name: "Observer II", at: 50 },
   { name: "Observer III", at: 120 },
