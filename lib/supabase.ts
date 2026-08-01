@@ -37,7 +37,26 @@ function headers(extra: Record<string, string> = {}) {
   };
 }
 
-/** Shape stored in Postgres — see supabase/reports.sql. */
+/**
+ * Status values the database can hold.
+ *
+ * The first three are the Community 2.0 vocabulary from
+ * supabase/community-2.sql; the last three are the pre-2.0 values, kept in
+ * the type because a database that has not had the migration applied still
+ * answers with them. lib/reports.ts maps both onto one display vocabulary,
+ * which is what lets the site run either way.
+ */
+export type RemoteStatus =
+  | "submitted"
+  | "corroborated"
+  | "forwarded"
+  | "org-response"
+  /* legacy, pre-migration */
+  | "pending"
+  | "cross-checking"
+  | "verified";
+
+/** Shape stored in Postgres — see supabase/reports.sql + community-2.sql. */
 export interface RemoteReport {
   id: string;
   created_at: string;
@@ -50,14 +69,46 @@ export interface RemoteReport {
   severity: "low" | "moderate" | "high" | "critical";
   title: string;
   body: string;
-  status: "pending" | "cross-checking" | "verified";
+  status: RemoteStatus;
   upvotes: number;
+
+  /* ── Added by community-2.sql. Every one of these is optional in the
+     type because `select=*` against an unmigrated table simply will not
+     return them, and that has to be a supported state rather than a
+     crash. ── */
+
+  /** ④ Передано — set only by mark_report_forwarded(). */
+  forwarded_at?: string | null;
+  forwarded_to?: string | null;
+  /** ⑤ Ответ организации — set only by record_org_response(). */
+  org_response?: string | null;
+  org_response_org?: string | null;
+  org_response_at?: string | null;
+  /** Follow-up on one's own earlier report. */
+  parent_id?: string | null;
+  /** Photo passed the client-side sharpness/size check. */
+  photo_quality?: boolean | null;
 }
 
 export type NewRemoteReport = Omit<
   RemoteReport,
-  "id" | "created_at" | "status" | "upvotes"
+  | "id"
+  | "created_at"
+  | "status"
+  | "upvotes"
+  | "forwarded_at"
+  | "forwarded_to"
+  | "org_response"
+  | "org_response_org"
+  | "org_response_at"
 >;
+
+/**
+ * Columns that exist only after community-2.sql has been run. An insert
+ * naming one of these against an unmigrated table is rejected outright, so
+ * insertRemoteReport strips them and retries rather than losing the report.
+ */
+const MIGRATION_ONLY_COLUMNS = ["parent_id", "photo_quality"] as const;
 
 /** Newest reports first. Returns null on any failure — never throws. */
 export async function listRemoteReports(
@@ -89,41 +140,69 @@ export type InsertResult =
   | { ok: false; reason: "rate-limited"; scope: "hourly" | "daily" }
   | { ok: false; reason: "unavailable" };
 
-/** Insert one report. Never throws. */
+/** One POST attempt. Separated so the caller can retry with fewer columns. */
+async function postReport(
+  report: Record<string, unknown>,
+  signal?: AbortSignal,
+): Promise<InsertResult | "unknown-column"> {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${REPORTS_TABLE}`, {
+    method: "POST",
+    // Prefer: return=representation gives back the inserted row, so the
+    // UI shows the server's id and timestamp rather than guessing.
+    headers: headers({ Prefer: "return=representation" }),
+    body: JSON.stringify(report),
+    signal,
+  });
+
+  if (res.ok) {
+    const rows = (await res.json()) as RemoteReport[];
+    return rows[0] ? { ok: true, row: rows[0] } : { ok: false, reason: "unavailable" };
+  }
+
+  // The rate-limit trigger raises P0001 with a message we tagged.
+  const body = (await res.json().catch(() => null)) as
+    | { code?: string; message?: string }
+    | null;
+  const msg = body?.message ?? "";
+  if (msg.includes("rate_limit_hourly")) {
+    return { ok: false, reason: "rate-limited", scope: "hourly" };
+  }
+  if (msg.includes("rate_limit_daily")) {
+    return { ok: false, reason: "rate-limited", scope: "daily" };
+  }
+
+  // PostgREST answers PGRST204 for a column its schema cache does not know.
+  // That means community-2.sql has not been run — recoverable, not an outage.
+  if (
+    body?.code === "PGRST204" ||
+    MIGRATION_ONLY_COLUMNS.some((c) => msg.includes(`'${c}'`) || msg.includes(`"${c}"`))
+  ) {
+    return "unknown-column";
+  }
+
+  return { ok: false, reason: "unavailable" };
+}
+
+/**
+ * Insert one report. Never throws.
+ *
+ * Retries once without the community-2.sql columns if the database has not
+ * had that migration applied. Dropping `photo_quality` costs the submitter
+ * a 5-point bonus; dropping the whole report would cost them the report.
+ */
 export async function insertRemoteReport(
   report: NewRemoteReport,
   signal?: AbortSignal,
 ): Promise<InsertResult> {
   if (!isConfigured()) return { ok: false, reason: "unavailable" };
   try {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/${REPORTS_TABLE}`, {
-      method: "POST",
-      // Prefer: return=representation gives back the inserted row, so the
-      // UI shows the server's id and timestamp rather than guessing.
-      headers: headers({ Prefer: "return=representation" }),
-      body: JSON.stringify(report),
-      signal,
-    });
+    const first = await postReport(report as unknown as Record<string, unknown>, signal);
+    if (first !== "unknown-column") return first;
 
-    if (res.ok) {
-      const rows = (await res.json()) as RemoteReport[];
-      return rows[0]
-        ? { ok: true, row: rows[0] }
-        : { ok: false, reason: "unavailable" };
-    }
-
-    // The rate-limit trigger raises P0001 with a message we tagged.
-    const body = (await res.json().catch(() => null)) as
-      | { code?: string; message?: string }
-      | null;
-    const msg = body?.message ?? "";
-    if (msg.includes("rate_limit_hourly")) {
-      return { ok: false, reason: "rate-limited", scope: "hourly" };
-    }
-    if (msg.includes("rate_limit_daily")) {
-      return { ok: false, reason: "rate-limited", scope: "daily" };
-    }
-    return { ok: false, reason: "unavailable" };
+    const lean = { ...(report as unknown as Record<string, unknown>) };
+    for (const c of MIGRATION_ONLY_COLUMNS) delete lean[c];
+    const second = await postReport(lean, signal);
+    return second === "unknown-column" ? { ok: false, reason: "unavailable" } : second;
   } catch {
     return { ok: false, reason: "unavailable" };
   }

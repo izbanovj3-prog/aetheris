@@ -94,7 +94,11 @@ const en: PageContent = {
       },
       {
         title: "Water, biodiversity & industry",
-        body: "Water Quality (WQI) and Industrial Load (IEI) are modeled from a deterministic regional baseline — no free real-time point feed exists for those layers yet, so treat them as indicative, not measured. Biodiversity is now split: the Biodiversity Intactness Index (BII) shown on the map and city pages is still that same modeled baseline, while a separate species-occurrence signal is live from GBIF — distinct species and occurrence records published within 50 km of each city over the last 10 years. The live signal reflects recording effort as well as ecology and does not feed into BII; the two are displayed side by side and badged separately. Industrial Load has a candidate live source that is not yet integrated: Copernicus Sentinel-5P / TROPOMI column densities for NO₂ and SO₂, which track industrial emission plumes. Adopting it means processing satellite scenes — through Google Earth Engine or equivalent — rather than the single REST call the air-quality and GBIF feeds need, so IEI stays modeled for now. For Water Quality no free real-time source covering Kazakhstan at this granularity has been identified at all. Alongside that gap sits the one signal here that is neither instrument nor model: community field reports, aggregated per city by category and severity over a rolling 30-day window and badged “Live · community”. It is real and current but self-reported, unverified against any instrument, and shaped by who happens to be looking — a city with no reports is a city nobody has reported from, not a clean one. It sits beside the modeled WQI and never feeds into it. Reports carry a status: everything arrives as “awaiting review”, and when two or more different devices report the same category in the same city within 72 hours the whole group moves to “corroborated”. That is corroboration between people, not verification — two reporters can be wrong together — and nothing is ever auto-promoted to “verified”.",
+        body: "Water Quality (WQI) and Industrial Load (IEI) are modeled from a deterministic regional baseline — no free real-time point feed exists for those layers yet, so treat them as indicative, not measured. Biodiversity is now split: the Biodiversity Intactness Index (BII) shown on the map and city pages is still that same modeled baseline, while a separate species-occurrence signal is live from GBIF — distinct species and occurrence records published within 50 km of each city over the last 10 years. The live signal reflects recording effort as well as ecology and does not feed into BII; the two are displayed side by side and badged separately. Industrial Load has a candidate live source that is not yet integrated: Copernicus Sentinel-5P / TROPOMI column densities for NO₂ and SO₂, which track industrial emission plumes. Adopting it means processing satellite scenes — through Google Earth Engine or equivalent — rather than the single REST call the air-quality and GBIF feeds need, so IEI stays modeled for now. For Water Quality no free real-time source covering Kazakhstan at this granularity has been identified at all. Alongside that gap sits the one signal here that is neither instrument nor model: community field reports, aggregated per city by category and severity over a rolling 30-day window and badged “Live · community”. It is real and current but self-reported, unverified against any instrument, and shaped by who happens to be looking — a city with no reports is a city nobody has reported from, not a clean one. It sits beside the modeled WQI and never feeds into it. Reports carry one of five statuses, described in full under “Community report statuses” below.",
+      },
+      {
+        title: "Community report statuses",
+        body: "A field report moves through a fixed vocabulary of five, and what is missing from it is deliberate. ① “Отправлен” (Submitted) is the default and everything a submission ever claims about itself: filed and stored, read by nobody. ② “AI-контекст добавлен” (AI context attached) means Aetheris Analyst put a live reading beside it — the nearest Open-Meteo/CAMS air-quality station for air and industrial reports, or the GBIF occurrence record for biodiversity ones. That context is computed in the browser at page load from the same feeds the city pages use, so it is never stored and no client can write the platform's own framing into the database; it is also a reading from now rather than from when the report was filed, which the bubble says on its face. There is no satellite cross-check of photographs and no placeholder pretending there is: that would need commercial imagery archives at a resolution and revisit rate this project has no access to. ③ “Corroborated сообществом” (Corroborated by the community) is the existing rule — two or more different devices reporting the same category in the same city within 72 hours. That is corroboration between people, not verification: two reporters can be wrong together, and no instrument has checked either. ④ “Передано в акимат/эко-инспекцию” (Forwarded) records that data was handed to a public body, with who sent it, when and where kept in a publicly readable log; it is an event in the report's history, not an assessment of it, and it says nothing about how or whether the recipient responded. ⑤ “Ответ организации” (Organisation response) appears only when an organisation that has agreed to appear on this platform leaves a comment, quoted as sent and attributed by name. ④ and ⑤ can only be set by a team member holding the service key — the database functions behind them have execute revoked from anonymous visitors, so nobody can mark their own report as forwarded to a government body or invent a reply from one. There is no “verified” status and no “resolved” status. Aetheris has no moderators, no instrument check standing behind a field report and no legal responsibility for verification, so it does not print a word that claims any of the three.",
       },
       {
         title: "Composite risk",
@@ -102,7 +106,15 @@ const en: PageContent = {
       },
       {
         title: "Validation",
-        body: "Cross-checks between modeled values, live readings and community field reports are being formalised. This section will document the validation protocol and known error bounds.",
+        body: "Cross-checks between modeled values, live readings and community field reports are being formalised. This section will document the validation protocol and known error bounds. What exists today is narrower and should not be mistaken for it: a live reading placed beside a report as context (status ②), and corroboration between independent reporters (status ③). Neither is a validation step.",
+      },
+      {
+        title: "Eco-Points, ranks and badges",
+        body: "Contributors accumulate Eco-Points: 10 for filing a report, 25 when it reaches “Corroborated сообществом”, 5 when the attached photo clears a resolution and sharpness check, and 15 for a follow-up update on one of your own earlier reports. Points are called Eco-Points and nothing else — they are not tokens, cannot be transferred or redeemed, carry no monetary value, and gate nothing on the platform. Because Aetheris has no accounts, they are computed in the visitor's own browser from that browser's own reports and are cleared with site data; one person on two devices counts as two contributors, and the inputs a client writes (the photo-quality flag, the follow-up link) are self-declared. The rank ladder extends the names already used here — Новичок, Observer I–III, Field Researcher, Eco-Inspector, Sentinel I–III, Constellation — and the five geographic badges cover Almaty, the Aral basin, the Temirtau–Karaganda industrial belt, the Balkhash basin and the Caspian shore.",
+      },
+      {
+        title: "Events and check-in",
+        body: "Anyone can create a community event and RSVP to one, capped at three new events per device per day. Check-in is the only thing on the platform that asserts someone was physically in a place, so its rules are enforced in the database rather than in the browser: within 500 m of the event's pin, and from an hour before the start until four hours after it. Coordinates still come from the visitor's own device, so this stops the accidental and the casual case, not a deliberate forgery. Two known limits, stated rather than hidden: participant caps are checked before the write rather than locked, so two people can take the last place at once; and because an anonymous device id cannot be proved, an RSVP can be withdrawn by anyone who knows it. Both close when the platform has real accounts. No report data is reachable either way.",
       },
     ],
   },
@@ -134,6 +146,18 @@ const en: PageContent = {
         provides:
           "Per-city counts of public field reports by category and severity over a rolling 30-day window, plus the number of distinct devices that filed them",
         status: "Live · community — self-reported, unverified against instruments, and shaped by who is looking",
+      },
+      {
+        name: "AI-контекст on report cards",
+        provides:
+          "The context bubble under a field report — no new source of its own. Air and industrial reports quote the nearest Open-Meteo/CAMS station; biodiversity reports quote the GBIF occurrence record for the area. Both are the rows above, read at page load and placed beside the report",
+        status: "Derived — context, never a verdict, and never stored; recomputed in the browser on each visit",
+      },
+      {
+        name: "Aetheris community events",
+        provides:
+          "Visitor-created events with RSVPs and geo-fenced check-ins. Check-in position comes from the visitor's own device and is accepted only within 500 m of the event and inside its time window",
+        status: "Live · community — self-organised and self-reported; Aetheris neither runs nor vets these gatherings",
       },
       {
         name: "Aetheris baseline model",
@@ -210,7 +234,7 @@ const en: PageContent = {
     channels: [
       {
         title: "Field reports & community",
-        body: "Seen a pollution event, a die-off, an illegal discharge? File a geo-tagged report — it lands directly in the verification queue.",
+        body: "Seen a pollution event, a die-off, an illegal discharge? File a geo-tagged report — it is stored and public straight away. There is no review queue behind it and nobody checks it; what can happen next is a live reading placed beside it, or another person reporting the same thing.",
         actionLabel: "Open the community hub",
         href: "/community",
       },
@@ -250,7 +274,11 @@ const ru: PageContent = {
       },
       {
         title: "Вода, биоразнообразие и промышленность",
-        body: "Индексы качества воды (WQI) и промышленной нагрузки (IEI) моделируются из детерминированной региональной базы — бесплатного потока в реальном времени для них пока нет, считайте их ориентировочными, а не измеренными. С биоразнообразием теперь два разных показателя: индекс сохранности (BII) на карте и страницах городов остаётся модельным, а рядом появился живой сигнал встречаемости видов из GBIF — число видов и записей наблюдений в радиусе 50 км за последние 10 лет. Живой сигнал отражает и интенсивность наблюдений, а не только экологию, и в BII не входит: показатели выводятся рядом и маркируются отдельно. У промышленной нагрузки есть кандидат на живой источник, пока не подключённый: колоночные концентрации NO₂ и SO₂ со спутника Copernicus Sentinel-5P / TROPOMI — они отслеживают шлейфы промышленных выбросов. Чтобы их использовать, нужна обработка спутниковых сцен (через Google Earth Engine или аналог), а не один REST-запрос, как у воздуха и GBIF, поэтому IEI пока остаётся модельным. Для качества воды бесплатного источника реального времени с нужной детализацией по Казахстану не найдено вовсе. Рядом с этим пробелом стоит единственный показатель, который не является ни прибором, ни моделью: полевые отчёты сообщества, сведённые по городу в разрезе категорий и тяжести за скользящие 30 дней и помеченные «Live · сообщество». Он реален и актуален, но это самоотчёты, не сверенные ни с одним прибором и зависящие от того, кто смотрит: город без отчётов — это город, откуда никто не написал, а не чистый город. Он стоит рядом с модельным WQI и в него не входит. У отчётов есть статус: все приходят как «ожидает проверки», а когда два и более разных устройства сообщают об одной категории в одном городе в пределах 72 часов, вся группа переходит в «подтверждено другими». Это подтверждение людьми, а не верификация — двое могут ошибаться одинаково — и до статуса «проверено» автоматически не поднимается ничего.",
+        body: "Индексы качества воды (WQI) и промышленной нагрузки (IEI) моделируются из детерминированной региональной базы — бесплатного потока в реальном времени для них пока нет, считайте их ориентировочными, а не измеренными. С биоразнообразием теперь два разных показателя: индекс сохранности (BII) на карте и страницах городов остаётся модельным, а рядом появился живой сигнал встречаемости видов из GBIF — число видов и записей наблюдений в радиусе 50 км за последние 10 лет. Живой сигнал отражает и интенсивность наблюдений, а не только экологию, и в BII не входит: показатели выводятся рядом и маркируются отдельно. У промышленной нагрузки есть кандидат на живой источник, пока не подключённый: колоночные концентрации NO₂ и SO₂ со спутника Copernicus Sentinel-5P / TROPOMI — они отслеживают шлейфы промышленных выбросов. Чтобы их использовать, нужна обработка спутниковых сцен (через Google Earth Engine или аналог), а не один REST-запрос, как у воздуха и GBIF, поэтому IEI пока остаётся модельным. Для качества воды бесплатного источника реального времени с нужной детализацией по Казахстану не найдено вовсе. Рядом с этим пробелом стоит единственный показатель, который не является ни прибором, ни моделью: полевые отчёты сообщества, сведённые по городу в разрезе категорий и тяжести за скользящие 30 дней и помеченные «Live · сообщество». Он реален и актуален, но это самоотчёты, не сверенные ни с одним прибором и зависящие от того, кто смотрит: город без отчётов — это город, откуда никто не написал, а не чистый город. Он стоит рядом с модельным WQI и в него не входит. У отчётов есть один из пяти статусов — они полностью описаны ниже, в разделе «Статусы отчётов сообщества».",
+      },
+      {
+        title: "Статусы отчётов сообщества",
+        body: "Отчёт движется по фиксированному словарю из пяти статусов, и то, чего в нём нет, отсутствует намеренно. ① «Отправлен» — статус по умолчанию и всё, что отчёт о себе утверждает: сохранён, никем не прочитан. ② «AI-контекст добавлен» означает, что Aetheris Analyst поставил рядом живой замер — ближайшую станцию Open-Meteo/CAMS для воздуха и промышленных выбросов или запись встречаемости GBIF для биоразнообразия. Этот контекст считается в браузере при загрузке страницы из тех же потоков, что и страницы городов, поэтому он нигде не хранится и ни один клиент не может записать в базу формулировку от лица платформы; это к тому же замер «сейчас», а не на момент подачи, и сам блок об этом прямо говорит. Спутниковой сверки фотографий нет и заглушки, изображающей её, тоже нет: для неё нужны коммерческие архивы съёмки с разрешением и частотой, к которым у проекта нет доступа. ③ «Corroborated сообществом» — уже существовавшее правило: два и более разных устройства сообщают об одной категории в одном городе в пределах 72 часов. Это подтверждение людьми, а не верификация: двое могут ошибаться одинаково, и ни один прибор их не проверял. ④ «Передано в акимат/эко-инспекцию» фиксирует, что данные переданы государственному органу, с открытым логом кто, когда и куда передал; это событие в истории отчёта, а не его оценка, и оно ничего не говорит о том, как и ответил ли получатель. ⑤ «Ответ организации» появляется только тогда, когда организация, согласившаяся присутствовать на платформе, оставила комментарий — он приводится дословно и с указанием её имени. ④ и ⑤ может проставить только участник команды с сервисным ключом: у функций базы, которые их пишут, отозвано право выполнения для анонимных посетителей, поэтому никто не может пометить свой отчёт как переданный в госорган или выдумать ответ от него. Статусов «проверено» и «решено» нет. У Aetheris нет модераторов, нет приборной проверки полевого отчёта и нет юридической ответственности за верификацию — поэтому платформа не печатает слово, которое утверждало бы хоть одно из трёх.",
       },
       {
         title: "Совокупный риск",
@@ -258,7 +286,15 @@ const ru: PageContent = {
       },
       {
         title: "Валидация",
-        body: "Сверка модельных значений, живых данных и полевых отчётов сообщества сейчас формализуется. В этом разделе будет описан протокол валидации и известные границы погрешности.",
+        body: "Сверка модельных значений, живых данных и полевых отчётов сообщества сейчас формализуется. В этом разделе будет описан протокол валидации и известные границы погрешности. То, что есть сегодня, уже́ и не должно приниматься за неё: живой замер, поставленный рядом с отчётом как контекст (статус ②), и подтверждение между независимыми людьми (статус ③). Ни то, ни другое валидацией не является.",
+      },
+      {
+        title: "Eco-Points, ранги и бейджи",
+        body: "Участники накапливают Eco-Points: 10 за поданный отчёт, 25 когда он доходит до «Corroborated сообществом», 5 если приложенное фото проходит проверку разрешения и резкости, и 15 за апдейт по своему же прошлому отчёту. Механика называется Eco-Points и никак иначе — это не токены, их нельзя передать или обменять, они не имеют денежной ценности и ничего на платформе не открывают. Поскольку у Aetheris нет аккаунтов, они считаются в браузере самого посетителя по отчётам этого же браузера и стираются вместе с данными сайта; один человек с двух устройств для платформы — два участника, а поля, которые пишет клиент (флаг качества фото, ссылка на исходный отчёт), заявляются им самим. Лестница рангов расширяет уже использовавшиеся здесь названия — Новичок, Observer I–III, Field Researcher, Eco-Inspector, Sentinel I–III, Constellation, — а пять географических бейджей покрывают Алматы, Аральский бассейн, промышленный пояс Темиртау–Караганда, бассейн Балхаша и Каспийское побережье.",
+      },
+      {
+        title: "События и чек-ин",
+        body: "Любой может создать событие сообщества и записаться на чужое, с лимитом в три новых события на устройство в сутки. Чек-ин — единственное на платформе, что утверждает физическое присутствие человека в месте, поэтому его правила проверяются в базе, а не в браузере: не дальше 500 м от пина события и в окне от часа до начала до четырёх часов после. Координаты всё равно приходят с устройства посетителя, так что это отсекает случайное и небрежное, но не намеренную подделку. Два известных ограничения, названных прямо: лимит участников проверяется до записи, а не блокировкой, поэтому двое могут занять последнее место одновременно; и поскольку анонимный идентификатор устройства нельзя доказать, запись на событие может снять любой, кто его знает. Оба закрываются, когда на платформе появятся настоящие аккаунты. Ни в том, ни в другом случае данные отчётов недоступны.",
       },
     ],
   },
@@ -290,6 +326,18 @@ const ru: PageContent = {
         provides:
           "Число публичных полевых отчётов по городу в разрезе категорий и тяжести за скользящие 30 дней, плюс количество разных устройств-авторов",
         status: "Live · сообщество — самоотчёты, не сверенные с приборами, зависят от того, кто смотрит",
+      },
+      {
+        name: "AI-контекст на карточках отчётов",
+        provides:
+          "Блок контекста под полевым отчётом — собственного источника у него нет. Для воздуха и промышленных выбросов цитируется ближайшая станция Open-Meteo/CAMS, для биоразнообразия — запись встречаемости GBIF. И то и другое — строки выше, прочитанные при загрузке страницы и поставленные рядом с отчётом",
+        status: "Производный — контекст, а не вердикт; нигде не хранится и пересчитывается в браузере при каждом заходе",
+      },
+      {
+        name: "События сообщества Aetheris",
+        provides:
+          "Созданные посетителями события с записью и чек-ином по геометке. Координаты чек-ина приходят с устройства самого посетителя и принимаются только в радиусе 500 м от события и внутри его временного окна",
+        status: "Live · сообщество — самоорганизация и самоотчёты; Aetheris эти встречи не проводит и не проверяет",
       },
       {
         name: "Базовая модель Aetheris",
@@ -366,7 +414,7 @@ const ru: PageContent = {
     channels: [
       {
         title: "Полевые отчёты и сообщество",
-        body: "Заметили загрязнение, замор, незаконный сброс? Отправьте геометку-отчёт — он попадёт прямо в очередь проверки.",
+        body: "Заметили загрязнение, замор, незаконный сброс? Отправьте геометку-отчёт — он сразу сохраняется и становится публичным. Никакой очереди проверки за ним нет, и никто его не проверяет; дальше рядом с ним может появиться живой замер или отчёт другого человека о том же самом.",
         actionLabel: "Открыть хаб сообщества",
         href: "/community",
       },
@@ -406,7 +454,11 @@ const kk: PageContent = {
       },
       {
         title: "Су, биоалуантүрлілік және өнеркәсіп",
-        body: "Су сапасы (WQI) және өнеркәсіп жүктемесі (IEI) индекстері детерминирленген өңірлік базадан модельденеді — олар үшін тегін нақты уақыт ағыны әлі жоқ, сондықтан оларды өлшенген емес, бағдарлы деп есептеңіз. Биоалуантүрлілік енді екіге бөлінді: картадағы және қала беттеріндегі сақталу индексі (BII) сол модельдік база күйінде қалады, ал қасында GBIF-тен тірі түрлер кездесуінің сигналы пайда болды — әр қаладан 50 км радиуста соңғы 10 жылда жарияланған түрлер мен бақылау жазбаларының саны. Тірі сигнал экологияны ғана емес, бақылау белсенділігін де көрсетеді және BII-ге кірмейді: екеуі қатар шығып, бөлек таңбаланады. Өнеркәсіптік жүктеме үшін әзірге қосылмаған үміткер дереккөз бар: Copernicus Sentinel-5P / TROPOMI жерсерігінің NO₂ және SO₂ бағаналық концентрациялары — олар өнеркәсіптік шығарынды шлейфтерін бақылайды. Оны пайдалану үшін бір REST-сұрау емес, жерсерік кадрларын өңдеу керек (Google Earth Engine немесе баламасы арқылы), сондықтан IEI әзірге модельдік күйінде қалады. Су сапасы үшін Қазақстан бойынша қажетті егжей-тегжейлі тегін нақты уақыт дереккөзі мүлдем табылған жоқ. Осы олқылықтың қасында аспап та, модель де емес жалғыз көрсеткіш тұр: қала бойынша санаттар мен ауырлық бойынша соңғы 30 күнде жинақталған, «Live · қауымдастық» деп белгіленген қауымдастықтың далалық есептері. Ол нақты әрі өзекті, бірақ өзін-өзі есептеу: ешбір аспаппен тексерілмеген және кім қарайтынына тәуелді — есебі жоқ қала таза қала емес, одан ешкім жазбаған. Ол модельдік WQI-дың қасында тұрады және оған кірмейді. Есептердің мәртебесі бар: бәрі «тексеруді күтуде» болып келеді, ал бір қалада бір санат бойынша 72 сағат ішінде екі не одан көп түрлі құрылғы хабарласа, бүкіл топ «өзгелермен расталды» күйіне ауысады. Бұл адамдардың растауы, верификация емес — екеуі бірдей қателесуі мүмкін — және ешнәрсе автоматты түрде «тексерілді» дәрежесіне көтерілмейді.",
+        body: "Су сапасы (WQI) және өнеркәсіп жүктемесі (IEI) индекстері детерминирленген өңірлік базадан модельденеді — олар үшін тегін нақты уақыт ағыны әлі жоқ, сондықтан оларды өлшенген емес, бағдарлы деп есептеңіз. Биоалуантүрлілік енді екіге бөлінді: картадағы және қала беттеріндегі сақталу индексі (BII) сол модельдік база күйінде қалады, ал қасында GBIF-тен тірі түрлер кездесуінің сигналы пайда болды — әр қаладан 50 км радиуста соңғы 10 жылда жарияланған түрлер мен бақылау жазбаларының саны. Тірі сигнал экологияны ғана емес, бақылау белсенділігін де көрсетеді және BII-ге кірмейді: екеуі қатар шығып, бөлек таңбаланады. Өнеркәсіптік жүктеме үшін әзірге қосылмаған үміткер дереккөз бар: Copernicus Sentinel-5P / TROPOMI жерсерігінің NO₂ және SO₂ бағаналық концентрациялары — олар өнеркәсіптік шығарынды шлейфтерін бақылайды. Оны пайдалану үшін бір REST-сұрау емес, жерсерік кадрларын өңдеу керек (Google Earth Engine немесе баламасы арқылы), сондықтан IEI әзірге модельдік күйінде қалады. Су сапасы үшін Қазақстан бойынша қажетті егжей-тегжейлі тегін нақты уақыт дереккөзі мүлдем табылған жоқ. Осы олқылықтың қасында аспап та, модель де емес жалғыз көрсеткіш тұр: қала бойынша санаттар мен ауырлық бойынша соңғы 30 күнде жинақталған, «Live · қауымдастық» деп белгіленген қауымдастықтың далалық есептері. Ол нақты әрі өзекті, бірақ өзін-өзі есептеу: ешбір аспаппен тексерілмеген және кім қарайтынына тәуелді — есебі жоқ қала таза қала емес, одан ешкім жазбаған. Ол модельдік WQI-дың қасында тұрады және оған кірмейді. Есептердің бес мәртебесінің бірі болады — олар төмендегі «Қауымдастық есептерінің мәртебелері» бөлімінде толық сипатталған.",
+      },
+      {
+        title: "Қауымдастық есептерінің мәртебелері",
+        body: "Есеп бес мәртебеден тұратын бекітілген сөздік бойынша жүреді, ал онда жоқ нәрсе әдейі жоқ. ① «Отправлен» — әдепкі мәртебе және есептің өзі туралы айтатынының бәрі: сақталған, ешкім оқымаған. ② «AI-контекст добавлен» дегені — Aetheris Analyst оның қасына тірі өлшем қойды: ауа мен өнеркәсіптік шығарындылар үшін ең жақын Open-Meteo/CAMS станциясы, биоалуантүрлілік үшін GBIF кездесу жазбасы. Бұл контекст қала беттері пайдаланатын дәл сол ағындардан бет жүктелгенде браузерде есептеледі, сондықтан ол ешқайда сақталмайды және ешбір клиент дерекқорға платформаның атынан тұжырым жаза алмайды; оның үстіне бұл — есеп берілген сәттегі емес, «дәл қазіргі» өлшем, және блок бұл туралы тікелей айтады. Фотосуреттерді жерсерікпен салыстыру жоқ, оны бейнелейтін бос орынбасар да жоқ: ол үшін жобаның қолы жетпейтін ажыратымдылық пен түсіру жиілігі бар коммерциялық мұрағаттар керек. ③ «Corroborated сообществом» — бұрыннан бар ереже: бір қалада бір санат бойынша 72 сағат ішінде екі не одан көп түрлі құрылғы хабарлайды. Бұл адамдардың растауы, верификация емес: екеуі бірдей қателесуі мүмкін және оларды ешбір аспап тексермеген. ④ «Передано в акимат/эко-инспекцию» деректердің мемлекеттік органға берілгенін тіркейді, кім, қашан және қайда бергені ашық журналда сақталады; бұл — есеп тарихындағы оқиға, оны бағалау емес, әрі алушының қалай, тіпті жауап бергені туралы ештеңе айтпайды. ⑤ «Ответ организации» платформада болуға келіскен ұйым пікір қалдырғанда ғана пайда болады — ол сөзбе-сөз және ұйым аты көрсетіліп келтіріледі. ④ мен ⑤-ті тек сервистік кілті бар команда мүшесі қоя алады: оларды жазатын дерекқор функцияларының анонимді келушілер үшін орындау құқығы алынып тасталған, сондықтан ешкім өз есебін мемлекеттік органға берілген деп белгілей алмайды және одан жауап ойлап таба алмайды. «Тексерілді» және «шешілді» мәртебелері жоқ. Aetheris-те модераторлар жоқ, далалық есептің артында аспаптық тексеру жоқ және верификация үшін заңды жауапкершілік жоқ — сондықтан платформа осы үшеуінің бірде-бірін мәлімдейтін сөзді баспайды.",
       },
       {
         title: "Жиынтық тәуекел",
@@ -414,7 +466,15 @@ const kk: PageContent = {
       },
       {
         title: "Валидация",
-        body: "Модельдік мәндер, тірі деректер және қауымдастықтың далалық есептері арасындағы салыстыру ресімделуде. Бұл бөлімде валидация хаттамасы мен белгілі қателік шектері сипатталады.",
+        body: "Модельдік мәндер, тірі деректер және қауымдастықтың далалық есептері арасындағы салыстыру ресімделуде. Бұл бөлімде валидация хаттамасы мен белгілі қателік шектері сипатталады. Бүгін бар нәрсе одан тар және онымен шатастырылмауы керек: есептің қасына контекст ретінде қойылған тірі өлшем (② мәртебесі) және тәуелсіз адамдар арасындағы растау (③ мәртебесі). Екеуінің де валидацияға қатысы жоқ.",
+      },
+      {
+        title: "Eco-Points, дәрежелер және бейджтер",
+        body: "Қатысушылар Eco-Points жинайды: есеп бергені үшін 10, ол «Corroborated сообществом» дәрежесіне жеткенде 25, тіркелген фото ажыратымдылық пен айқындық тексерісінен өтсе 5, өзінің бұрынғы есебі бойынша жаңарту үшін 15. Механика Eco-Points деп аталады, басқаша емес — бұл токен емес, оларды беруге немесе айырбастауға болмайды, ақшалай құны жоқ және платформада ештеңені ашпайды. Aetheris-те аккаунттар болмағандықтан, олар келушінің өз браузерінде сол браузердің есептері бойынша есептеледі және сайт деректерімен бірге өшеді; екі құрылғыдағы бір адам платформа үшін екі қатысушы, ал клиент жазатын өрістерді (фото сапасының белгісі, бастапқы есепке сілтеме) қатысушының өзі мәлімдейді. Дәреже баспалдағы мұнда бұрыннан қолданылған атауларды кеңейтеді — Новичок, Observer I–III, Field Researcher, Eco-Inspector, Sentinel I–III, Constellation — ал бес географиялық бейдж Алматыны, Арал бассейнін, Теміртау–Қарағанды өнеркәсіп белдеуін, Балқаш бассейнін және Каспий жағалауын қамтиды.",
+      },
+      {
+        title: "Іс-шаралар және чек-ин",
+        body: "Кез келген адам қауымдастық іс-шарасын құра алады және басқасына жазыла алады, тәулігіне бір құрылғыдан үш жаңа іс-шара шегімен. Чек-ин — платформадағы адамның бір жерде физикалық болғанын мәлімдейтін жалғыз нәрсе, сондықтан оның ережелері браузерде емес, дерекқорда тексеріледі: іс-шара пинінен 500 м-ден алыс емес және басталуына бір сағат қалғаннан кейін төрт сағат өткенге дейінгі терезеде. Координаттар бәрібір келушінің құрылғысынан келеді, сондықтан бұл кездейсоқ пен ұқыпсызды тоқтатады, әдейі жалғандықты емес. Тікелей аталған екі белгілі шектеу: қатысушылар лимиті жазудан бұрын тексеріледі, бұғаттау арқылы емес, сондықтан екі адам соңғы орынды бір мезгілде ала алады; және анонимді құрылғы идентификаторын дәлелдеу мүмкін болмағандықтан, жазылуды оны білетін кез келген адам алып тастай алады. Екеуі де платформада нағыз аккаунттар пайда болғанда жабылады. Екі жағдайда да есеп деректеріне қол жеткізуге болмайды.",
       },
     ],
   },
@@ -446,6 +506,18 @@ const kk: PageContent = {
         provides:
           "Соңғы 30 күндегі қала бойынша қоғамдық далалық есептердің санаттар мен ауырлық бойынша саны, сондай-ақ жіберген құрылғылар саны",
         status: "Live · қауымдастық — өзін-өзі есептеу, аспаппен тексерілмеген, кім қарайтынына тәуелді",
+      },
+      {
+        name: "Есеп карточкаларындағы AI-контекст",
+        provides:
+          "Далалық есептің астындағы контекст блогы — оның өз дереккөзі жоқ. Ауа мен өнеркәсіптік шығарындылар үшін ең жақын Open-Meteo/CAMS станциясы, биоалуантүрлілік үшін GBIF кездесу жазбасы келтіріледі. Екеуі де — жоғарыдағы жолдар, бет жүктелгенде оқылып, есептің қасына қойылған",
+        status: "Туынды — вердикт емес, контекст; ешқайда сақталмайды және әр кіргенде браузерде қайта есептеледі",
+      },
+      {
+        name: "Aetheris қауымдастық іс-шаралары",
+        provides:
+          "Келушілер құрған іс-шаралар, жазылу және геобелгі бойынша чек-ин. Чек-ин координаттары келушінің өз құрылғысынан келеді және тек іс-шарадан 500 м радиуста әрі оның уақыт терезесінде қабылданады",
+        status: "Live · қауымдастық — өзін-өзі ұйымдастыру және өзін-өзі есептеу; Aetheris бұл кездесулерді өткізбейді және тексермейді",
       },
       {
         name: "Aetheris базалық моделі",
@@ -522,7 +594,7 @@ const kk: PageContent = {
     channels: [
       {
         title: "Далалық есептер мен қауымдастық",
-        body: "Ластануды, жаппай қырылуды, заңсыз төгіндіні байқадыңыз ба? Геобелгісі бар есеп жіберіңіз — ол тексеру кезегіне тікелей түседі.",
+        body: "Ластануды, жаппай қырылуды, заңсыз төгіндіні байқадыңыз ба? Геобелгісі бар есеп жіберіңіз — ол бірден сақталып, жария болады. Оның артында тексеру кезегі жоқ, оны ешкім тексермейді; әрі қарай оның қасында тікелей өлшем немесе дәл сол нәрсе туралы басқа адамның есебі пайда болуы мүмкін.",
         actionLabel: "Қауымдастық хабын ашу",
         href: "/community",
       },
