@@ -46,18 +46,21 @@ export const metadata: Metadata = {
   // is inherited by every child page, marking them all duplicates of "/".
   // Each page declares its own canonical instead.
   formatDetection: { telephone: false, address: false, email: false },
+  // Deliberately no `title` or `description` inside openGraph/twitter here.
+  // Metadata merges shallowly, and a nested field set in the root wins over
+  // a child that only sets the top-level `title`/`description` — so pinning
+  // them made every one of the ~140 pages share as the homepage, whatever
+  // its own title said. Left unset, Next resolves both from each page's own
+  // title and description, and the root's values still apply to "/" because
+  // that is what its top-level title/description already are.
   openGraph: {
     type: "website",
     siteName: SITE.name,
-    title: SITE.title,
-    description: SITE.description,
     url: SITE.url,
     locale: SITE.locale,
   },
   twitter: {
     card: "summary_large_image",
-    title: SITE.title,
-    description: SITE.description,
   },
   robots: {
     index: true,

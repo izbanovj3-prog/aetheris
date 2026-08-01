@@ -27,6 +27,10 @@ export async function generateMetadata({
     title,
     description,
     alternates: { canonical: `/city/${id}/brief/` },
+    // `images` must be restated: metadata merges shallowly between segments,
+    // so declaring openGraph here replaces the root's entirely — including
+    // the card image that app/opengraph-image.png attaches to it. Without
+    // this all 28 briefs shared with no image.
     openGraph: {
       type: "article",
       siteName: SITE.name,
@@ -34,8 +38,14 @@ export async function generateMetadata({
       description,
       url: `${SITE.url}/city/${id}/brief/`,
       locale: SITE.locale,
+      images: [{ url: "/opengraph-image.png", width: 1200, height: 630, alt: title }],
     },
-    twitter: { card: "summary_large_image", title, description },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+      images: ["/twitter-image.png"],
+    },
   };
 }
 

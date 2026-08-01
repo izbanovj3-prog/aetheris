@@ -152,7 +152,16 @@ export function Hero() {
 
           <motion.h1
             variants={heroItem}
-            className="font-[family-name:var(--font-syne)] font-extrabold tracking-tight leading-[1.02] text-[2.75rem] sm:text-6xl lg:text-7xl"
+            /* Fluid rather than stepped, because the old base size did not
+               fit any phone. At 2.75rem the widest word in the headline
+               ("Kazakhstan." — 438px in Syne 800) is wider than the 327px
+               of content width a 375px screen leaves, so the h1 box grew
+               past the viewport and the section's overflow-hidden sliced
+               the last line off. The largest size that fits is ~27px at
+               320px wide and ~33px at 375px; 8.5vw stays under that across
+               the whole phone range and reaches the original 2.75rem at
+               ~517px, where there is finally room for it. */
+            className="font-[family-name:var(--font-syne)] font-extrabold tracking-tight leading-[1.02] text-[clamp(1.5rem,8.5vw,4.5rem)] lg:text-7xl"
           >
             {dict.hero.h1a}
             <br />

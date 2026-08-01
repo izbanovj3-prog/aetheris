@@ -36,6 +36,12 @@ export const metadata: Metadata = {
   // Without these the route inherits the homepage's OG copy from the root
   // layout, so every share of this page read "Kazakhstan Environmental
   // Intelligence" instead of the Aral Sea story.
+  //
+  // `images` has to be repeated here. Metadata objects are merged SHALLOWLY
+  // between segments: declaring `openGraph` at all replaces the root's
+  // openGraph wholesale, and the root's is where the app/opengraph-image.png
+  // file convention had attached the card image. Omitting it left this page —
+  // the one the project is judged on — sharing with no image at all.
   openGraph: {
     type: "article",
     siteName: SITE.name,
@@ -43,11 +49,15 @@ export const metadata: Metadata = {
     description: OG_DESCRIPTION,
     url: `${SITE.url}/oxford-challenge/`,
     locale: SITE.locale,
+    images: [
+      { url: "/opengraph-image.png", width: 1200, height: 630, alt: OG_TITLE },
+    ],
   },
   twitter: {
     card: "summary_large_image",
     title: OG_TITLE,
     description: OG_DESCRIPTION,
+    images: ["/twitter-image.png"],
   },
 };
 
