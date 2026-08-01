@@ -434,6 +434,7 @@ export default function Community() {
   // context (the hook deduplicates at module level).
   const live = useLiveStations();
 
+
   // Merge this device's previously-submitted reports after mount (avoids any
   // SSR/localStorage hydration mismatch — the seed feed renders identically
   // on server and first client paint, then user reports fold in).
@@ -533,15 +534,21 @@ export default function Community() {
           </Reveal>
 
           <div className="flex flex-col gap-5">
-            <AnimatePresence initial={false}>
+            {/* mode="popLayout" and no height animation on exit. Animating
+                `height: 0` on an element that also carries `layout` left
+                removed cards stuck at their entry style — invisible at
+                opacity 0, but still holding their full height and still in
+                the text tree, so a card that had been filtered out was
+                being read by screen readers and leaving a blank gap. */}
+            <AnimatePresence initial={false} mode="popLayout" key={deadIds.size}>
               {reports.filter((r) => !deadIds.has(r.id)).map((r) => (
                 <motion.div
                   key={r.id}
                   layout
                   initial={{ opacity: 0, y: -16, scale: 0.98 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.45, ease: EASE }}
+                  exit={{ opacity: 0, scale: 0.97 }}
+                  transition={{ duration: 0.35, ease: EASE }}
                 >
                   <ReportCard r={r} highlight={r.id === justAddedId} live={live} />
                 </motion.div>
