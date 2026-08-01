@@ -9,6 +9,7 @@
    ───────────────────────────────────────────────────────────── */
 
 import {
+  existingReportIds,
   insertRemoteReport,
   listRemoteReports,
   type RemoteReport,
@@ -524,6 +525,55 @@ export function getUserReports(): Report[] {
   } catch {
     return [];
   }
+}
+
+/**
+ * Drop local mirrors of reports that no longer exist in Postgres.
+ *
+ * createReport keeps a copy of every submission in localStorage beside the
+ * database row — the table stores no image, so the photo lives only here,
+ * and the copy keeps the feed populated when the backend is unreachable.
+ * That mirror carries `remote: true`, which is what puts the "Filed" mark
+ * on the card and tells the reader the report is in the shared database
+ * and visible to everyone.
+ *
+ * Nothing used to take that mark back. When a row was deleted from
+ * Postgres its mirror stayed in the feed on the author's own device,
+ * indefinitely, still claiming to be filed. Only the author saw it and
+ * only after an operator deletion — but it is the same failure as a
+ * confirmation screen promising a report was filed when it was not: the
+ * UI asserting something about storage that has stopped being true.
+ *
+ * Returns the reports this device should still show, plus the ids that
+ * were dropped. The caller needs that second list: rewriting storage is
+ * not enough on its own, because whatever the feed already rendered from
+ * the pre-pruning read is still on screen, and only an explicit set of
+ * dead ids can be filtered out of it no matter which pass wrote it.
+ *
+ * On any uncertainty — datastore unreachable, request failed — nothing is
+ * removed: losing someone's only copy of a photo to a transient network
+ * error would be a far worse bug than the one being fixed.
+ */
+export async function reconcileLocalMirrors(
+  signal?: AbortSignal,
+): Promise<{ kept: Report[]; removed: string[] }> {
+  const stored = getUserReports();
+  const mirrored = stored.filter((r) => r.remote).map((r) => r.id);
+  if (mirrored.length === 0) return { kept: stored, removed: [] };
+
+  const alive = await existingReportIds(mirrored, signal);
+  if (!alive) return { kept: stored, removed: [] }; // could not check
+
+  const kept = stored.filter((r) => !r.remote || alive.has(r.id));
+  const removed = stored.filter((r) => r.remote && !alive.has(r.id)).map((r) => r.id);
+  if (removed.length === 0) return { kept: stored, removed: [] };
+
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(kept));
+  } catch {
+    /* pruning is best-effort; the filtered list is still what we return */
+  }
+  return { kept, removed };
 }
 
 export interface NewReportInput {

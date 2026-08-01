@@ -22,6 +22,7 @@ import {
   getRemoteReports,
   getUserReports,
   namesOrganisation,
+  reconcileLocalMirrors,
   resolveStatus,
   type Report,
   type Tone,
@@ -423,6 +424,11 @@ export default function Community() {
   // Only true once Postgres has actually answered — drives the copy that
   // claims reports persist. Never assumed.
   const [backendLive, setBackendLive] = useState(false);
+  /* Local mirrors whose database row is confirmed gone. Filtered at render
+     rather than only at the point of pruning: the feed may already have
+     been populated from the pre-pruning read, and this way a card that is
+     no longer filed cannot survive on screen whichever pass wrote it. */
+  const [deadIds, setDeadIds] = useState<Set<string>>(new Set());
 
   // One live-station fetch for the whole page, shared by every card's AI
   // context (the hook deduplicates at module level).
@@ -431,27 +437,40 @@ export default function Community() {
   // Merge this device's previously-submitted reports after mount (avoids any
   // SSR/localStorage hydration mismatch — the seed feed renders identically
   // on server and first client paint, then user reports fold in).
+  // One effect, not two. When the local read and the remote read each owned
+  // an effect, both wrote the feed and the last writer won — so on the load
+  // where a deleted row's mirror gets pruned, the local pass could re-add
+  // the card the remote pass had just removed. Sequencing them here means
+  // the reconciled result is always what lands last.
   useEffect(() => {
+    const ac = new AbortController();
+
+    // This device's stored reports first, so the feed is populated
+    // immediately and still works with no network at all.
     const own = getUserReports();
     setMine(own);
     if (own.length) setReports([...own, ...SEED_REPORTS]);
-  }, []);
 
-  // Real submissions from Postgres, newest first, ahead of the seeded ones.
-  // Local-only rows that already exist remotely are dropped so a report
-  // filed on this device is not shown twice.
-  useEffect(() => {
-    const ac = new AbortController();
-    getRemoteReports(ac.signal).then((rows) => {
+    getRemoteReports(ac.signal).then(async (rows) => {
       if (!rows) return; // backend unreachable — keep the local view
       setBackendLive(true);
+
+      // Drop mirrors of rows that have since been deleted from Postgres —
+      // otherwise they sit in this device's feed for good, still marked
+      // "Filed". Checked by id rather than against `rows`, because that
+      // list is capped at 50 and "not on this page" is not "deleted".
+      const { kept, removed } = await reconcileLocalMirrors(ac.signal);
+      if (removed.length) setDeadIds((prev) => new Set([...prev, ...removed]));
+      if (ac.signal.aborted) return;
+
       const remoteIds = new Set(rows.map((r) => r.id));
-      const localOnly = getUserReports().filter((r) => !remoteIds.has(r.id));
+      const localOnly = kept.filter((r) => !remoteIds.has(r.id));
       setReports([...rows, ...localOnly, ...SEED_REPORTS]);
       // Points come from the server's copy of your reports where it has
       // one, so a corroboration that happened after you filed is counted.
       setMine([...rows.filter((r) => r.userCreated), ...localOnly]);
     });
+
     return () => ac.abort();
   }, []);
 
@@ -515,7 +534,7 @@ export default function Community() {
 
           <div className="flex flex-col gap-5">
             <AnimatePresence initial={false}>
-              {reports.map((r) => (
+              {reports.filter((r) => !deadIds.has(r.id)).map((r) => (
                 <motion.div
                   key={r.id}
                   layout
@@ -534,7 +553,7 @@ export default function Community() {
         {/* rail */}
         <div className="flex flex-col gap-8 lg:sticky lg:top-24">
           <Reveal>
-            <BadgeShowcase reports={mine} />
+            <BadgeShowcase reports={mine.filter((r) => !deadIds.has(r.id))} />
           </Reveal>
 
           <Reveal>

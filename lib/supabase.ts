@@ -208,6 +208,35 @@ export async function insertRemoteReport(
   }
 }
 
+/**
+ * Which of these ids still exist in the table.
+ *
+ * Asked about specific ids rather than inferred from the feed page on
+ * purpose: listRemoteReports caps at 50 rows, so "absent from the feed"
+ * and "deleted" stop meaning the same thing as soon as the feed is longer
+ * than that. Returns null on any failure, so a caller can tell "confirmed
+ * gone" apart from "could not check" and leave the data alone.
+ */
+export async function existingReportIds(
+  ids: string[],
+  signal?: AbortSignal,
+): Promise<Set<string> | null> {
+  if (!isConfigured()) return null;
+  if (ids.length === 0) return new Set();
+  try {
+    const list = ids.map((i) => `"${i}"`).join(",");
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/${REPORTS_TABLE}?select=id&id=in.(${list})`,
+      { headers: headers(), signal },
+    );
+    if (!res.ok) return null;
+    const rows = (await res.json()) as Array<{ id: string }>;
+    return new Set(rows.map((r) => r.id));
+  } catch {
+    return null;
+  }
+}
+
 /** True when the table exists and is readable — used to decide whether the
  *  UI may claim reports persist. */
 export async function backendReachable(signal?: AbortSignal): Promise<boolean> {
