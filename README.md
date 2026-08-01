@@ -8,9 +8,34 @@ A cinematic climate-tech platform: real-time ecological mapping, national analyt
 npm install
 npm run dev      # http://localhost:3000
 npm run build    # static production build → out/ (all routes prerendered)
+npm test         # vitest, ~1s, no browser and no network
 ```
 
 > Node 22+ required. No API keys needed — the map uses MapLibre GL with CARTO dark tiles, map label glyphs are self-hosted from `public/fonts/`, and all environmental data comes from the built-in simulation engine.
+
+## Tests
+
+`tests/` covers the pure logic, in `vitest`. It runs in about a second with
+no browser, no fixtures and no network, so it is cheap enough to run on
+every change.
+
+What it guards, and why these and not other things: this is the layer where
+a regression is invisible. A wrong Eco-Points total, a badge that quietly
+stops counting a city, or a status label drifting into the word "verified"
+all look perfectly fine on screen.
+
+| File | Covers |
+| --- | --- |
+| `points.test.ts` | the four point values, the corroboration bonus surviving statuses ④/⑤, rank thresholds and boundaries, badge thresholds and city matching |
+| `reports.test.ts` | the five-status vocabulary and its ordering, legacy status mapping, `resolveStatus` precedence, the organisation watchlist, seed-feed invariants |
+| `sitemap.test.ts` | every URL trailing-slashed, no duplicates, city profiles / briefs / oxford-challenge all present, no advertised translation that 404s |
+| `aiContext.test.ts` | nearest-station selection and its distance limit, the "no live source" cases, and that no context sentence reads as a verdict |
+| `events.test.ts` | the check-in window boundaries and the hydration-safe date formatting |
+
+**Not covered, and worth adding next:** anything needing a browser — the
+five-step submission flow reaching its confirmation screen, and the absence
+of horizontal scroll at 320px. Both were regressions found by hand in this
+codebase, and both need Playwright rather than vitest.
 
 ## Surfaces
 

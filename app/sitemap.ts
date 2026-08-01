@@ -24,8 +24,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
   // Every city page links to its action brief, and each one is a real
   // indexable page — they were reachable and crawlable but absent here.
   const briefPaths = stations.map((s) => `/city/${s.id}/brief`);
-  // EN lives at the root; RU/KK trees mirror every path that has a translation
-  // (home, stub pages, city profiles) — map/dashboard/assistant/community stay EN.
+  // EN lives at the root; RU/KK trees mirror every path that has a
+  // translation. isLocalized() is the authority on which those are —
+  // /community is currently the only route with no RU/KK tree at all.
   const translatable = [...ROUTES.filter(isLocalized), ...cityPaths];
   const localized = ["/ru", "/kk"].flatMap((prefix) =>
     translatable.map((p) => (p === "/" ? prefix : `${prefix}${p}`)),

@@ -259,8 +259,19 @@ const ORGANISATION_PATTERNS: RegExp[] = [
   /arcelormittal|арселормиттал|qarmet|qarmet/i,
   /kazakhmys|казахмыс|kazzinc|казцинк|kazatomprom|казатомпром/i,
   /eurasian resources|erg\b|kegoc|кегок|samruk|самрук/i,
-  // Generic corporate forms — catches operators not on the list above
-  /\b(jsc|llp|ltd|inc)\b|\bао\s|\bтоо\s|\bжшс\s/i,
+  /* Generic corporate forms — catches operators not on the list above.
+
+     Unicode-aware boundaries, not \b. In JavaScript \b is defined against
+     ASCII \w, so "\bтоо" can never match "ТОО КазМунайГаз": there is no
+     ASCII word character for the boundary to sit against. The three
+     Cyrillic forms here — ТОО, АО, ЖШС — are the ones that actually appear
+     in reports written in Russian and Kazakh, so the pattern was silently
+     matching only the Latin half of its own list. Same trap that made
+     hasWord() in lib/ai.ts move to \p{L}\p{N} with the u flag.
+
+     Bounded on both sides by a non-letter rather than by a trailing space,
+     so "ТОО, вышка" and a name at the very end of a sentence both count. */
+  /(?:^|[^\p{L}\p{N}])(?:jsc|llp|ltd|inc|ао|тоо|жшс)(?:$|[^\p{L}\p{N}])/iu,
 ];
 
 /**
