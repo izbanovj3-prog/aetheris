@@ -26,6 +26,11 @@ export default defineConfig({
   },
   test: {
     environment: "node",
+    // The security audit talks to the live database over the network, so it
+    // is excluded from the default run and invoked by `npm run test:security`.
+    // Keeping `npm test` offline and sub-second is what makes it runnable on
+    // every change; the audit is a deliberate, separate act.
     include: ["tests/**/*.test.ts"],
+    exclude: ["tests/**/*.rls.test.ts", "**/node_modules/**"],
   },
 });
