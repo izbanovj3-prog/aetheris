@@ -327,11 +327,14 @@ export function ReportFlow({
               <div className="telemetry mb-1.5">
                 Step {Math.min(step + 1, 5)} of 5 · {STEP_TITLES[step]}
               </div>
+              {/* Not the status name here — the confirmation panel below
+                  owns that, and printing «Отправлен» in both places put it
+                  on screen twice in a row. */}
               <h2
                 id="report-flow-title"
                 className="font-[family-name:var(--font-syne)] font-bold text-xl leading-none"
               >
-                {step === 4 ? "Отправлен" : "File a field report"}
+                {step === 4 ? "Report filed" : "File a field report"}
               </h2>
             </div>
             <button
@@ -679,22 +682,41 @@ function Confirmation({ report }: { report: Report }) {
         <div className="telemetry !text-[9px] mt-1.5">{meta.gloss} · status ①</div>
       </div>
 
+      {/* Two different things can have happened, and the screen must not
+          claim the better one. `remote` is true only for a row Postgres
+          handed back; when the datastore was unreachable createReport falls
+          back to this browser's storage, and telling that person their
+          report is "visible to everyone" would be a straight untruth. */}
       <p className="text-[13.5px] text-ink-dim font-light leading-relaxed max-w-sm">
-        Your report is stored and is now visible to everyone on the map and in the
-        feed. That is all that has happened to it: nobody has reviewed it, no
-        instrument has been compared against it, and Aetheris is not stating that
-        what you described is or is not the case.
+        {report.remote ? (
+          <>
+            Your report is stored and is now visible to everyone on the map and in
+            the feed.
+          </>
+        ) : (
+          <>
+            The shared database could not be reached, so your report is saved in
+            this browser only — you can see it, nobody else can. It is not lost,
+            but it has not been filed to the network either.
+          </>
+        )}{" "}
+        That is all that has happened to it: nobody has reviewed it, no instrument
+        has been compared against it, and Aetheris is not stating that what you
+        described is or is not the case.
       </p>
 
       <div className="w-full rounded-xl border border-line bg-carbon-2/50 p-4 text-left flex flex-col gap-2.5">
         <div className="telemetry !text-[9px]">What can happen next</div>
         <p className="text-[12.5px] text-ink-dim font-light leading-relaxed">
+          {/* Status names are quoted, never case-folded: lowercasing
+              «AI-контекст добавлен» to fit a sentence also destroyed the
+              abbreviation. */}
           If a live feed covers your category and area, Aetheris Analyst will attach
-          a reading beside it as context — {STATUS_META["ai-context"].label.toLowerCase()}.
+          a reading beside it as context — «{STATUS_META["ai-context"].label}».
           If someone else reports the same category in {report.city} within 72 hours
-          from a different device, both move to{" "}
-          {STATUS_META.corroborated.label} — which means independent people described
-          the same thing, not that either of you is right.
+          from a different device, both move to «{STATUS_META.corroborated.label}» —
+          which means independent people described the same thing, not that either of
+          you is right.
         </p>
         <p className="telemetry !text-[9px] text-emerald/70">
           +{POINTS.submission} Eco-Points for filing
