@@ -222,7 +222,10 @@ export function AtlasShowcase() {
           </Reveal>
         </div>
 
-        <div className="flex flex-col gap-4">
+        {/* min-w-0: a grid item defaults to min-width:auto, so this column
+            could not shrink below the widest card's min-content and pushed
+            the whole page into a horizontal scroll on narrow screens. */}
+        <div className="flex flex-col gap-4 min-w-0">
           {keys.map((k, i) => {
             const layer = LAYERS[k];
             const copy = dict.atlas.layers[k];
@@ -230,10 +233,15 @@ export function AtlasShowcase() {
               <Reveal key={k} index={i}>
                 <Link href={localePath("/map", locale)} className="block group">
                   <GlassCard className="p-6 transition-all duration-500 group-hover:border-line-bright group-hover:translate-x-1.5">
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center gap-3">
+                    {/* Wrapping, because these three sit on one nowrap line
+                        otherwise: the label, the Live/Modeled badge and the
+                        unit. "Environmental Risk" plus a "Modeled" badge is
+                        286px that cannot be reduced, which is what set the
+                        card's floor. Below ~330px they now stack instead. */}
+                    <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 mb-1">
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 min-w-0">
                         <span
-                          className="w-2 h-2 rounded-full"
+                          className="w-2 h-2 rounded-full shrink-0"
                           style={{ background: layer.color, boxShadow: `0 0 10px ${layer.color}` }}
                         />
                         <span className="font-[family-name:var(--font-syne)] font-bold text-lg">
@@ -272,14 +280,18 @@ export function AssistantPreview() {
       <div className="grid lg:grid-cols-2 gap-12 items-center">
         <Reveal>
           <GlassCard bright ticks className="p-6 sm:p-8 relative overflow-hidden">
-            <div className="flex items-center justify-between border-b border-line pb-4 mb-5">
-              <div className="flex items-center gap-3">
-                <span className="grid place-items-center w-8 h-8 rounded-lg bg-emerald/10 border border-emerald/30 text-emerald text-xs font-bold">
+            {/* Wrapping for the same reason as the Atlas cards: the name and
+                the "reasoning" indicator sat on one unbreakable line, whose
+                257px floor was the last thing forcing the page to scroll
+                sideways on a 320px screen. */}
+            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-line pb-4 mb-5">
+              <div className="flex items-center gap-3 min-w-0">
+                <span className="grid place-items-center w-8 h-8 rounded-lg bg-emerald/10 border border-emerald/30 text-emerald text-xs font-bold shrink-0">
                   Æ
                 </span>
                 <span className="telemetry telemetry-bright">{dict.assistant.analyst}</span>
               </div>
-              <span className="flex items-center gap-2">
+              <span className="flex items-center gap-2 shrink-0">
                 <span className="dot-live" />
                 <span className="telemetry">{dict.assistant.reasoning}</span>
               </span>
