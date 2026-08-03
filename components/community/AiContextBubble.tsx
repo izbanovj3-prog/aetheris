@@ -25,9 +25,12 @@ import type { AiContext } from "@/lib/aiContext";
 export function AiContextBubble({
   context,
   loading,
+  failed,
 }: {
   context: AiContext | null;
   loading: boolean;
+  /** The lookup errored, as opposed to having nothing to report. */
+  failed?: boolean;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -38,6 +41,28 @@ export function AiContextBubble({
           Æ
         </span>
         <span className="telemetry !text-[9px]">Analyst is pulling comparable data…</span>
+      </div>
+    );
+  }
+
+  /* A failed lookup gets its own state. Rendering nothing would leave a
+     card that silently looks like a category with no live source, which
+     is a different and misleading statement — and it is the failure mode
+     that already went unnoticed once on the GBIF block. */
+  if (failed) {
+    return (
+      <div
+        role="status"
+        className="flex items-start gap-2.5 rounded-xl border border-amber/30 bg-amber/[0.05] px-3.5 py-2.5 mb-4"
+      >
+        <span className="text-amber text-sm leading-none mt-0.5 shrink-0" aria-hidden>
+          ⚠
+        </span>
+        <p className="text-[12px] text-ink-dim font-light leading-relaxed">
+          <span className="text-amber">Context unavailable.</span> The live feed
+          didn&apos;t answer, so nothing could be placed beside this report right now.
+          This says nothing about the report itself — reload to try again.
+        </p>
       </div>
     );
   }

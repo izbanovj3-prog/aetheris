@@ -146,7 +146,13 @@ export async function buildAiContext(
   if (report.category === "biodiversity") {
     if (!near) return null;
     const bio = await fetchCityBiodiversity(near.station, signal);
-    if (!bio) return null;
+    /* Null here is a failed lookup, not an empty area: GBIF answers 200
+       with count 0 for somewhere genuinely unsurveyed, so the only way to
+       get null is the request itself failing. Returning null would make
+       that indistinguishable from "this category has nothing to show" and
+       the card would render no bubble at all — the silent failure this
+       block was caught by once already. Throw, so the caller can say so. */
+    if (!bio) throw new Error("GBIF occurrence lookup failed");
     const capped = bio.speciesCapped ? `${bio.species}+` : `${bio.species}`;
 
     return {

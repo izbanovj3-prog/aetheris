@@ -113,14 +113,20 @@ const ACHIEVEMENTS = [
 function useAiContext(
   report: Report,
   stations: ReturnType<typeof useLiveStations>,
-): { context: AiContext | null; loading: boolean } {
+): { context: AiContext | null; loading: boolean; failed: boolean } {
   const [context, setContext] = useState<AiContext | null>(null);
   const [loading, setLoading] = useState(true);
+  /* A failed lookup used to be indistinguishable from "nothing to say":
+     both left context null and the bubble rendered nothing at all. That is
+     the silent-failure mode this project has already been caught by once,
+     with the GBIF block. The two are now separate states. */
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     const ac = new AbortController();
     let alive = true;
     setLoading(true);
+    setFailed(false);
     buildAiContext(report, stations.stations, stations.live, stations.fetchedAt, ac.signal)
       .then((c) => {
         if (!alive) return;
@@ -128,7 +134,9 @@ function useAiContext(
         setLoading(false);
       })
       .catch(() => {
-        if (alive) setLoading(false);
+        if (!alive || ac.signal.aborted) return;
+        setFailed(true);
+        setLoading(false);
       });
     return () => {
       alive = false;
@@ -136,7 +144,7 @@ function useAiContext(
     };
   }, [report, stations.stations, stations.live, stations.fetchedAt]);
 
-  return { context, loading };
+  return { context, loading, failed };
 }
 
 /* ── Report card ──────────────────────────────────────────────── */
@@ -155,7 +163,7 @@ function ReportCard({
   const cat = CATEGORIES[r.category];
   const sev = SEVERITIES[r.severity];
 
-  const { context, loading } = useAiContext(r, live);
+  const { context, loading, failed } = useAiContext(r, live);
   // ② is derived: a report shows "AI-контекст добавлен" once real context
   // has actually resolved for it, and not before.
   const status = resolveStatus(r, Boolean(context) && context?.kind !== "none");
@@ -252,7 +260,7 @@ function ReportCard({
       )}
 
       {/* ② AI-контекст — collapsible, sitting under the photo. */}
-      <AiContextBubble context={context} loading={loading} />
+      <AiContextBubble context={context} loading={loading} failed={failed} />
 
       {/* ④ / ⑤ — only ever present when an operator recorded them. */}
       {r.forwardedAt && (

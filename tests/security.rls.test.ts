@@ -123,13 +123,26 @@ describe("anonymous role · escalating a report that already exists", () => {
      assertion has to be on the row's state afterwards, never on the
      status code. */
   it("cannot PATCH an existing report's status to forwarded or org-response", async () => {
-    const created = await insertReport({});
-    expect(created.status, `probe row could not be created: ${created.body}`).toBe(201);
-    const row = JSON.parse(created.body)[0] as { id: string; status: string };
+    /* Reuse the probe row from a previous run rather than adding another.
+       The anonymous role cannot delete, so a test that inserted every time
+       would leave a growing trail of rows in a public feed — which it did,
+       twice, before this lookup was added. At most one probe row exists,
+       whatever the run count. */
+    const existing = await fetch(
+      `${SUPABASE_URL}/rest/v1/reports?select=id,status&anon_id=eq.rls-audit-probe-0001&limit=1`,
+      { headers: anonHeaders },
+    );
+    let row = ((await existing.json()) as Array<{ id: string; status: string }>)[0];
+
+    if (!row) {
+      const created = await insertReport({});
+      expect(created.status, `probe row could not be created: ${created.body}`).toBe(201);
+      row = JSON.parse(created.body)[0] as { id: string; status: string };
+    }
     expect(row.status).toBe("submitted");
 
     // eslint-disable-next-line no-console
-    console.log(`[rls-audit] probe row id: ${row.id} — anon cannot delete it; see report`);
+    console.log(`[rls-audit] probe row: ${row.id} — anon cannot delete it; see supabase/README.md`);
 
     for (const target of ["forwarded", "org-response"]) {
       const patch = await fetch(`${SUPABASE_URL}/rest/v1/reports?id=eq.${row.id}`, {
@@ -165,6 +178,80 @@ describe("anonymous role · escalating a report that already exists", () => {
       { headers: anonHeaders },
     );
     expect(((await after.json()) as unknown[]).length, "row survived the delete attempt").toBe(1);
+  });
+});
+
+/* ── The positive case ────────────────────────────────────────
+   Proving anon CANNOT is only half the claim; the other half is that the
+   service role CAN, otherwise the feature is simply broken rather than
+   secure. That needs the service key, which is not in this environment
+   and must never be pasted into a chat or committed. Set it in the
+   environment and this block runs:
+
+     SUPABASE_SERVICE_KEY=sb_secret_… npm run test:security
+
+   It cleans up after itself — the service role can delete, so the report
+   it creates does not survive the run. */
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
+
+describe.skipIf(!SERVICE_KEY)("service role · the other half of the claim", () => {
+  const svc = {
+    apikey: SERVICE_KEY as string,
+    Authorization: `Bearer ${SERVICE_KEY}`,
+    "Content-Type": "application/json",
+  };
+
+  it("CAN set ④ forwarded, and the transfer is logged", async () => {
+    const created = await fetch(`${SUPABASE_URL}/rest/v1/reports`, {
+      method: "POST",
+      headers: { ...svc, Prefer: "return=representation" },
+      body: JSON.stringify({
+        anon_id: "svc-audit-probe-0001",
+        author: "Anonymous",
+        city: "Almaty",
+        lat: 43.238,
+        lon: 76.889,
+        category: "air",
+        severity: "low",
+        title: "SERVICE-ROLE PROBE — deleted by this test",
+        body: "Created and removed by tests/security.rls.test.ts.",
+      }),
+    });
+    expect(created.status).toBe(201);
+    const row = (await created.json())[0] as { id: string };
+
+    try {
+      const call = await fetch(`${SUPABASE_URL}/rest/v1/rpc/mark_report_forwarded`, {
+        method: "POST",
+        headers: svc,
+        body: JSON.stringify({
+          p_report_id: row.id,
+          p_destination: "audit probe destination",
+          p_actor: "audit",
+          p_note: null,
+        }),
+      });
+      expect(call.status, await call.text()).toBeLessThan(300);
+
+      const after = await fetch(
+        `${SUPABASE_URL}/rest/v1/reports?select=status,forwarded_to&id=eq.${row.id}`,
+        { headers: svc },
+      );
+      const [state] = (await after.json()) as Array<{ status: string; forwarded_to: string }>;
+      expect(state.status).toBe("forwarded");
+      expect(state.forwarded_to).toBe("audit probe destination");
+
+      const log = await fetch(
+        `${SUPABASE_URL}/rest/v1/report_forwardings?select=actor&report_id=eq.${row.id}`,
+        { headers: svc },
+      );
+      expect(((await log.json()) as unknown[]).length).toBe(1);
+    } finally {
+      await fetch(`${SUPABASE_URL}/rest/v1/reports?id=eq.${row.id}`, {
+        method: "DELETE",
+        headers: svc,
+      });
+    }
   });
 });
 

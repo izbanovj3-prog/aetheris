@@ -103,6 +103,34 @@ describe("buildAiContext", () => {
   });
 });
 
+describe("failure is distinguishable from silence", () => {
+  /* The card renders nothing when buildAiContext resolves null, so a
+     failed lookup that resolved null looked exactly like a category with
+     no live source. It has to reject instead, or the UI cannot tell the
+     two apart — which is how the GBIF block failed silently before. */
+  it("rejects when the GBIF lookup fails, rather than resolving null", async () => {
+    const original = globalThis.fetch;
+    globalThis.fetch = (() => Promise.reject(new Error("network down"))) as typeof fetch;
+    try {
+      await expect(
+        buildAiContext(report({ category: "biodiversity" }), stations, true, Date.now()),
+      ).rejects.toThrow(/GBIF/i);
+    } finally {
+      globalThis.fetch = original;
+    }
+  });
+
+  it("still resolves null for a location with no station in range", async () => {
+    const ctx = await buildAiContext(
+      report({ city: "", lat: 0, lon: 0 }),
+      stations,
+      true,
+      Date.now(),
+    );
+    expect(ctx).toBeNull();
+  });
+});
+
 describe("assistantPrompt", () => {
   it("carries the place and the report's own words", () => {
     const q = assistantPrompt(report({ title: "Heavy smog layer" }), null);
