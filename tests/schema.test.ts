@@ -238,6 +238,80 @@ describe("the corroboration rule", () => {
   });
 });
 
+describe("the participant cap", () => {
+  /* Was a documented known limitation: setRsvp() read the count and
+     compared it to the cap before writing, so the last place could go
+     twice. Enforced in the database now, which is the only place it can
+     be. Checked here for correctness; contention still needs a real
+     server, since PGlite is one connection. */
+  let eventId: string;
+
+  beforeAll(async () => {
+    await db.exec(`
+      insert into public.events (anon_id,title,description,place,lat,lon,starts_at,capacity)
+      values ('organiser-device-01','a valid event title','a valid description','Almaty',
+              43.238,76.889, now() + interval '2 days', 2);
+    `);
+    eventId = (
+      await db.query<{ id: string }>(`select id from public.events limit 1`)
+    ).rows[0].id;
+  });
+
+  it("accepts RSVPs up to the cap", async () => {
+    for (const who of ["attendee-device-01", "attendee-device-02"]) {
+      const r = await asRole(
+        "anon",
+        `insert into public.event_rsvps (event_id, anon_id) values ($1,$2)`,
+        [eventId, who],
+      );
+      expect(r.allowed, `${who}: ${r.error}`).toBe(true);
+    }
+  });
+
+  it("refuses the one past it", async () => {
+    const r = await asRole(
+      "anon",
+      `insert into public.event_rsvps (event_id, anon_id) values ($1,'attendee-device-03')`,
+      [eventId],
+    );
+    expect(r.allowed).toBe(false);
+    expect(r.error).toMatch(/event_full/);
+  });
+
+  /* Someone re-confirming a place they already hold is not taking a
+     second one, and must not be turned away by a full event. */
+  it("still lets an existing attendee re-confirm a full event", async () => {
+    const r = await asRole(
+      "anon",
+      `insert into public.event_rsvps (event_id, anon_id) values ($1,'attendee-device-01')
+       on conflict do nothing`,
+      [eventId],
+    );
+    expect(r.allowed, r.error).toBe(true);
+  });
+
+  it("leaves an uncapped event uncapped", async () => {
+    await db.exec(`
+      insert into public.events (anon_id,title,description,place,lat,lon,starts_at,capacity)
+      values ('organiser-device-02','an uncapped event','a valid description','Astana',
+              51.169,71.449, now() + interval '3 days', null);
+    `);
+    const open = (
+      await db.query<{ id: string }>(
+        `select id from public.events where anon_id='organiser-device-02'`,
+      )
+    ).rows[0].id;
+    for (const who of ["a-01", "a-02", "a-03", "a-04", "a-05"]) {
+      const r = await asRole(
+        "anon",
+        `insert into public.event_rsvps (event_id, anon_id) values ($1,$2)`,
+        [open, `uncapped-device-${who}`],
+      );
+      expect(r.allowed, r.error).toBe(true);
+    }
+  });
+});
+
 describe("service_role, the other half of the claim", () => {
   it("CAN set 4, and the transfer is logged", async () => {
     const target = (
