@@ -24,10 +24,21 @@ Files 1–5 are applied to the production project. **File 6 is not.**
 Nothing here tracks that automatically; this line is the record, and it
 has to be updated by whoever runs one.
 
-## Checking them without a database
+## Checking them without a server
 
-The SQL parses against the real Postgres grammar via `libpg_query`, which
-catches syntax errors without a server:
+`tests/schema.test.ts` replays every file in the order above against a
+brand-new Postgres — PGlite, the real engine compiled to WASM — then
+creates `anon`, `authenticated` and `service_role` the way Supabase does
+and probes what each can actually reach. It runs in `npm test`, offline,
+in about a second and a half.
+
+It is the answer to both "do these apply cleanly from nothing?" and "what
+can each role do once they have?". **It cannot test concurrency:** PGlite
+is a single connection, so the advisory locks in files 5 and 6 are
+exercised for correctness but never for contention. That still needs
+`scripts/probe-rate-limit-race.mjs` against a real server.
+
+For syntax alone, without the role setup, `libpg_query` also works:
 
 ```bash
 npx --yes -p libpg-query node -e "

@@ -31,11 +31,23 @@ all look perfectly fine on screen.
 | `sitemap.test.ts` | every URL trailing-slashed, no duplicates, city profiles / briefs / oxford-challenge all present, no advertised translation that 404s |
 | `aiContext.test.ts` | nearest-station selection and its distance limit, the "no live source" cases, and that no context sentence reads as a verdict |
 | `events.test.ts` | the check-in window boundaries and the hydration-safe date formatting |
+| `schema.test.ts` | replays every migration against a fresh Postgres (PGlite, in WASM), then checks what `anon`, `authenticated` and `service_role` can each actually do — including that neither browser-reachable role can set statuses ④/⑤ |
+| `pointsRoundTrip.test.ts` | that a corroboration landing after you closed the tab still pays out on your next visit |
 
 **Not covered, and worth adding next:** anything needing a browser — the
 five-step submission flow reaching its confirmation screen, and the absence
 of horizontal scroll at 320px. Both were regressions found by hand in this
 codebase, and both need Playwright rather than vitest.
+
+Also not covered: **concurrency**. PGlite is a single connection, so the
+advisory locks that close the rate-limit and participant-cap races are
+checked for correctness but never under contention. Measuring that needs a
+real server — `scripts/probe-rate-limit-race.mjs`.
+
+`npm run test:security` is separate and hits the live database over the
+network. It checks the same access-control claim against production rather
+than against a replayed schema. Its service-role half only runs when
+`SUPABASE_SERVICE_KEY` is in the environment.
 
 ## Surfaces
 
