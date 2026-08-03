@@ -234,7 +234,7 @@ const en: PageContent = {
     channels: [
       {
         title: "Field reports & community",
-        body: "Seen a pollution event, a die-off, an illegal discharge? File a geo-tagged report — it is stored and public straight away. There is no review queue behind it and nobody checks it; what can happen next is a live reading placed beside it, or another person reporting the same thing.",
+        body: "Seen a pollution event, a die-off, an illegal discharge? File a geo-tagged report — it's stored and visible immediately. Reports are corroborated between independent contributors over time, not verified by a moderator or instrument — see [Methodology](/methodology) for exactly how that works.",
         actionLabel: "Open the community hub",
         href: "/community",
       },
@@ -246,7 +246,7 @@ const en: PageContent = {
       },
       {
         title: "Press & partnerships",
-        body: "Direct mail channels are being set up. Until then, start from the press kit or the community hub and we will route you.",
+        body: "For press or partnership inquiries, email [izbanovj3@gmail.com](mailto:izbanovj3@gmail.com) directly — it reaches the team. The press kit has the boilerplate, logo and palette if you need them first.",
         actionLabel: "View the press kit",
         href: "/press",
       },
@@ -414,7 +414,7 @@ const ru: PageContent = {
     channels: [
       {
         title: "Полевые отчёты и сообщество",
-        body: "Заметили загрязнение, замор, незаконный сброс? Отправьте геометку-отчёт — он сразу сохраняется и становится публичным. Никакой очереди проверки за ним нет, и никто его не проверяет; дальше рядом с ним может появиться живой замер или отчёт другого человека о том же самом.",
+        body: "Заметили загрязнение, замор, незаконный сброс? Отправьте геометку-отчёт — он сохраняется и виден сразу. Отчёты со временем подтверждаются независимыми участниками, а не проверяются модератором или прибором — как именно это работает, описано в разделе [«Методология»](/methodology).",
         actionLabel: "Открыть хаб сообщества",
         href: "/community",
       },
@@ -426,7 +426,7 @@ const ru: PageContent = {
       },
       {
         title: "Пресса и партнёрства",
-        body: "Прямые почтовые каналы настраиваются. Пока начните с пресс-кита или хаба сообщества — мы вас направим.",
+        body: "По вопросам прессы и партнёрства пишите напрямую на [izbanovj3@gmail.com](mailto:izbanovj3@gmail.com) — письмо дойдёт до команды. В пресс-ките есть официальный текст, логотип и палитра, если они нужны заранее.",
         actionLabel: "Открыть пресс-кит",
         href: "/press",
       },
@@ -594,7 +594,7 @@ const kk: PageContent = {
     channels: [
       {
         title: "Далалық есептер мен қауымдастық",
-        body: "Ластануды, жаппай қырылуды, заңсыз төгіндіні байқадыңыз ба? Геобелгісі бар есеп жіберіңіз — ол бірден сақталып, жария болады. Оның артында тексеру кезегі жоқ, оны ешкім тексермейді; әрі қарай оның қасында тікелей өлшем немесе дәл сол нәрсе туралы басқа адамның есебі пайда болуы мүмкін.",
+        body: "Ластануды, жаппай қырылуды, заңсыз төгіндіні байқадыңыз ба? Геобелгісі бар есеп жіберіңіз — ол сақталып, бірден көрінеді. Есептер уақыт өте тәуелсіз қатысушылармен расталады, оларды модератор да, аспап та тексермейді — бұл қалай жұмыс істейтіні [«Әдіснама»](/methodology) бөлімінде сипатталған.",
         actionLabel: "Қауымдастық хабын ашу",
         href: "/community",
       },
@@ -606,7 +606,7 @@ const kk: PageContent = {
       },
       {
         title: "Баспасөз және серіктестік",
-        body: "Тікелей пошта арналары орнатылуда. Әзірге баспасөз жинағынан немесе қауымдастық хабынан бастаңыз — біз бағыттаймыз.",
+        body: "Баспасөз және серіктестік сұрақтары бойынша тікелей [izbanovj3@gmail.com](mailto:izbanovj3@gmail.com) мекенжайына жазыңыз — хат командаға жетеді. Баспасөз жинағында ресми мәтін, логотип және палитра бар, егер олар алдын ала қажет болса.",
         actionLabel: "Баспасөз жинағын ашу",
         href: "/press",
       },

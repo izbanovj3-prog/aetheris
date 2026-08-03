@@ -1,13 +1,42 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 
 import Link from "next/link";
 import { BRAND } from "@/lib/site";
 import { TRACKING_SINCE, countRemoteReports } from "@/lib/supabase";
 import { getStations } from "@/lib/data";
-import { cityName, localePath } from "@/lib/i18n";
+import { cityName, localePath, type Locale } from "@/lib/i18n";
 import { useLocale, usePageContent } from "@/lib/useLocale";
+
+/* Contact copy stays plain strings in lib/content.ts — one sentence per
+   channel, translated three times — but two of those sentences need a link
+   inside them: "see Methodology for how that works", and the address to
+   write to. Rather than splitting each into prefix/label/suffix fields
+   across three locales, links are written inline as [label](href) and
+   expanded here.
+
+   Deliberately the smallest possible subset: one pattern, no nesting, no
+   bold, no lists. Anything richer belongs in a component, not in a
+   content string. */
+function withLinks(text: string, locale: Locale) {
+  return text.split(/(\[[^\]]+\]\([^)]+\))/g).map((part, i) => {
+    const m = /^\[([^\]]+)\]\(([^)]+)\)$/.exec(part);
+    if (!m) return <Fragment key={i}>{part}</Fragment>;
+    const [, label, href] = m;
+    const style = "text-ink hover:text-emerald transition-colors duration-300 underline underline-offset-4 decoration-line-bright";
+    // mailto and other external schemes must not be locale-prefixed.
+    return href.includes(":") ? (
+      <a key={i} href={href} className={style}>
+        {label}
+      </a>
+    ) : (
+      <Link key={i} href={localePath(href, locale)} className={style}>
+        {label}
+      </Link>
+    );
+  });
+}
 
 /* Shared shell — kicker + title + lede, identical across all six pages. */
 function PageHead({ kicker, title, lede }: { kicker: string; title: string; lede: string }) {
@@ -259,7 +288,9 @@ export function ContactContent() {
             <h2 className="font-[family-name:var(--font-syne)] font-bold text-2xl mb-3">
               {ch.title}
             </h2>
-            <p className="text-ink-dim leading-relaxed font-light mb-4 max-w-xl">{ch.body}</p>
+            <p className="text-ink-dim leading-relaxed font-light mb-4 max-w-xl">
+              {withLinks(ch.body, locale)}
+            </p>
             <Link
               href={localePath(ch.href, locale)}
               className="text-sm text-ink-dim hover:text-emerald transition-colors duration-300 link-sweep"
