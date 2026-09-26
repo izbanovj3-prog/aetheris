@@ -84,13 +84,13 @@ export const GlobalPulse = memo(function GlobalPulse({
         >
           <span className="relative grid place-items-center w-9 h-9">
             {ring(36)}
-            <span className="absolute readout text-[11px] font-medium" style={{ color }}>
+            <span className="absolute readout text-[14px] font-medium" style={{ color }}>
               {health}
             </span>
           </span>
           <span className="flex flex-col items-start leading-tight">
-            <span className="telemetry !text-[8px]">{dict.map.planet}</span>
-            <span className="text-[11px] font-semibold text-ink">{dict.map.health}</span>
+            <span className="telemetry !text-[14px]">{dict.map.planet}</span>
+            <span className="text-[14px] font-semibold text-ink">{dict.map.health}</span>
           </span>
         </button>
         <AnimatePresence>
@@ -124,14 +124,14 @@ export const GlobalPulse = memo(function GlobalPulse({
             <span className="readout text-xl font-medium" style={{ color }}>
               {health}
             </span>
-            <span className="telemetry !text-[7px] -mt-0.5">{dict.map.index}</span>
+            <span className="telemetry !text-[14px] -mt-0.5">{dict.map.index}</span>
           </div>
         </div>
         <div className="flex flex-col gap-1">
           <span className="telemetry flex items-center gap-1.5">
             <span className="dot-live" /> {dict.map.planetaryPulse}
           </span>
-          <p className="text-[11px] leading-snug text-ink-dim font-light">
+          <p className="text-[14px] leading-snug text-ink-dim font-light">
             {planetNarrative({ ...base, health }, locale)}
           </p>
         </div>
@@ -157,7 +157,7 @@ export const GlobalPulse = memo(function GlobalPulse({
 function Stat({ label, value, tone }: { label: string; value: string; tone: string }) {
   return (
     <div className="px-3 py-2.5 flex flex-col gap-0.5">
-      <span className="telemetry !text-[8px]">{label}</span>
+      <span className="telemetry !text-[14px]">{label}</span>
       <span className="readout text-sm font-medium" style={{ color: tone, transition: "color 0.6s" }}>
         {value}
       </span>
@@ -174,23 +174,23 @@ function Feed({ visible, head }: { visible: AtlasEvent[]; head: number }) {
             key={`${head}-${e.id}`}
             layout
             initial={i === 0 ? { opacity: 0, y: -8, height: 0 } : false}
-            animate={{ opacity: 1 - i * 0.16, y: 0, height: "auto" }}
+            animate={{ opacity: 1, y: 0, height: "auto" }}
             exit={{ opacity: 0, height: 0 }}
             transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
             className="flex items-start gap-2.5 overflow-hidden"
           >
             <span
-              className="mt-0.5 text-[11px] leading-none shrink-0"
+              className="mt-0.5 text-[14px] leading-none shrink-0"
               style={{ color: severityColor(e.severity) }}
             >
               {e.glyph}
             </span>
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[11px] font-semibold text-ink truncate">{e.place}</span>
-                <span className="telemetry !text-[8px] shrink-0">{AGES[i] ?? "—"}</span>
+                <span className="text-[14px] font-semibold text-ink truncate">{e.place}</span>
+                <span className="telemetry !text-[14px] shrink-0">{AGES[i] ?? "—"}</span>
               </div>
-              <p className="text-[10.5px] leading-snug text-ink-faint font-light truncate">
+              <p className="text-[14px] leading-snug text-ink-faint font-light">
                 {e.text}
               </p>
             </div>

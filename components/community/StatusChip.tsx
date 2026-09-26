@@ -31,7 +31,7 @@ export function StatusChip({ status }: { status: ReportStatus }) {
   return (
     <span
       title={`${meta.label} — ${meta.gloss}. ${meta.note}`}
-      className={`telemetry !text-[9px] !tracking-[0.12em] border rounded-full px-2.5 py-1 inline-flex items-center gap-1.5 cursor-help ${TONE_CHIP[meta.tone]}`}
+      className={`telemetry !text-[14px] !tracking-[0.12em] border rounded-full px-2.5 py-1 inline-flex items-center gap-1.5 cursor-help ${TONE_CHIP[meta.tone]}`}
     >
       <span aria-hidden>{NUMERALS[meta.step - 1]}</span>
       <span>{meta.label}</span>
@@ -55,18 +55,18 @@ export function StatusLegend() {
             const m = STATUS_META[s];
             return (
               <li key={s} className="flex items-start gap-2.5">
-                <span className={`text-[13px] leading-5 shrink-0 ${TONE_CHIP[m.tone].split(" ")[0]}`} aria-hidden>
+                <span className={`text-[14px] leading-5 shrink-0 ${TONE_CHIP[m.tone].split(" ")[0]}`} aria-hidden>
                   {NUMERALS[m.step - 1]}
                 </span>
                 <span className="min-w-0">
-                  <span className="block text-[12.5px] text-ink leading-snug">{m.label}</span>
-                  <span className="block telemetry !text-[9px] mt-0.5">{m.gloss}</span>
+                  <span className="block text-[14px] text-ink leading-snug">{m.label}</span>
+                  <span className="block telemetry !text-[14px] mt-0.5">{m.gloss}</span>
                 </span>
               </li>
             );
           })}
       </ol>
-      <p className="text-[11.5px] text-ink-faint font-light leading-relaxed border-t border-line pt-3">
+      <p className="text-[14px] text-ink-faint font-light leading-relaxed border-t border-line pt-3">
         There is no &quot;confirmed&quot; and no &quot;resolved&quot; status, and there
         will not be one until something real stands behind it. Aetheris has no
         moderators and no instrument check for a field report, so the furthest the

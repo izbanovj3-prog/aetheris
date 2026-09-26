@@ -47,7 +47,7 @@ function UtcClock() {
     return () => clearInterval(id);
   }, []);
   return (
-    <span className="readout text-[11px] text-ink-faint tracking-[0.15em] tabular-nums min-w-[88px] text-right">
+    <span className="readout text-[14px] text-ink-faint tracking-[0.15em] tabular-nums min-w-[88px] text-right">
       {now ?? "––:––:–– UTC"}
     </span>
   );
@@ -80,7 +80,7 @@ export function Nav() {
               Æ
             </span>
           </span>
-          <span className="font-[family-name:var(--font-syne)] font-bold tracking-[0.28em] text-[13px] text-ink">
+          <span className="font-[family-name:var(--font-syne)] font-bold tracking-[0.28em] text-[14px] text-ink">
             AETHERIS
           </span>
         </Link>
@@ -93,7 +93,7 @@ export function Nav() {
               <Link
                 key={l.href}
                 href={href}
-                className={`relative px-3.5 py-1.5 rounded-lg text-[13px] font-medium transition-colors duration-300 ${
+                className={`relative px-3.5 py-1.5 rounded-lg text-[14px] font-medium transition-colors duration-300 ${
                   active
                     ? "text-ink"
                     : "text-ink-dim hover:text-ink"

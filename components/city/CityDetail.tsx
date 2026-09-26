@@ -95,10 +95,10 @@ export default function CityDetail({ id }: { id: string }) {
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-6 gap-y-5 mt-8 border-t border-line pt-6">
             {airMetrics.map((m) => (
               <div key={m.label} className="flex flex-col gap-1">
-                <span className="telemetry">{m.label}</span>
+                <span className="telemetry [overflow-wrap:anywhere]">{m.label}</span>
                 <span className="readout text-lg">
                   {m.value}
-                  <span className="text-ink-faint text-xs ml-1">{m.unit}</span>
+                  <span className="text-ink-faint text-sm ml-1">{m.unit}</span>
                 </span>
               </div>
             ))}
@@ -125,10 +125,10 @@ export default function CityDetail({ id }: { id: string }) {
             const tone = scoreBand(m.good).tone;
             return (
               <GlassCard key={m.label} className="p-5">
-                <span className="telemetry">{m.label}</span>
+                <span className="telemetry [overflow-wrap:anywhere]">{m.label}</span>
                 <div className={`readout text-2xl mt-2 ${TONE_TEXT[tone]}`}>
                   {m.value}
-                  <span className="text-ink-faint text-xs ml-1">{m.unit}</span>
+                  <span className="text-ink-faint text-sm ml-1">{m.unit}</span>
                 </div>
               </GlassCard>
             );
@@ -151,7 +151,7 @@ export default function CityDetail({ id }: { id: string }) {
             <div className="readout text-2xl mt-2 text-emerald">
               {bio.phase === "ready" && bio.data ? bio.data.species : "—"}
               {bio.data?.speciesCapped && (
-                <span className="text-ink-faint text-xs ml-1">+</span>
+                <span className="text-ink-faint text-sm ml-1">+</span>
               )}
             </div>
           </GlassCard>
@@ -165,7 +165,7 @@ export default function CityDetail({ id }: { id: string }) {
           </GlassCard>
           <GlassCard className="p-5 col-span-2">
             <span className="telemetry">{dict.city.gbifWindow}</span>
-            <div className="text-[13px] text-ink-dim font-light leading-relaxed mt-2">
+            <div className="text-base text-ink-dim font-light leading-relaxed mt-2">
               {/* "idle" is what a reader without JS sees, and what the page
                   source shows: no request has been made, so say that rather
                   than claiming to be querying — an indefinite "loading…"
@@ -195,7 +195,7 @@ export default function CityDetail({ id }: { id: string }) {
 
         {sig.phase !== "ready" || !sig.signal ? (
           <GlassCard className="p-5">
-            <span className="text-[13px] text-ink-dim font-light leading-relaxed">
+            <span className="text-base text-ink-dim font-light leading-relaxed">
               {sig.phase === "loading"
                 ? dict.city.communityLoading
                 : sig.phase === "unavailable"
@@ -206,7 +206,7 @@ export default function CityDetail({ id }: { id: string }) {
         ) : sig.signal.total === 0 ? (
           // An honest empty state, not a zero plotted as if it were a reading.
           <GlassCard className="p-5">
-            <span className="text-[13px] text-ink-dim font-light leading-relaxed">
+            <span className="text-base text-ink-dim font-light leading-relaxed">
               {dict.city.communityNone(name, WINDOW_DAYS)}
             </span>
           </GlassCard>
@@ -231,7 +231,7 @@ export default function CityDetail({ id }: { id: string }) {
                     .map((k) => (
                       <span
                         key={k}
-                        className="telemetry !text-[9px] border border-line rounded-full px-2 py-0.5"
+                        className="telemetry !text-[14px] border border-line rounded-full px-2 py-0.5"
                       >
                         {CATEGORIES[k].glyph} {CATEGORIES[k].label} · {sig.signal!.byCategory[k]}
                       </span>
@@ -239,7 +239,7 @@ export default function CityDetail({ id }: { id: string }) {
                 </div>
               </GlassCard>
             </div>
-            <p className="text-[13px] text-ink-dim font-light leading-relaxed mt-4 max-w-2xl">
+            <p className="text-base text-ink-dim font-light leading-relaxed mt-4 max-w-2xl">
               {dict.city.communityCaveat(WINDOW_DAYS)}
             </p>
           </>

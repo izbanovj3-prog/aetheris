@@ -175,14 +175,14 @@ export const AtlasBoot = memo(function AtlasBoot({
             return (
               <div
                 key={line}
-                className="flex items-center gap-2.5 text-[11px]"
+                className="flex items-center gap-2.5 text-[14px]"
                 style={{
                   opacity: shown ? 1 : 0.25,
                   transition: "opacity 0.35s",
                 }}
               >
                 <span
-                  className={`grid place-items-center w-3.5 h-3.5 rounded-full text-[8px] ${
+                  className={`grid place-items-center w-3.5 h-3.5 rounded-full text-[14px] ${
                     shown && !active
                       ? "text-emerald"
                       : active

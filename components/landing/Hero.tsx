@@ -120,10 +120,10 @@ export function Hero() {
                 number says nothing about trend. */}
             {c.key === "anomaly" && (
               <div className="flex items-center gap-1.5 mt-1.5">
-                <span className="telemetry !text-[8px] text-ink-faint">
+                <span className="telemetry !text-[14px] text-ink-faint">
                   vs {CLIMATE_BASELINE.period}
                 </span>
-                <span className="telemetry !text-[8px] text-amber">
+                <span className="telemetry !text-[14px] text-amber">
                   ▲ +{TREND.perDecade.toFixed(2)} °C/decade
                 </span>
               </div>

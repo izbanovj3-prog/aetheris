@@ -286,7 +286,7 @@ export function OriginBadge({
       tabIndex={0}
       title={note}
       aria-label={`${label} — ${note}`}
-      className={`telemetry !text-[9px] inline-flex items-center gap-1.5 rounded-full border px-2 py-[3px] cursor-help align-middle whitespace-nowrap ${tone} ${className}`}
+      className={`telemetry !text-[14px] inline-flex items-center gap-1.5 rounded-full border px-2 py-[3px] cursor-help align-middle whitespace-nowrap ${tone} ${className}`}
     >
       {origin === "live" ? (
         <span className="dot-live" />

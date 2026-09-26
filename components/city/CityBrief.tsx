@@ -28,7 +28,7 @@ function IndicativeBadge() {
       tabIndex={0}
       title={note}
       aria-label={`Indicative — ${note}`}
-      className="telemetry !text-[9px] inline-flex items-center gap-1.5 rounded-full border px-2 py-[3px] cursor-help align-middle whitespace-nowrap text-amber border-amber/30 bg-amber/[0.07]"
+      className="telemetry !text-[14px] inline-flex items-center gap-1.5 rounded-full border px-2 py-[3px] cursor-help align-middle whitespace-nowrap text-amber border-amber/30 bg-amber/[0.07]"
     >
       <span className="w-1.5 h-1.5 rounded-full border border-current opacity-70" />
       Indicative
@@ -47,7 +47,7 @@ export default function CityBrief({ id }: { id: string }) {
       <div className="flex flex-wrap items-center gap-3 mb-5">
         <span className="telemetry telemetry-bright">City action brief</span>
         <span
-          className={`telemetry !text-[9px] inline-flex items-center gap-1.5 rounded-full border px-2 py-[3px] capitalize ${STATUS_TONE[status]}`}
+          className={`telemetry !text-[14px] inline-flex items-center gap-1.5 rounded-full border px-2 py-[3px] capitalize ${STATUS_TONE[status]}`}
         >
           {status}
         </span>
@@ -112,7 +112,7 @@ export default function CityBrief({ id }: { id: string }) {
               </h3>
             </div>
 
-            <p className="text-ink-dim font-light leading-relaxed text-[15px]">{iv.action}</p>
+            <p className="text-ink-dim font-light leading-relaxed text-base">{iv.action}</p>
             <p className="text-ink-faint font-light leading-relaxed text-[14px]">
               <span className="text-ink-dim">Why: </span>
               {iv.rationale}
@@ -143,7 +143,7 @@ export default function CityBrief({ id }: { id: string }) {
       {/* ── Provenance ───────────────────────────────────────── */}
       <div className="glass rounded-2xl p-6 mt-10 flex flex-col gap-3">
         <span className="telemetry telemetry-bright">How to read this brief</span>
-        <ul className="flex flex-col gap-2 text-[14px] text-ink-dim font-light leading-relaxed">
+        <ul className="flex flex-col gap-2 text-base text-ink-dim font-light leading-relaxed">
           <li>
             <span className="text-ink">Air quality is measured.</span> AQI and its
             components come from Open-Meteo / CAMS at page load. Water, industrial
@@ -186,7 +186,7 @@ export default function CityBrief({ id }: { id: string }) {
         )}
       </div>
 
-      <p className="telemetry mt-8">
+      <p className="telemetry mt-8 [overflow-wrap:anywhere]">
         Aetheris · aetherisearth.live/city/{s.id}/brief
       </p>
     </section>

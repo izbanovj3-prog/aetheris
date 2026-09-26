@@ -126,7 +126,7 @@ function AreaChart({
       </svg>
       {hoverIdx !== null && (
         <div
-          className="absolute -top-1 glass-bright rounded-lg px-3 py-1.5 pointer-events-none readout text-xs"
+          className="absolute -top-1 glass-bright rounded-lg px-3 py-1.5 pointer-events-none readout text-sm"
           style={{
             left: `${(hoverIdx / (series.length - 1)) * 88}%`,
             color,
@@ -207,8 +207,8 @@ function CityBars({
             ? i < 2 ? "#f57362" : "#f5b352"
             : i < 2 ? "#2de2a6" : "#4fd8f7";
           return (
-            <div key={it.name} className="grid grid-cols-[90px_1fr_44px] items-center gap-3">
-              <span className="text-[12px] text-ink-dim truncate">{it.name}</span>
+            <div key={it.name} className="grid grid-cols-[124px_1fr_44px] items-center gap-3">
+              <span className="text-[14px] text-ink-dim truncate">{it.name}</span>
               <div className="h-1.5 rounded-full bg-carbon-3 overflow-hidden">
                 {/* Width encodes the ranking value — rendered directly, not
                     grown from 0, so an unscrolled capture shows the real
@@ -221,7 +221,7 @@ function CityBars({
                   }}
                 />
               </div>
-              <span className="readout text-xs text-right" style={{ color }}>
+              <span className="readout text-sm text-right" style={{ color }}>
                 {it.v}
               </span>
             </div>
@@ -341,11 +341,11 @@ export default function Dashboard() {
                 </div>
                 <div className="readout text-2xl text-amber">
                   +{sum.meanAnomaly} °C
-                  <span className="text-xs text-ink-faint ml-2">{dict.dashboard.vsBaseline}</span>
+                  <span className="text-sm text-ink-faint ml-2">{dict.dashboard.vsBaseline}</span>
                 </div>
                 {/* Trend, not just level: the anomaly on its own says
                     nothing about direction of travel. */}
-                <div className="telemetry !text-[9px] text-amber mt-1">
+                <div className="telemetry !text-[14px] text-amber mt-1">
                   ▲ +{TREND.perDecade.toFixed(2)} °C/decade over the last{" "}
                   {TREND.years} modeled years
                 </div>
@@ -363,7 +363,7 @@ export default function Dashboard() {
             {/* Composite of live air + modeled water/bio/risk — badged as the
                 weaker of the two claims. */}
             <OriginBadge origin={METRIC_ORIGIN.sustainability} />
-            <p className="text-[12px] text-ink-faint text-center font-light leading-relaxed mt-2 max-w-[220px]">
+            <p className="text-[14px] text-ink-faint text-center font-light leading-relaxed mt-2 max-w-[220px]">
               {dict.dashboard.gaugeLede(stations.length)}
             </p>
           </GlassCard>
@@ -382,7 +382,7 @@ export default function Dashboard() {
                 </div>
                 <div className={`readout text-2xl ${TONE[aqiBand(sum.meanAqi).tone]}`}>
                   {sum.meanAqi}
-                  <span className="text-xs text-ink-faint ml-2">{aqiBandLabel(aqiBand(sum.meanAqi).label, locale)}</span>
+                  <span className="text-sm text-ink-faint ml-2">{aqiBandLabel(aqiBand(sum.meanAqi).label, locale)}</span>
                 </div>
               </div>
             </div>
@@ -405,7 +405,7 @@ export default function Dashboard() {
       <div className="mt-12">
         <Reveal>
           <div className="flex items-center gap-3 mb-5">
-            <span className="grid place-items-center w-7 h-7 rounded-lg bg-emerald/10 border border-emerald/30 text-emerald text-[10px] font-bold">
+            <span className="grid place-items-center w-7 h-7 rounded-lg bg-emerald/10 border border-emerald/30 text-emerald text-[14px] font-bold">
               Æ
             </span>
             <h2 className="font-[family-name:var(--font-syne)] font-bold text-xl">
@@ -425,7 +425,7 @@ export default function Dashboard() {
                   <h3 className="font-[family-name:var(--font-syne)] font-bold text-lg mt-2 mb-2.5 leading-snug">
                     {ins.title}
                   </h3>
-                  <p className="text-[13px] text-ink-dim font-light leading-relaxed">
+                  <p className="text-base text-ink-dim font-light leading-relaxed">
                     {ins.body}
                   </p>
                 </GlassCard>
@@ -466,8 +466,8 @@ export default function Dashboard() {
                         className="border-b border-line/50 last:border-0 hover:bg-carbon-2/60 transition-colors"
                       >
                         <td className="px-5 py-3.5 text-sm font-medium whitespace-nowrap">{hotspotName(h.id, h.name, locale)}</td>
-                        <td className="px-5 py-3.5 text-xs text-ink-dim whitespace-nowrap">{regionShort(h.region, locale)}</td>
-                        <td className="px-5 py-3.5 telemetry !text-[9px] whitespace-nowrap">
+                        <td className="px-5 py-3.5 text-sm text-ink-dim whitespace-nowrap">{regionShort(h.region, locale)}</td>
+                        <td className="px-5 py-3.5 telemetry !text-[14px] whitespace-nowrap">
                           {hotspotTypeLabel(h.type, locale)}
                         </td>
                         <td className="px-5 py-3.5">
@@ -478,11 +478,11 @@ export default function Dashboard() {
                                 style={{ width: `${h.severity}%` }}
                               />
                             </div>
-                            <span className="readout text-xs text-coral">{h.severity}</span>
+                            <span className="readout text-sm text-coral">{h.severity}</span>
                           </div>
                         </td>
                         <td className="px-5 py-3.5">
-                          <span className={`readout text-xs capitalize ${STATUS_TONE[h.status]}`}>
+                          <span className={`readout text-sm capitalize ${STATUS_TONE[h.status]}`}>
                             {statusLabel(h.status, locale)}
                           </span>
                         </td>
@@ -491,7 +491,7 @@ export default function Dashboard() {
                         <td className="px-5 py-3.5 whitespace-nowrap">
                           <Link
                             href={`/city/${nearestCityForHotspot(h).id}/brief/`}
-                            className="text-xs text-emerald hover:underline"
+                            className="text-sm text-emerald hover:underline"
                           >
                             {dict.dashboard.th.action} →
                           </Link>

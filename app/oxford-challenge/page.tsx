@@ -164,7 +164,7 @@ export default function OxfordChallengePage() {
                   <TelemetryTag tone="coral">Critical</TelemetryTag>
                   <OriginBadge
                     origin={LAYER_ORIGIN.water}
-                    className="!text-[11px] !tracking-[0.22em] px-3 py-1.5"
+                    className="!text-[14px] !tracking-[0.22em] px-3 py-1.5"
                   />
                 </div>
                 <StatReadout

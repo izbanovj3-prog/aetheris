@@ -132,7 +132,7 @@ export function Events() {
             <button
               type="button"
               onClick={() => setFormOpen(true)}
-              className="flex items-center gap-1.5 rounded-lg border border-emerald/30 text-emerald text-[12px] font-semibold px-3 py-1.5 hover:bg-emerald/[0.08] transition-colors"
+              className="flex items-center gap-1.5 rounded-lg border border-emerald/30 text-emerald text-[14px] font-semibold px-3 py-1.5 hover:bg-emerald/[0.08] transition-colors"
             >
               <svg viewBox="0 0 16 16" className="w-3 h-3" fill="none" aria-hidden>
                 <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
@@ -146,7 +146,7 @@ export function Events() {
       {notice && (
         <div
           role="status"
-          className="rounded-xl border border-line bg-carbon-2/60 px-3.5 py-2.5 text-[12px] text-ink-dim mb-3"
+          className="rounded-xl border border-line bg-carbon-2/60 px-3.5 py-2.5 text-[14px] text-ink-dim mb-3"
         >
           {notice}
         </div>
@@ -167,7 +167,7 @@ export function Events() {
 
         {loaded && available && real.length === 0 && (
           <div className="glass rounded-xl p-4">
-            <p className="text-[12.5px] text-ink-dim font-light leading-relaxed">
+            <p className="text-base text-ink-dim font-light leading-relaxed">
               No events have been created yet. Anyone can add one — a cleanup, a
               survey, a mapping walk — and people can RSVP and check in when they
               arrive.
@@ -177,7 +177,7 @@ export function Events() {
 
         {loaded && !available && (
           <div className="glass rounded-xl p-4">
-            <p className="text-[12.5px] text-ink-dim font-light leading-relaxed">
+            <p className="text-base text-ink-dim font-light leading-relaxed">
               The events datastore isn&apos;t reachable from here, so no real events
               can be listed or created right now. The examples below are the
               illustrative ones that have always been on this page.
@@ -199,19 +199,19 @@ export function Events() {
           const d = eventDay(e.startsAt);
           return (
             <Reveal key={e.id} index={i}>
-              <div className="glass rounded-xl p-4 flex items-center gap-4 opacity-70">
+              <div className="glass rounded-xl p-4 flex items-center gap-4">
                 <DateBlock month={d.month} day={d.day} />
                 <div className="flex-1 min-w-0">
-                  <div className="text-[13.5px] font-medium leading-snug flex items-center gap-2">
+                  <div className="text-[14px] font-medium leading-snug flex items-center gap-2">
                     {e.title}
                     <span
                       title="Illustrative example — not a scheduled gathering."
-                      className="telemetry !text-[8px] text-amber border border-amber/30 rounded-full px-1.5 py-0.5 cursor-help shrink-0"
+                      className="telemetry !text-[14px] text-amber border border-amber/30 rounded-full px-1.5 py-0.5 cursor-help shrink-0"
                     >
                       Sample
                     </span>
                   </div>
-                  <div className="telemetry !text-[9px] mt-1">
+                  <div className="telemetry !text-[14px] mt-1">
                     {e.place} · {e.attendees} attending (illustrative)
                   </div>
                 </div>
@@ -258,15 +258,15 @@ function EventCard({
       <div className="flex items-start gap-4">
         <DateBlock month={d.month} day={d.day} />
         <div className="flex-1 min-w-0">
-          <div className="text-[13.5px] font-medium leading-snug flex items-center gap-2 flex-wrap">
+          <div className="text-[14px] font-medium leading-snug flex items-center gap-2 flex-wrap">
             {ev.title}
             {ev.mine && (
-              <span className="telemetry !text-[8px] text-emerald border border-emerald/30 rounded-full px-1.5 py-0.5">
+              <span className="telemetry !text-[14px] text-emerald border border-emerald/30 rounded-full px-1.5 py-0.5">
                 Yours
               </span>
             )}
           </div>
-          <div className="telemetry !text-[9px] mt-1">
+          <div className="telemetry !text-[14px] mt-1">
             {ev.place} · {eventClock(ev.startsAt)} ·{" "}
             {ev.capacity != null ? `${ev.going}/${ev.capacity} going` : `${ev.going} going`}
             {ev.checkedIn > 0 && ` · ${ev.checkedIn} checked in`}
@@ -274,7 +274,7 @@ function EventCard({
         </div>
       </div>
 
-      <p className="text-[12.5px] text-ink-dim font-light leading-relaxed">
+      <p className="text-base text-ink-dim font-light leading-relaxed">
         {ev.description}
       </p>
 
@@ -283,7 +283,7 @@ function EventCard({
           type="button"
           onClick={onRsvp}
           disabled={busy || full}
-          className={`rounded-lg border px-3.5 py-1.5 text-[12px] font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+          className={`rounded-lg border px-3.5 py-1.5 text-[14px] font-semibold transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
             ev.iRsvpd
               ? "border-emerald/40 text-emerald bg-emerald/[0.07]"
               : "border-line text-ink-dim hover:text-ink hover:border-line-bright"
@@ -293,7 +293,7 @@ function EventCard({
         </button>
 
         {ev.iCheckedIn ? (
-          <span className="telemetry !text-[9px] text-emerald">Checked in ✓</span>
+          <span className="telemetry !text-[14px] text-emerald">Checked in ✓</span>
         ) : (
           <button
             type="button"
@@ -306,7 +306,7 @@ function EventCard({
                   ? "Check-in closed four hours after the start."
                   : `Uses your location — you must be within ${CHECKIN_RADIUS_M} m of the event.`
             }
-            className="rounded-lg border border-line text-ink-dim hover:text-ink hover:border-line-bright px-3.5 py-1.5 text-[12px] font-semibold transition-colors disabled:opacity-35 disabled:cursor-not-allowed"
+            className="rounded-lg border border-line text-ink-dim hover:text-ink hover:border-line-bright px-3.5 py-1.5 text-[14px] font-semibold transition-colors disabled:opacity-35 disabled:cursor-not-allowed"
           >
             {window === "open" ? "Check in" : window === "early" ? "Check-in not open" : "Check-in closed"}
           </button>
@@ -319,10 +319,10 @@ function EventCard({
 function DateBlock({ month, day }: { month: string; day: string }) {
   return (
     <div className="grid place-items-center w-12 h-12 rounded-lg bg-carbon-3 border border-line-bright shrink-0">
-      <span className="telemetry !text-[8px] !tracking-[0.1em] text-cyan text-center leading-tight">
+      <span className="telemetry !text-[14px] !tracking-[0.1em] text-cyan text-center leading-tight">
         {month}
         <br />
-        <span className="text-ink text-[13px] font-semibold tracking-normal">{day}</span>
+        <span className="text-ink text-[14px] font-semibold tracking-normal">{day}</span>
       </span>
     </div>
   );
@@ -523,7 +523,7 @@ function EventForm({
           />
 
           {error && (
-            <div role="alert" className="rounded-xl border border-coral/40 bg-coral/[0.08] px-4 py-3 text-[13px] text-coral">
+            <div role="alert" className="rounded-xl border border-coral/40 bg-coral/[0.08] px-4 py-3 text-[14px] text-coral">
               {error}
             </div>
           )}
@@ -533,7 +533,7 @@ function EventForm({
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl border border-line text-ink-dim hover:text-ink hover:border-line-bright px-4 py-2.5 text-[13px] font-medium transition-colors"
+            className="rounded-xl border border-line text-ink-dim hover:text-ink hover:border-line-bright px-4 py-2.5 text-[14px] font-medium transition-colors"
           >
             Cancel
           </button>
@@ -541,7 +541,7 @@ function EventForm({
             type="button"
             onClick={submit}
             disabled={!valid || busy}
-            className="ml-auto inline-flex items-center gap-2 rounded-xl bg-emerald text-abyss px-5 py-2.5 text-[13px] font-semibold hover:shadow-[0_0_24px_rgba(45,226,166,0.4)] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+            className="ml-auto inline-flex items-center gap-2 rounded-xl bg-emerald text-abyss px-5 py-2.5 text-[14px] font-semibold hover:shadow-[0_0_24px_rgba(45,226,166,0.4)] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           >
             {busy ? "Creating…" : "Create event"}
           </button>

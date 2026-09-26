@@ -58,8 +58,8 @@ export const LayerLegend = memo(function LayerLegend({
         transition={{ duration: 0.28, ease: EASE }}
       >
         <div className="flex items-center justify-between mb-1.5">
-          <span className="text-[11px] font-semibold text-ink">{label}</span>
-          <span className="telemetry !text-[8px]">{unit}</span>
+          <span className="text-[14px] font-semibold text-ink">{label}</span>
+          <span className="telemetry !text-[14px]">{unit}</span>
         </div>
         <div className="mb-2">
           <OriginBadge origin={LAYER_ORIGIN[layer]} />
@@ -69,9 +69,9 @@ export const LayerLegend = memo(function LayerLegend({
           style={{ background: `linear-gradient(90deg, ${ramp[0]}, ${ramp[1]}, ${ramp[2]})` }}
         />
         <div className="flex justify-between mt-1.5">
-          <span className="readout text-[9px] text-ink-faint">{lo}</span>
-          <span className="readout text-[9px] text-ink-faint">{mid}</span>
-          <span className="readout text-[9px] text-ink-faint">{hi}</span>
+          <span className="readout text-[14px] text-ink-faint">{lo}</span>
+          <span className="readout text-[14px] text-ink-faint">{mid}</span>
+          <span className="readout text-[14px] text-ink-faint">{hi}</span>
         </div>
 
         {/* Biodiversity carries two independent readings. They get two rows
@@ -81,15 +81,15 @@ export const LayerLegend = memo(function LayerLegend({
         {liveRow && (
           <div className="mt-2.5 pt-2.5 border-t border-line flex flex-col gap-1.5">
             <div className="flex items-center justify-between gap-2">
-              <span className="text-[10px] font-semibold text-ink leading-tight">
+              <span className="text-[14px] font-semibold text-ink leading-tight">
                 {liveRow.label}
               </span>
               <OriginBadge origin="live" />
             </div>
             {liveRow.value ? (
-              <span className="readout text-[11px] text-emerald">{liveRow.value}</span>
+              <span className="readout text-[14px] text-emerald">{liveRow.value}</span>
             ) : (
-              <span className="telemetry !text-[8px] leading-snug">{liveRow.hint}</span>
+              <span className="telemetry !text-[14px] leading-snug">{liveRow.hint}</span>
             )}
           </div>
         )}

@@ -142,7 +142,7 @@ export function Pillars() {
               <h3 className="font-[family-name:var(--font-syne)] font-bold text-2xl mt-3 mb-3 group-hover:text-emerald transition-colors duration-500">
                 {p.title}
               </h3>
-              <p className="text-ink-dim leading-relaxed text-[15px] font-light">
+              <p className="text-ink-dim leading-relaxed text-base font-light">
                 {p.body.replace("{readings}", readings)}
               </p>
             </GlassCard>
@@ -286,7 +286,7 @@ export function AssistantPreview() {
                 sideways on a 320px screen. */}
             <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2 border-b border-line pb-4 mb-5">
               <div className="flex items-center gap-3 min-w-0">
-                <span className="grid place-items-center w-8 h-8 rounded-lg bg-emerald/10 border border-emerald/30 text-emerald text-xs font-bold shrink-0">
+                <span className="grid place-items-center w-8 h-8 rounded-lg bg-emerald/10 border border-emerald/30 text-emerald text-sm font-bold shrink-0">
                   Æ
                 </span>
                 <span className="telemetry telemetry-bright">{dict.assistant.analyst}</span>

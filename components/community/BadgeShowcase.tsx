@@ -52,8 +52,8 @@ export function BadgeShowcase({ reports }: { reports: Report[] }) {
       {next && (
         <div>
           <div className="flex justify-between mb-1.5">
-            <span className="telemetry !text-[9px]">Next · {next.name}</span>
-            <span className="readout text-[11px] text-cyan">{toNext} to go</span>
+            <span className="telemetry !text-[14px]">Next · {next.name}</span>
+            <span className="readout text-[14px] text-cyan">{toNext} to go</span>
           </div>
           <div className="h-1 rounded-full bg-carbon-3 overflow-hidden">
             <div
@@ -65,7 +65,7 @@ export function BadgeShowcase({ reports }: { reports: Report[] }) {
       )}
 
       {points.reports === 0 ? (
-        <p className="text-[12px] text-ink-faint font-light leading-relaxed border-t border-line pt-3.5">
+        <p className="text-[14px] text-ink-faint font-light leading-relaxed border-t border-line pt-3.5">
           You have not filed a report from this device yet, so this is zero. It is
           not a score anyone assigned you — Eco-Points are counted in this browser
           from your own reports, and clearing site data clears them. They are a
@@ -84,7 +84,7 @@ export function BadgeShowcase({ reports }: { reports: Report[] }) {
           {points.followUp > 0 && (
             <Row label={`Follow-up updates · ${POINTS.followUp} each`} value={points.followUp} />
           )}
-          <p className="telemetry !text-[8.5px] mt-1.5 leading-relaxed">
+          <p className="telemetry !text-[14px] mt-1.5 leading-relaxed">
             Counted in this browser from your own reports. Not transferable, not
             redeemable, no monetary value.
           </p>
@@ -95,7 +95,7 @@ export function BadgeShowcase({ reports }: { reports: Report[] }) {
       <div className="border-t border-line pt-4">
         <div className="flex items-center gap-2 mb-3">
           <span className="telemetry">Geographic badges</span>
-          <span className="readout text-[11px] text-ink-faint">{earned}/{badges.length}</span>
+          <span className="readout text-[14px] text-ink-faint">{earned}/{badges.length}</span>
         </div>
         <div className="flex flex-col gap-2.5">
           {badges.map(({ badge, count, earned: got, progress: p }) => (
@@ -113,7 +113,7 @@ export function BadgeShowcase({ reports }: { reports: Report[] }) {
                   {badge.glyph}
                 </span>
                 <div className="min-w-0 flex-1">
-                  <div className="text-[12.5px] font-medium leading-snug flex items-center gap-1.5">
+                  <div className="text-[14px] font-medium leading-snug flex items-center gap-1.5">
                     {badge.name}
                     {!badge.thresholdFromDoc && (
                       <SourceNote
@@ -121,11 +121,11 @@ export function BadgeShowcase({ reports }: { reports: Report[] }) {
                       />
                     )}
                   </div>
-                  <div className="telemetry !text-[8.5px] mt-0.5">
+                  <div className="telemetry !text-[14px] mt-0.5">
                     {badge.gloss} · {badge.where}
                   </div>
                 </div>
-                <span className="readout text-[11px] text-ink-faint shrink-0">
+                <span className="readout text-[14px] text-ink-faint shrink-0">
                   {count}/{badge.threshold}
                 </span>
               </div>
@@ -151,7 +151,7 @@ export function BadgeShowcase({ reports }: { reports: Report[] }) {
           {RANKS.map((r) => (
             <li
               key={r.name}
-              className={`flex items-center justify-between text-[12px] ${
+              className={`flex items-center justify-between text-[14px] ${
                 r.name === rank.name ? "text-emerald" : "text-ink-faint"
               }`}
             >
@@ -161,11 +161,11 @@ export function BadgeShowcase({ reports }: { reports: Report[] }) {
               >
                 {r.name}
               </span>
-              <span className="readout text-[10.5px]">{r.at}</span>
+              <span className="readout text-[14px]">{r.at}</span>
             </li>
           ))}
         </ol>
-        <p className="telemetry !text-[8.5px] mt-3 leading-relaxed">
+        <p className="telemetry !text-[14px] mt-3 leading-relaxed">
           Observer, Sentinel and Constellation are the names already used on the
           platform; Field Researcher and Eco-Inspector are the two ranks the
           Community 2.0 concept inserts between them. The point thresholds are
@@ -178,7 +178,7 @@ export function BadgeShowcase({ reports }: { reports: Report[] }) {
 
 function Row({ label, value }: { label: string; value: number }) {
   return (
-    <div className="flex items-center justify-between text-[12px]">
+    <div className="flex items-center justify-between text-[14px]">
       <span className="text-ink-faint font-light">{label}</span>
       <span className="readout text-emerald">+{value}</span>
     </div>

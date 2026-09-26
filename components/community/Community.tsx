@@ -174,16 +174,16 @@ function ReportCard({
         highlight ? "border-emerald/50 shadow-[0_0_28px_-6px_rgba(45,226,166,0.45)]" : "hover:border-line-bright"
       }`}
     >
-      <div className="flex items-start justify-between gap-4 mb-3">
+      <div className="flex flex-wrap items-start justify-between gap-4 mb-3">
         <div className="flex items-center gap-3">
-          <span className="grid place-items-center w-9 h-9 rounded-full bg-carbon-3 border border-line-bright text-[10px] font-semibold text-ink-dim">
+          <span className="grid place-items-center w-9 h-9 rounded-full bg-carbon-3 border border-line-bright text-[14px] font-semibold text-ink-dim">
             {r.initials}
           </span>
           <div>
             <div className="text-sm font-medium flex items-center gap-2 flex-wrap">
               {r.author}
               {r.userCreated && (
-                <span className="telemetry !text-[8px] text-emerald border border-emerald/30 rounded-full px-1.5 py-0.5">
+                <span className="telemetry !text-[14px] text-emerald border border-emerald/30 rounded-full px-1.5 py-0.5">
                   You
                 </span>
               )}
@@ -192,7 +192,7 @@ function ReportCard({
               {!r.remote && !r.createdAt && (
                 <span
                   title="Illustrative example written to demonstrate the feed — not a real submission."
-                  className="telemetry !text-[8px] text-amber border border-amber/30 rounded-full px-1.5 py-0.5 cursor-help"
+                  className="telemetry !text-[14px] text-amber border border-amber/30 rounded-full px-1.5 py-0.5 cursor-help"
                 >
                   Sample
                 </span>
@@ -200,7 +200,7 @@ function ReportCard({
               {r.remote && (
                 <span
                   title="Real submission, stored in the shared database and visible to every visitor."
-                  className="telemetry !text-[8px] text-cyan border border-cyan/30 rounded-full px-1.5 py-0.5 cursor-help"
+                  className="telemetry !text-[14px] text-cyan border border-cyan/30 rounded-full px-1.5 py-0.5 cursor-help"
                 >
                   Filed
                 </span>
@@ -208,13 +208,13 @@ function ReportCard({
               {r.parentId && (
                 <span
                   title="A follow-up update on an earlier report."
-                  className="telemetry !text-[8px] text-atmos border border-atmos/30 rounded-full px-1.5 py-0.5 cursor-help"
+                  className="telemetry !text-[14px] text-atmos border border-atmos/30 rounded-full px-1.5 py-0.5 cursor-help"
                 >
                   Update
                 </span>
               )}
             </div>
-            <div className="telemetry !text-[9px] mt-0.5">
+            <div className="telemetry !text-[14px] mt-0.5">
               {r.city} · {displayTime(r)}
             </div>
           </div>
@@ -225,14 +225,14 @@ function ReportCard({
       <div className="flex items-center gap-2 mb-1.5">
         <span className={`text-sm ${TONE_TEXT[cat.tone]}`}>{cat.glyph}</span>
         <span className="telemetry">{cat.label}</span>
-        <span className={`telemetry !text-[9px] border rounded-full px-2 py-0.5 ml-1 ${TONE_CHIP[sev.tone]}`}>
+        <span className={`telemetry !text-[14px] border rounded-full px-2 py-0.5 ml-1 ${TONE_CHIP[sev.tone]}`}>
           {sev.label}
         </span>
       </div>
       <h3 className="font-[family-name:var(--font-syne)] font-bold text-lg leading-snug mb-2">
         {r.title}
       </h3>
-      <p className="text-[13.5px] text-ink-dim font-light leading-relaxed mb-4">{r.body}</p>
+      <p className="text-base text-ink-dim font-light leading-relaxed mb-4">{r.body}</p>
 
       {/* The report's own words are never altered. When they name an outside
           organisation, this sits beside them so nobody reads the mention as
@@ -242,7 +242,7 @@ function ReportCard({
           <span className="text-amber text-sm leading-none mt-0.5 shrink-0" aria-hidden>
             ⚠
           </span>
-          <p className="text-[12px] text-ink-dim font-light leading-relaxed">
+          <p className="text-base text-ink-dim font-light leading-relaxed">
             <span className="text-amber">Independent report.</span> This account
             names an outside organisation. Aetheris is not affiliated with it, and
             the organisation has neither reviewed nor commented on this report.
@@ -265,8 +265,8 @@ function ReportCard({
       {/* ④ / ⑤ — only ever present when an operator recorded them. */}
       {r.forwardedAt && (
         <div className="rounded-xl border border-amber/25 bg-amber/[0.04] px-3.5 py-2.5 mb-4">
-          <div className="telemetry !text-[9px] text-amber/80 mb-1">Transfer log</div>
-          <p className="text-[12px] text-ink-dim font-light leading-relaxed">
+          <div className="telemetry !text-[14px] text-amber/80 mb-1">Transfer log</div>
+          <p className="text-base text-ink-dim font-light leading-relaxed">
             Passed to {r.forwardedTo} on{" "}
             {new Date(r.forwardedAt).toISOString().slice(0, 10)}. This records that
             the data was sent, and nothing about how it was received or whether
@@ -276,10 +276,10 @@ function ReportCard({
       )}
       {r.orgResponse && (
         <div className="rounded-xl border border-coral/25 bg-coral/[0.04] px-3.5 py-2.5 mb-4">
-          <div className="telemetry !text-[9px] text-coral/80 mb-1">
+          <div className="telemetry !text-[14px] text-coral/80 mb-1">
             {r.orgResponseOrg}
           </div>
-          <p className="text-[12px] text-ink-dim font-light leading-relaxed">
+          <p className="text-base text-ink-dim font-light leading-relaxed">
             {r.orgResponse}
           </p>
         </div>
@@ -295,7 +295,7 @@ function ReportCard({
           aria-pressed={voted}
           aria-label={voted ? "Remove reaction" : "I see it too"}
           title="I see it too"
-          className={`flex items-center gap-2 text-[13px] rounded-full border px-3.5 py-1.5 transition-all duration-300 ${
+          className={`flex items-center gap-2 text-[14px] rounded-full border px-3.5 py-1.5 transition-all duration-300 ${
             voted
               ? "border-emerald/40 text-emerald bg-emerald/[0.07]"
               : "border-line text-ink-dim hover:border-line-bright hover:text-ink"
@@ -316,15 +316,15 @@ function ReportCard({
             get an English answer back. */}
         <Link
           href={`/ru/assistant?q=${encodeURIComponent(assistantPrompt(r, context))}`}
-          className="flex items-center gap-2 text-[13px] rounded-full border border-line text-ink-dim hover:text-emerald hover:border-emerald/30 px-3.5 py-1.5 transition-colors duration-300"
+          className="flex items-center gap-2 text-[14px] rounded-full border border-line text-ink-dim hover:text-emerald hover:border-emerald/30 px-3.5 py-1.5 transition-colors duration-300"
         >
-          <span className="text-[11px] font-bold" aria-hidden>
+          <span className="text-[14px] font-bold" aria-hidden>
             Æ
           </span>
           Спросить ИИ
         </Link>
 
-        <span className="ml-auto telemetry !text-[9px] text-emerald/60">
+        <span className="ml-auto telemetry !text-[14px] text-emerald/60">
           +{POINTS.corroboration} Eco-Points on corroboration
         </span>
       </div>
@@ -340,16 +340,16 @@ function MissionCard({ m, index }: { m: Mission; index: number }) {
       <div className="glass rounded-xl p-5">
         <div className="flex items-start justify-between gap-3 mb-1.5">
           <h4 className="font-[family-name:var(--font-syne)] font-bold text-[15px]">{m.title}</h4>
-          <span className="readout text-xs text-emerald whitespace-nowrap">
+          <span className="readout text-sm text-emerald whitespace-nowrap">
             +{m.reward} Eco-Points
           </span>
         </div>
-        <p className="text-[12.5px] text-ink-faint font-light leading-relaxed mb-3.5">{m.desc}</p>
+        <p className="text-[14px] text-ink-faint font-light leading-relaxed mb-3.5">{m.desc}</p>
         {joined ? (
           <>
             <div className="flex justify-between mb-1.5">
-              <span className="telemetry !text-[9px]">Progress</span>
-              <span className="readout text-[11px] text-cyan">
+              <span className="telemetry !text-[14px]">Progress</span>
+              <span className="readout text-[14px] text-cyan">
                 {m.progress}/{m.total}
               </span>
             </div>
@@ -366,7 +366,7 @@ function MissionCard({ m, index }: { m: Mission; index: number }) {
         ) : (
           <button
             onClick={() => setJoined(true)}
-            className="w-full rounded-lg border border-emerald/30 text-emerald text-[12px] font-semibold py-2 hover:bg-emerald/[0.08] transition-colors duration-300"
+            className="w-full rounded-lg border border-emerald/30 text-emerald text-[14px] font-semibold py-2 hover:bg-emerald/[0.08] transition-colors duration-300"
           >
             Join mission
           </button>
@@ -399,11 +399,11 @@ function Toast({ message, onClose }: { message: string; onClose: () => void }) {
         </svg>
       </span>
       <div className="min-w-0">
-        <div className="text-[13px] font-medium text-ink">{message}</div>
+        <div className="text-[14px] font-medium text-ink">{message}</div>
         {/* Status ① in its own words — the old line here read "Pending
             sensor cross-check", which promised an instrument step that
             does not exist. */}
-        <div className="telemetry !text-[9px] mt-0.5">
+        <div className="telemetry !text-[14px] mt-0.5">
           {STATUS_META.submitted.label} · nobody has reviewed it
         </div>
       </div>
@@ -531,7 +531,7 @@ export default function Community() {
               <button
                 type="button"
                 onClick={() => setFlowOpen(true)}
-                className="flex items-center gap-2 rounded-xl bg-emerald text-abyss text-[13px] font-semibold px-4 py-2.5 hover:shadow-[0_0_24px_rgba(45,226,166,0.4)] transition-shadow duration-300"
+                className="flex items-center gap-2 rounded-xl bg-emerald text-abyss text-[14px] font-semibold px-4 py-2.5 hover:shadow-[0_0_24px_rgba(45,226,166,0.4)] transition-shadow duration-300"
               >
                 <svg viewBox="0 0 16 16" className="w-3.5 h-3.5" fill="none" aria-hidden>
                   <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
@@ -613,13 +613,13 @@ export default function Community() {
                     className={`group relative flex flex-col items-center gap-1.5 rounded-xl border p-3 text-center transition-all duration-300 ${
                       a.unlocked
                         ? "border-emerald/25 bg-emerald/[0.05] hover:bg-emerald/[0.1]"
-                        : "border-line opacity-40 grayscale"
+                        : "border-line grayscale"
                     }`}
                   >
                     <span className={`text-xl ${a.unlocked ? "text-emerald" : "text-ink-faint"}`}>
                       {a.icon}
                     </span>
-                    <span className="text-[10px] font-medium leading-tight">{a.name}</span>
+                    <span className="text-[14px] font-medium leading-tight">{a.name}</span>
                   </div>
                 ))}
               </GlassCard>

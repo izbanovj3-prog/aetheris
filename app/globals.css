@@ -23,7 +23,9 @@
 
   --ink: #e9f3f4;
   --ink-dim: #93a8b0;
-  --ink-faint: #5c707a;
+  /* 4.7:1 on the lightest stacked panel (glass-bright over carbon-3),
+     6.0:1 on --abyss — WCAG AA for body-size text. Was #5c707a (3.9:1). */
+  --ink-faint: #7a8f98;
 
   --glow-emerald: 0 0 24px rgba(45, 226, 166, 0.28);
   --glow-cyan: 0 0 24px rgba(79, 216, 247, 0.25);
@@ -189,7 +191,7 @@ body {
 
 .telemetry {
   font-family: var(--font-plex-mono), monospace;
-  font-size: 0.6875rem;
+  font-size: 0.875rem;
   letter-spacing: 0.22em;
   text-transform: uppercase;
   color: var(--ink-faint);
@@ -312,7 +314,7 @@ body {
   padding: 0.625rem 1rem;
   border-radius: 0.75rem;
   font-family: var(--font-plex-mono), monospace;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
   color: var(--abyss);
@@ -330,7 +332,10 @@ body {
 .maplibregl-ctrl-attrib {
   background: rgba(5, 10, 13, 0.7) !important;
   font-family: var(--font-plex-mono), monospace;
-  font-size: 9px !important;
+  font-size: 14px !important;
+  /* MapLibre's own text colour here is black, which read 1.05:1 on this
+     dark plate. */
+  color: var(--ink-dim) !important;
 }
 .maplibregl-ctrl-attrib a {
   color: var(--ink-faint) !important;

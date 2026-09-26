@@ -259,7 +259,7 @@ export function PressContent() {
                   style={{ background: col.hex }}
                 />
                 <span className="text-ink-dim text-sm font-light">{col.name}</span>
-                <span className="readout text-xs text-ink-faint uppercase">{col.hex}</span>
+                <span className="readout text-sm text-ink-faint uppercase">{col.hex}</span>
               </li>
             ))}
           </ul>

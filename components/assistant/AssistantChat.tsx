@@ -65,7 +65,7 @@ function Rich({ text }: { text: string }) {
               </span>
             ) : isNum ? (
               <span className="flex gap-2.5 pl-1">
-                <span className="readout text-emerald text-xs mt-[3px] shrink-0">
+                <span className="readout text-emerald text-sm mt-[3px] shrink-0">
                   {line.match(/^\d+/)?.[0]}
                 </span>
                 <span>{parts}</span>
@@ -201,7 +201,7 @@ export default function AssistantChat() {
               <h1 className="font-[family-name:var(--font-syne)] font-bold text-2xl mb-2">
                 {dict.assistant.emptyTitle}
               </h1>
-              <p className="text-ink-dim font-light text-[15px] leading-relaxed">
+              <p className="text-ink-dim font-light text-base leading-relaxed">
                 {dict.assistant.emptyLede}
               </p>
             </div>
@@ -213,7 +213,7 @@ export default function AssistantChat() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.4 + i * 0.07, duration: 0.6, ease: EASE }}
                   onClick={() => send(p)}
-                  className="glass rounded-full px-4 py-2 text-[13px] text-ink-dim hover:text-emerald hover:border-emerald/30 transition-colors duration-300"
+                  className="glass rounded-full px-4 py-2 text-[14px] text-ink-dim hover:text-emerald hover:border-emerald/30 transition-colors duration-300"
                 >
                   {p}
                 </motion.button>
@@ -262,7 +262,7 @@ export default function AssistantChat() {
                     {m.citations.map((c) => (
                       <span
                         key={c}
-                        className="telemetry !text-[9px] !tracking-[0.12em] border border-line rounded-full px-2.5 py-1"
+                        className="telemetry !text-[14px] !tracking-[0.12em] border border-line rounded-full px-2.5 py-1"
                       >
                         ⌖ {c}
                       </span>
@@ -279,7 +279,7 @@ export default function AssistantChat() {
             animate={{ opacity: 1 }}
             className="flex items-center gap-3 pl-1"
           >
-            <span className="grid place-items-center w-7 h-7 rounded-lg bg-emerald/10 border border-emerald/30 text-emerald text-[10px] font-bold">
+            <span className="grid place-items-center w-7 h-7 rounded-lg bg-emerald/10 border border-emerald/30 text-emerald text-[14px] font-bold">
               Æ
             </span>
             <span className="flex gap-1.5">
@@ -329,7 +329,7 @@ export default function AssistantChat() {
           </svg>
         </button>
       </form>
-      <p className="telemetry !text-[9px] text-center mt-3 !tracking-[0.18em]">
+      <p className="telemetry !text-[14px] text-center mt-3 !tracking-[0.18em]">
         {dict.assistant.disclaimer}
       </p>
     </div>
