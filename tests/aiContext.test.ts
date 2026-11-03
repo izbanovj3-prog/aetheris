@@ -66,11 +66,30 @@ describe("buildAiContext", () => {
     expect(ctx).toBeNull();
   });
 
-  it("quotes the live station for an air report", async () => {
-    const ctx = await buildAiContext(report(), stations, true, Date.now());
+  /* As useLiveStations hands them over once Open-Meteo answered. */
+  const fetched = stations.map((s) => ({ ...s, liveAir: true }));
+
+  it("quotes the open-data value for an air report, as a model estimate", async () => {
+    const ctx = await buildAiContext(report(), fetched, true, Date.now());
     expect(ctx!.kind).toBe("air");
     expect(ctx!.text).toContain("US AQI");
+    expect(ctx!.text).toMatch(/model estimate/);
+    expect(ctx!.text).not.toMatch(/\bstation\b/i);
     expect(ctx!.source).toContain("Open-Meteo");
+  });
+
+  it("says nothing when that city's reading did not arrive, even if others did", async () => {
+    const ctx = await buildAiContext(report(), stations, true, Date.now());
+    expect(ctx).toBeNull();
+  });
+
+  it.each([
+    ["ru", /модельная оценка/],
+    ["kk", /модельдік бағалау/],
+  ] as const)("speaks the page's language (%s)", async (locale, re) => {
+    const ctx = await buildAiContext(report(), fetched, true, Date.now(), undefined, locale);
+    expect(ctx!.text).toMatch(re);
+    expect(ctx!.text).not.toMatch(/подтвержда|расталды|проверено/i);
   });
 
   /* No free real-time feed covers water or waste, and the bubble says so
@@ -90,7 +109,7 @@ describe("buildAiContext", () => {
   it("never phrases the context as a verdict", async () => {
     const forbidden = /confirms?\b|verif|proves?\b|consistent with|подтвержда/i;
     for (const category of ["air", "water", "waste", "industrial"] as const) {
-      const ctx = await buildAiContext(report({ category }), stations, true, Date.now());
+      const ctx = await buildAiContext(report({ category }), fetched, true, Date.now());
       if (ctx) expect(ctx.text, category).not.toMatch(forbidden);
     }
   });
@@ -134,8 +153,10 @@ describe("failure is distinguishable from silence", () => {
 describe("assistantPrompt", () => {
   it("carries the place and the report's own words", () => {
     const q = assistantPrompt(report({ title: "Heavy smog layer" }), null);
-    expect(q).toContain("Almaty");
+    expect(q).toContain("Алматы");
     expect(q).toContain("Heavy smog layer");
+    expect(assistantPrompt(report(), null, "en")).toContain("Almaty");
+    expect(assistantPrompt(report(), null, "kk")).toContain("Алматы");
   });
 
   it("names the right subject per category", () => {

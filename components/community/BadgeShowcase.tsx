@@ -9,6 +9,7 @@ import {
   rankFor,
 } from "@/lib/points";
 import type { Report } from "@/lib/reports";
+import { useCommunityText } from "@/lib/useLocale";
 
 /* ─────────────────────────────────────────────────────────────
    Eco-Points, rank and the geographic badges — concept 2.1 and 2.2.
@@ -28,23 +29,25 @@ export function BadgeShowcase({ reports }: { reports: Report[] }) {
   const { rank, next, progress, toNext } = rankFor(points.total);
   const badges = badgeProgress(reports);
   const earned = badges.filter((b) => b.earned).length;
+  const t = useCommunityText().badges;
+  const rankName = (n: string) => t.ranks[n] ?? n;
 
   return (
     <GlassCard bright className="p-5 flex flex-col gap-4">
       <div className="flex items-start justify-between gap-3">
         <div>
-          <div className="telemetry mb-1">Eco-Points</div>
+          <div className="telemetry mb-1">{t.ecoPoints}</div>
           <div className="readout text-3xl text-emerald leading-none">{points.total}</div>
         </div>
         <div className="text-right">
-          <div className="telemetry mb-1">Rank</div>
+          <div className="telemetry mb-1">{t.rank}</div>
           <div
-            title={rank.docName ? `Written «${rank.docName}» in the Community 2.0 concept.` : undefined}
+            title={rank.docName ? t.writtenInConcept(rank.docName) : undefined}
             className={`font-[family-name:var(--font-syne)] font-bold text-lg leading-none ${
               rank.docName ? "cursor-help" : ""
             }`}
           >
-            {rank.name}
+            {rankName(rank.name)}
           </div>
         </div>
       </div>
@@ -52,8 +55,8 @@ export function BadgeShowcase({ reports }: { reports: Report[] }) {
       {next && (
         <div>
           <div className="flex justify-between mb-1.5">
-            <span className="telemetry !text-[0.9375rem]">Next · {next.name}</span>
-            <span className="readout text-[0.9375rem] text-cyan">{toNext} to go</span>
+            <span className="telemetry !text-[0.9375rem]">{t.next(rankName(next.name))}</span>
+            <span className="readout text-[0.9375rem] text-cyan">{t.toGo(toNext)}</span>
           </div>
           <div className="h-1 rounded-full bg-carbon-3 overflow-hidden">
             <div
@@ -66,27 +69,22 @@ export function BadgeShowcase({ reports }: { reports: Report[] }) {
 
       {points.reports === 0 ? (
         <p className="text-[0.9375rem] text-ink-faint font-light leading-relaxed border-t border-line pt-3.5">
-          You have not filed a report from this device yet, so this is zero. It is
-          not a score anyone assigned you — Eco-Points are counted in this browser
-          from your own reports, and clearing site data clears them. They are a
-          progress display: they cannot be spent, transferred or exchanged for
-          anything, and nothing on the platform is gated behind them.
+          {t.zero}
         </p>
       ) : (
         <div className="border-t border-line pt-3.5 flex flex-col gap-1.5">
-          <Row label={`Reports filed · ${POINTS.submission} each`} value={points.submission} />
+          <Row label={t.rowFiled(POINTS.submission)} value={points.submission} />
           {points.corroboration > 0 && (
-            <Row label={`Corroborated · ${POINTS.corroboration} each`} value={points.corroboration} />
+            <Row label={t.rowCorroborated(POINTS.corroboration)} value={points.corroboration} />
           )}
           {points.photoQuality > 0 && (
-            <Row label={`Photo quality · ${POINTS.photoQuality} each`} value={points.photoQuality} />
+            <Row label={t.rowPhoto(POINTS.photoQuality)} value={points.photoQuality} />
           )}
           {points.followUp > 0 && (
-            <Row label={`Follow-up updates · ${POINTS.followUp} each`} value={points.followUp} />
+            <Row label={t.rowFollow(POINTS.followUp)} value={points.followUp} />
           )}
           <p className="telemetry !text-[0.9375rem] mt-1.5 leading-relaxed">
-            Counted in this browser from your own reports. Not transferable, not
-            redeemable, no monetary value.
+            {t.countedHere}
           </p>
         </div>
       )}
@@ -94,7 +92,7 @@ export function BadgeShowcase({ reports }: { reports: Report[] }) {
       {/* ── Geographic badges ── */}
       <div className="border-t border-line pt-4">
         <div className="flex items-center gap-2 mb-3">
-          <span className="telemetry">Geographic badges</span>
+          <span className="telemetry">{t.geoTitle}</span>
           <span className="readout text-[0.9375rem] text-ink-faint">{earned}/{badges.length}</span>
         </div>
         <div className="flex flex-col gap-2.5">
@@ -114,15 +112,13 @@ export function BadgeShowcase({ reports }: { reports: Report[] }) {
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="text-[0.9375rem] font-medium leading-snug flex items-center gap-1.5">
-                    {badge.name}
+                    {t.geo[badge.id]?.name ?? badge.name}
                     {!badge.thresholdFromDoc && (
-                      <SourceNote
-                        source={`The Community 2.0 concept names this badge and its region but no report count. The threshold of ${badge.threshold} is Aetheris's, matching the Aral badge, and can be retuned — it is not from the document.`}
-                      />
+                      <SourceNote source={t.thresholdNote(badge.threshold)} />
                     )}
                   </div>
                   <div className="telemetry !text-[0.9375rem] mt-0.5">
-                    {badge.gloss} · {badge.where}
+                    {t.geo[badge.id]?.gloss ?? badge.gloss} · {t.geo[badge.id]?.where ?? badge.where}
                   </div>
                 </div>
                 <span className="readout text-[0.9375rem] text-ink-faint shrink-0">
@@ -145,7 +141,7 @@ export function BadgeShowcase({ reports }: { reports: Report[] }) {
       {/* ── The ladder ── */}
       <details className="border-t border-line pt-3.5">
         <summary className="telemetry cursor-pointer hover:text-ink transition-colors list-none">
-          The full rank ladder ▾
+          {t.ladder}
         </summary>
         <ol className="flex flex-col gap-1 mt-3">
           {RANKS.map((r) => (
@@ -156,20 +152,17 @@ export function BadgeShowcase({ reports }: { reports: Report[] }) {
               }`}
             >
               <span
-                title={r.docName ? `Written «${r.docName}» in the Community 2.0 concept.` : undefined}
+                title={r.docName ? t.writtenInConcept(r.docName) : undefined}
                 className={r.docName ? "cursor-help" : ""}
               >
-                {r.name}
+                {rankName(r.name)}
               </span>
               <span className="readout text-[0.9375rem]">{r.at}</span>
             </li>
           ))}
         </ol>
         <p className="telemetry !text-[0.9375rem] mt-3 leading-relaxed">
-          Observer, Sentinel and Constellation are the names already used on the
-          platform; Field Researcher and Eco-Inspector are the two ranks the
-          Community 2.0 concept inserts between them. The point thresholds are
-          Aetheris&apos;s own — the concept sets the order, not the numbers.
+          {t.ladderNote}
         </p>
       </details>
     </GlassCard>

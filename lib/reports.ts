@@ -159,7 +159,7 @@ export const STATUS_META: Record<
     label: "AI-контекст добавлен",
     gloss: "AI context attached",
     tone: "cyan",
-    note: "Aetheris Analyst attached comparable data from a live feed — the nearest air-quality station, or the species-occurrence record for this area. It is context placed beside the report, not a judgement about whether the report is right.",
+    note: "Aetheris Analyst attached comparable open data — the nearest air-quality value from Open-Meteo (CAMS model), or the species-occurrence record for this area. It is context placed beside the report, not a judgement about whether the report is right.",
   },
   corroborated: {
     step: 3,

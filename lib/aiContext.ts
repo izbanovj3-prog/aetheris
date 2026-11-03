@@ -37,6 +37,8 @@
 import { aqiBand, getStations, type Station } from "./data";
 import { fetchCityBiodiversity, RADIUS_KM, YEARS_BACK } from "./gbif";
 import type { Report } from "./reports";
+import { aqiBandLabel, cityName, type Locale } from "./i18n";
+import { communityText } from "./communityText";
 
 /** Beyond this, the nearest station is too far to be worth quoting. */
 export const MAX_STATION_KM = 120;
@@ -110,33 +112,30 @@ export async function buildAiContext(
   live: boolean,
   fetchedAt: number | null,
   signal?: AbortSignal,
+  locale: Locale = "en",
 ): Promise<AiContext | null> {
   const near = nearestStation(report, stations);
+  const t = communityText(locale).ai;
+  const band = (aqi: number) => aqiBandLabel(aqiBand(aqi).label, locale);
+  const city = (s: Station) => cityName(s.id, s.name, locale);
 
-  /* ── Air and industrial: the nearest live air-quality reading ── */
+  /* ── Air and industrial: the nearest open-data air-quality value ── */
   if (report.category === "air" || report.category === "industrial") {
     if (!near) return null;
-    if (!live) {
+    if (!live || !near.station.liveAir) {
       // The modeled baseline must never be quoted as though an instrument
       // had produced it. Saying nothing beats saying something unsourced.
       return null;
     }
     const { station, km } = near;
-    const band = aqiBand(station.aqi);
-    const where =
-      km === 0
-        ? `The ${station.name} station`
-        : `The nearest air-quality station (${station.name}, ${km1(km)} km away)`;
+    // Open-Meteo's CAMS value is a model estimate for a grid point, not a
+    // station reading — the wording says so in every language.
+    const where = km === 0 ? t.airAt(city(station)) : t.airNear(city(station), km1(km));
 
     return {
       kind: "air",
-      text:
-        `${where} currently reads US AQI ${station.aqi} (${band.label}), ` +
-        `PM2.5 ${station.pm25} µg/m³ and NO₂ ${station.no2} ppb. ` +
-        `This is a reading from near the reported location, not a check on the report: ` +
-        `the station measures its own air, which may differ from what was seen at the exact spot, ` +
-        `and it says nothing about ${report.category === "industrial" ? "the source of what was seen" : "the cause of it"}.`,
-      source: `Open-Meteo Air Quality API (CAMS) · ${station.name} · read ${new Date(fetchedAt ?? Date.now()).toUTCString()}`,
+      text: t.airText(where, station.aqi, band(station.aqi), station.pm25, station.no2, report.category === "industrial"),
+      source: t.airSource(city(station), new Date(fetchedAt ?? Date.now()).toUTCString()),
       fetchedAt: fetchedAt ?? Date.now(),
       station: { name: station.name, km },
     };
@@ -157,13 +156,16 @@ export async function buildAiContext(
 
     return {
       kind: "biodiversity",
-      text:
-        `Within ${RADIUS_KM} km of ${near.station.name}, GBIF holds ` +
-        `${bio.records.toLocaleString("en-US")} occurrence records covering ${capped} distinct species ` +
-        `from the last ${YEARS_BACK} years (${bio.fromYear}–${bio.toYear}). ` +
-        `That is a record of what people have published from this area, so it reflects how much surveying ` +
-        `has happened as much as what lives there. It is background for reading this report, not a check on it.`,
-      source: `GBIF occurrence search · ${RADIUS_KM} km radius · ${bio.fromYear}–${bio.toYear}`,
+      text: t.bioText(
+        RADIUS_KM,
+        city(near.station),
+        bio.records.toLocaleString("en-US"),
+        capped,
+        YEARS_BACK,
+        bio.fromYear,
+        bio.toYear,
+      ),
+      source: t.bioSource(RADIUS_KM, bio.fromYear, bio.toYear),
       fetchedAt: Date.now(),
       station: { name: near.station.name, km: near.km },
     };
@@ -172,11 +174,8 @@ export async function buildAiContext(
   /* ── Water and waste: no live feed exists, and that is the context ── */
   return {
     kind: "none",
-    text:
-      report.category === "water"
-        ? "No live water-quality feed covering Kazakhstan at this granularity has been identified, so there is no instrument reading to place beside this report. The Water Quality Index shown elsewhere on the platform is modeled, not measured, and quoting a modeled number here would suggest a check that did not happen."
-        : "There is no live feed for waste and dumping — no instrument network measures it. Nothing can be placed beside this report except other people's reports from the same area.",
-    source: "Aetheris Analyst · no live source available for this category",
+    text: report.category === "water" ? t.water : t.waste,
+    source: t.noneSource,
     fetchedAt: Date.now(),
   };
 }
@@ -188,27 +187,53 @@ export async function buildAiContext(
  * location and whatever readings are on screen, so the Analyst answers
  * about this report rather than about the city in general.
  */
-export function assistantPrompt(report: Report, ctx: AiContext | null): string {
+export function assistantPrompt(report: Report, ctx: AiContext | null, locale: Locale = "ru"): string {
   const stations = getStations();
   const near = nearestStation(report, stations);
-  const place = near ? near.station.name : report.city;
+  const place = near ? cityName(near.station.id, near.station.name, locale) : report.city;
+  const aqi = ctx?.kind === "air" ? ctx.text.match(/US AQI (\d+)/)?.[1] : undefined;
 
-  const readings =
-    ctx?.kind === "air" && ctx.station
-      ? ` Ближайшая станция (${ctx.station.name}) сейчас показывает ${ctx.text.match(/US AQI (\d+)/)?.[1] ?? "—"} US AQI.`
-      : "";
+  const P = {
+    ru: {
+      subject: {
+        air: "загрязнение воздуха",
+        water: "загрязнение воды",
+        waste: "свалку",
+        biodiversity: "наблюдение за биоразнообразием",
+        industrial: "промышленные выбросы",
+      },
+      readings: (a: string) => ` Открытые данные для этого места сейчас показывают ${a} US AQI.`,
+      q: (subj: string, sev: string, title: string, rd: string) =>
+        `Житель сообщает про ${subj} — ${place}, критичность «${sev}»: «${title}».${rd} ` +
+        `Насколько это опасно для здоровья при текущих показателях по этой локации, и что стоит сделать?`,
+    },
+    en: {
+      subject: {
+        air: "air pollution",
+        water: "water pollution",
+        waste: "illegal dumping",
+        biodiversity: "a biodiversity observation",
+        industrial: "industrial pollution",
+      },
+      readings: (a: string) => ` Open data for this place currently shows ${a} US AQI.`,
+      q: (subj: string, sev: string, title: string, rd: string) =>
+        `A resident reports ${subj} in ${place}, severity "${sev}": "${title}".${rd} ` +
+        `How much of a health risk is this at the current values for this location, and what should be done?`,
+    },
+    kk: {
+      subject: {
+        air: "ауаның ластануы",
+        water: "судың ластануы",
+        waste: "қоқыс үйіндісі",
+        biodiversity: "биоалуантүрлілікті бақылау",
+        industrial: "өнеркәсіптік ластану",
+      },
+      readings: (a: string) => ` Бұл жер үшін ашық деректер қазір ${a} US AQI көрсетеді.`,
+      q: (subj: string, sev: string, title: string, rd: string) =>
+        `Тұрғын ${place} қаласындағы ${subj} туралы хабарлайды, маңыздылығы «${sev}»: «${title}».${rd} ` +
+        `Осы жердегі ағымдағы көрсеткіштер кезінде бұл денсаулыққа қаншалықты қауіпті және не істеу керек?`,
+    },
+  }[locale];
 
-  const subject: Record<Report["category"], string> = {
-    air: "загрязнение воздуха",
-    water: "загрязнение воды",
-    waste: "свалку",
-    biodiversity: "наблюдение за биоразнообразием",
-    industrial: "промышленные выбросы",
-  };
-
-  return (
-    `Житель сообщает про ${subject[report.category]} — ${place}, критичность «${report.severity}»: ` +
-    `«${report.title}».${readings} ` +
-    `Насколько это опасно для здоровья при текущих показателях по этой локации, и что стоит сделать?`
-  );
+  return P.q(P.subject[report.category], report.severity, report.title, aqi ? P.readings(aqi) : "");
 }

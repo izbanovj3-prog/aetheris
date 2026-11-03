@@ -1,5 +1,7 @@
 "use client";
 
+import { useCommunityText, useLocale } from "@/lib/useLocale";
+import { placeName } from "@/lib/communityText";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { EASE, Reveal, SourceNote, TelemetryTag } from "@/components/ui/primitives";
@@ -35,7 +37,14 @@ import { PinMap } from "./PinMap";
 
 const FALLBACK: [number, number] = [43.238, 76.889]; // Almaty
 
+/** Month abbreviation in the reader's language (UTC, like eventDay). */
+const monthIn = (ts: number, months: string[]) => months[new Date(ts).getUTCMonth()];
+
 export function Events() {
+  const t = useCommunityText();
+  const e9 = t.events;
+  const locale = useLocale();
+  const ids = useMemo(() => new Map(getStations().map((s) => [s.name, s.id])), []);
   const [events, setEvents] = useState<AetherisEvent[] | null>(null);
   const [loaded, setLoaded] = useState(false);
   const [formOpen, setFormOpen] = useState(false);
@@ -73,8 +82,8 @@ export function Events() {
         ),
       );
       await refresh();
-    } catch {
-      setNotice("Couldn't update your RSVP — the events datastore didn't answer.");
+    } catch (err) {
+      setNotice(err instanceof EventError && err.reason === "full" ? e9.errFull : e9.errRsvp);
     } finally {
       setBusyId(null);
     }
@@ -82,7 +91,7 @@ export function Events() {
 
   function onCheckIn(ev: AetherisEvent) {
     if (!navigator.geolocation) {
-      setNotice("This browser can't report a position, so it can't check you in.");
+      setNotice(e9.errNoGeo);
       return;
     }
     setBusyId(ev.id);
@@ -91,25 +100,25 @@ export function Events() {
       async (pos) => {
         try {
           await checkIn(ev.id, pos.coords.latitude, pos.coords.longitude);
-          setNotice(`Checked in at ${ev.title}.`);
+          setNotice(e9.okCheckedIn(ev.title));
           await refresh();
         } catch (err) {
           const reason = err instanceof EventError ? err.reason : "unavailable";
           setNotice(
             reason === "too-far"
-              ? `You're further than ${CHECKIN_RADIUS_M} m from the event location, so the check-in wasn't recorded.`
+              ? e9.errTooFar(CHECKIN_RADIUS_M)
               : reason === "too-early"
-                ? "Check-in opens an hour before the event starts."
+                ? e9.errTooEarly
                 : reason === "closed"
-                  ? "Check-in closed four hours after the event started."
-                  : "Couldn't record the check-in.",
+                  ? e9.errClosed
+                  : e9.errCheckin,
           );
         } finally {
           setBusyId(null);
         }
       },
       () => {
-        setNotice("Location permission is required to check in at an event.");
+        setNotice(e9.errPermission);
         setBusyId(null);
       },
       { enableHighAccuracy: true, timeout: 10_000 },
@@ -122,10 +131,10 @@ export function Events() {
         <div className="flex flex-wrap items-center justify-between gap-2.5 mb-4">
           <div className="flex flex-wrap items-center gap-2.5">
             <h2 className="font-[family-name:var(--font-syne)] font-bold text-xl">
-              Local eco-events
+              {e9.title}
             </h2>
             {loaded && available && real.length > 0 && (
-              <TelemetryTag tone="cyan">{real.length} scheduled</TelemetryTag>
+              <TelemetryTag tone="cyan">{e9.scheduled(real.length)}</TelemetryTag>
             )}
           </div>
           {available && (
@@ -137,7 +146,7 @@ export function Events() {
               <svg viewBox="0 0 16 16" className="w-3 h-3" fill="none" aria-hidden>
                 <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
               </svg>
-              Create
+              {e9.create}
             </button>
           )}
         </div>
@@ -157,6 +166,7 @@ export function Events() {
         {real.map((ev, i) => (
           <Reveal key={ev.id} index={i}>
             <EventCard
+              placeLabel={placeName(ev.place, locale, ids)}
               ev={ev}
               busy={busyId === ev.id}
               onRsvp={() => onRsvp(ev)}
@@ -168,9 +178,7 @@ export function Events() {
         {loaded && available && real.length === 0 && (
           <div className="glass rounded-xl p-4">
             <p className="text-base text-ink-dim font-light leading-relaxed">
-              No events have been created yet. Anyone can add one — a cleanup, a
-              survey, a mapping walk — and people can RSVP and check in when they
-              arrive.
+              {e9.none}
             </p>
           </div>
         )}
@@ -178,9 +186,7 @@ export function Events() {
         {loaded && !available && (
           <div className="glass rounded-xl p-4">
             <p className="text-base text-ink-dim font-light leading-relaxed">
-              The events datastore isn&apos;t reachable from here, so no real events
-              can be listed or created right now. The examples below are the
-              illustrative ones that have always been on this page.
+              {e9.unreachable}
             </p>
           </div>
         )}
@@ -189,8 +195,8 @@ export function Events() {
         <div className="flex items-center gap-2.5 pt-1">
           <span className="h-px flex-1 bg-line" />
           <span className="inline-flex items-center gap-1.5">
-            <TelemetryTag tone="amber">Sample data</TelemetryTag>
-            <SourceNote source="Illustrative examples with invented attendee counts, kept from the original static block to show what the section is for. They are not scheduled gatherings, there is no sign-up behind them, and no one is attending them." />
+            <TelemetryTag tone="amber">{t.page.sampleData}</TelemetryTag>
+            <SourceNote source={e9.sampleNote} />
           </span>
           <span className="h-px flex-1 bg-line" />
         </div>
@@ -200,19 +206,19 @@ export function Events() {
           return (
             <Reveal key={e.id} index={i}>
               <div className="glass rounded-xl p-4 flex items-center gap-4">
-                <DateBlock month={d.month} day={d.day} />
+                <DateBlock month={monthIn(e.startsAt, e9.months)} day={d.day} />
                 <div className="flex-1 min-w-0">
-                  <div className="text-[0.9375rem] font-medium leading-snug flex items-center gap-2">
-                    {e.title}
+                  <div className="text-[0.9375rem] font-medium leading-snug flex flex-wrap items-center gap-2">
+                    {e9.samples[e.id]?.title ?? e.title}
                     <span
-                      title="Illustrative example — not a scheduled gathering."
+                      title={e9.sampleTitle}
                       className="telemetry !text-[0.9375rem] text-amber border border-amber/30 rounded-full px-1.5 py-0.5 cursor-help shrink-0"
                     >
-                      Sample
+                      {t.card.sample}
                     </span>
                   </div>
                   <div className="telemetry !text-[0.9375rem] mt-1">
-                    {e.place} · {e.attendees} attending (illustrative)
+                    {e9.samples[e.id]?.place ?? e.place} · {e9.attendingSample(e.attendees)}
                   </div>
                 </div>
               </div>
@@ -240,15 +246,19 @@ export function Events() {
 
 function EventCard({
   ev,
+  placeLabel,
   busy,
   onRsvp,
   onCheckIn,
 }: {
+  placeLabel: string;
   ev: AetherisEvent;
   busy: boolean;
   onRsvp: () => void;
   onCheckIn: () => void;
 }) {
+  const t = useCommunityText();
+  const e9 = t.events;
   const d = eventDay(ev.startsAt);
   const window = checkinWindow(ev.startsAt);
   const full = ev.capacity != null && ev.going >= ev.capacity && !ev.iRsvpd;
@@ -256,20 +266,20 @@ function EventCard({
   return (
     <div className="glass rounded-xl p-4 flex flex-col gap-3 hover:border-line-bright transition-colors duration-300">
       <div className="flex items-start gap-4">
-        <DateBlock month={d.month} day={d.day} />
+        <DateBlock month={monthIn(ev.startsAt, e9.months)} day={d.day} />
         <div className="flex-1 min-w-0">
           <div className="text-[0.9375rem] font-medium leading-snug flex items-center gap-2 flex-wrap">
             {ev.title}
             {ev.mine && (
               <span className="telemetry !text-[0.9375rem] text-emerald border border-emerald/30 rounded-full px-1.5 py-0.5">
-                Yours
+                {e9.yours}
               </span>
             )}
           </div>
           <div className="telemetry !text-[0.9375rem] mt-1">
-            {ev.place} · {eventClock(ev.startsAt)} ·{" "}
-            {ev.capacity != null ? `${ev.going}/${ev.capacity} going` : `${ev.going} going`}
-            {ev.checkedIn > 0 && ` · ${ev.checkedIn} checked in`}
+            {placeLabel} · {eventClock(ev.startsAt)} ·{" "}
+            {ev.capacity != null ? e9.goingCapped(ev.going, ev.capacity) : e9.going(ev.going)}
+            {ev.checkedIn > 0 && e9.checkedInCount(ev.checkedIn)}
           </div>
         </div>
       </div>
@@ -289,11 +299,11 @@ function EventCard({
               : "border-line text-ink-dim hover:text-ink hover:border-line-bright"
           }`}
         >
-          {ev.iRsvpd ? "Going ✓" : full ? "Full" : "RSVP"}
+          {ev.iRsvpd ? e9.rsvpGoing : full ? e9.full : e9.rsvp}
         </button>
 
         {ev.iCheckedIn ? (
-          <span className="telemetry !text-[0.9375rem] text-emerald">Checked in ✓</span>
+          <span className="telemetry !text-[0.9375rem] text-emerald">{e9.checkedIn}</span>
         ) : (
           <button
             type="button"
@@ -301,14 +311,14 @@ function EventCard({
             disabled={busy || window !== "open"}
             title={
               window === "early"
-                ? "Check-in opens an hour before the start."
+                ? e9.hintEarly
                 : window === "closed"
-                  ? "Check-in closed four hours after the start."
-                  : `Uses your location — you must be within ${CHECKIN_RADIUS_M} m of the event.`
+                  ? e9.hintClosed
+                  : e9.hintOpen(CHECKIN_RADIUS_M)
             }
             className="rounded-lg border border-line text-ink-dim hover:text-ink hover:border-line-bright px-3.5 py-1.5 text-[0.9375rem] font-semibold transition-colors disabled:opacity-35 disabled:cursor-not-allowed"
           >
-            {window === "open" ? "Check in" : window === "early" ? "Check-in not open" : "Check-in closed"}
+            {window === "open" ? e9.checkIn : window === "early" ? e9.notOpen : e9.closed}
           </button>
         )}
       </div>
@@ -338,6 +348,10 @@ function EventForm({
   onCreated: () => void;
 }) {
   const stations = useMemo(() => getStations(), []);
+  const t = useCommunityText();
+  const e9 = t.events;
+  const locale = useLocale();
+  const ids = useMemo(() => new Map(stations.map((s) => [s.name, s.id])), [stations]);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [place, setPlace] = useState(stations[0]?.name ?? "Almaty");
@@ -381,11 +395,7 @@ function EventForm({
     } catch (err) {
       const reason = err instanceof EventError ? err.reason : "unavailable";
       setError(
-        reason === "rate-limited"
-          ? "You've created three events in the last day — that's the limit for now."
-          : reason === "in-past"
-            ? "That start time is in the past."
-            : "Couldn't create the event — the datastore didn't accept it.",
+        reason === "rate-limited" ? e9.errRate : reason === "in-past" ? e9.errPast : e9.errCreate,
       );
       setBusy(false);
     }
@@ -401,7 +411,7 @@ function EventForm({
     >
       <button
         type="button"
-        aria-label="Close event form"
+        aria-label={e9.formClose}
         onClick={onClose}
         className="absolute inset-0 bg-abyss/85 backdrop-blur-sm cursor-default"
         tabIndex={-1}
@@ -419,15 +429,15 @@ function EventForm({
       >
         <div className="sticky top-0 z-10 flex items-start justify-between gap-3 px-5 sm:px-6 py-4 border-b border-line bg-carbon-2/80 backdrop-blur-md rounded-t-3xl sm:rounded-t-2xl">
           <div>
-            <div className="telemetry mb-1.5">Organise something</div>
+            <div className="telemetry mb-1.5">{e9.formKicker}</div>
             <h2 id="event-form-title" className="font-[family-name:var(--font-syne)] font-bold text-xl leading-none">
-              New event
+              {e9.formTitle}
             </h2>
           </div>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close"
+            aria-label={t.flow.close}
             className="grid place-items-center w-8 h-8 rounded-lg border border-line text-ink-dim hover:text-ink hover:border-line-bright transition-colors shrink-0"
           >
             <svg viewBox="0 0 14 14" className="w-3 h-3" fill="none" aria-hidden>
@@ -437,31 +447,31 @@ function EventForm({
         </div>
 
         <div className="px-5 sm:px-6 py-5 flex flex-col gap-4">
-          <Labelled label="Title" htmlFor="ev-title">
+          <Labelled label={e9.fTitle} htmlFor="ev-title">
             <input
               id="ev-title"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               maxLength={120}
-              placeholder="e.g. Ile-Alatau foothills cleanup"
+              placeholder={e9.fTitlePh}
               className="w-full bg-carbon-2/60 border border-line rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-emerald/40 placeholder:text-ink-faint transition-colors"
             />
           </Labelled>
 
-          <Labelled label="What is it" htmlFor="ev-desc">
+          <Labelled label={e9.fDesc} htmlFor="ev-desc">
             <textarea
               id="ev-desc"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
               maxLength={1200}
-              placeholder="What are you doing, what should people bring, where exactly do you meet?"
+              placeholder={e9.fDescPh}
               className="w-full bg-carbon-2/60 border border-line rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-emerald/40 placeholder:text-ink-faint transition-colors resize-none leading-relaxed"
             />
           </Labelled>
 
           <div className="grid sm:grid-cols-2 gap-4">
-            <Labelled label="Starts" htmlFor="ev-when">
+            <Labelled label={e9.fStarts} htmlFor="ev-when">
               <input
                 id="ev-when"
                 type="datetime-local"
@@ -470,7 +480,7 @@ function EventForm({
                 className="w-full bg-carbon-2/60 border border-line rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-emerald/40 transition-colors"
               />
             </Labelled>
-            <Labelled label="Participant cap (optional)" htmlFor="ev-cap">
+            <Labelled label={e9.fCap} htmlFor="ev-cap">
               <input
                 id="ev-cap"
                 type="number"
@@ -478,13 +488,13 @@ function EventForm({
                 max={2000}
                 value={capacity}
                 onChange={(e) => setCapacity(e.target.value)}
-                placeholder="No limit"
+                placeholder={e9.fCapPh}
                 className="w-full bg-carbon-2/60 border border-line rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-emerald/40 placeholder:text-ink-faint transition-colors"
               />
             </Labelled>
           </div>
 
-          <Labelled label="Area" htmlFor="ev-place">
+          <Labelled label={e9.fArea} htmlFor="ev-place">
             <div className="relative">
               <select
                 id="ev-place"
@@ -501,7 +511,7 @@ function EventForm({
               >
                 {stations.map((s) => (
                   <option key={s.id} value={s.name}>
-                    {s.name}
+                    {placeName(s.name, locale, ids)}
                   </option>
                 ))}
               </select>
@@ -519,7 +529,7 @@ function EventForm({
               setLon(lo);
             }}
             height={200}
-            label={`Drag the pin to the meeting point. Check-in only works within ${CHECKIN_RADIUS_M} m of it.`}
+            label={e9.fPin(CHECKIN_RADIUS_M)}
           />
 
           {error && (
@@ -535,7 +545,7 @@ function EventForm({
             onClick={onClose}
             className="rounded-xl border border-line text-ink-dim hover:text-ink hover:border-line-bright px-4 py-2.5 text-[0.9375rem] font-medium transition-colors"
           >
-            Cancel
+            {e9.cancel}
           </button>
           <button
             type="button"
@@ -543,7 +553,7 @@ function EventForm({
             disabled={!valid || busy}
             className="ml-auto inline-flex items-center gap-2 rounded-xl bg-emerald text-abyss px-5 py-2.5 text-[0.9375rem] font-semibold hover:shadow-[0_0_24px_rgba(45,226,166,0.4)] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
           >
-            {busy ? "Creating…" : "Create event"}
+            {busy ? e9.creating : e9.createEvent}
           </button>
         </div>
       </motion.div>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -13,13 +13,15 @@ import {
 import { useLiveStations } from "@/lib/useLiveStations";
 import { assistantPrompt, buildAiContext, type AiContext } from "@/lib/aiContext";
 import { POINTS } from "@/lib/points";
+import { getStations } from "@/lib/data";
+import { localePath } from "@/lib/i18n";
+import { placeName, relativeTimeIn, type CommunityText } from "@/lib/communityText";
+import { useCommunityText, useLocale } from "@/lib/useLocale";
 import {
   CATEGORIES,
   SEED_REPORTS,
   SEVERITIES,
-  STATUS_META,
   deleteMyReport,
-  displayTime,
   getRemoteReports,
   getUserReports,
   namesOrganisation,
@@ -78,8 +80,6 @@ function SampleTag({ note, children }: { note: string; children: ReactNode }) {
 
 interface Mission {
   id: string;
-  title: string;
-  desc: string;
   reward: number;
   progress: number;
   total: number;
@@ -87,9 +87,9 @@ interface Mission {
 }
 
 const MISSIONS: Mission[] = [
-  { id: "m1", title: "Watershed Watch", desc: "Log 5 water-quality readings from your local waterway this month.", reward: 450, progress: 3, total: 5, joined: true },
-  { id: "m2", title: "Canopy Census", desc: "Map 20 street trees with species + condition in your district.", reward: 600, progress: 0, total: 20, joined: false },
-  { id: "m3", title: "Night Sky Audit", desc: "Submit 3 light-pollution measurements after 23:00.", reward: 280, progress: 1, total: 3, joined: true },
+  { id: "m1", reward: 450, progress: 3, total: 5, joined: true },
+  { id: "m2", reward: 600, progress: 0, total: 20, joined: false },
+  { id: "m3", reward: 280, progress: 1, total: 3, joined: true },
 ];
 
 /* The rank-shaped names (Sentinel, Constellation) that used to sit in this
@@ -98,12 +98,37 @@ const MISSIONS: Mission[] = [
    duplicated-nomenclature bug this project has been caught by before.
    What is left is the achievements that are not ranks, with the wording
    that promised a verification step the platform cannot perform removed. */
+/* Text for each is in lib/communityText.ts, in the same order. */
 const ACHIEVEMENTS = [
-  { icon: "◬", name: "First Signal", desc: "First report filed", unlocked: true },
-  { icon: "❋", name: "Field Naturalist", desc: "25 species logged", unlocked: false },
-  { icon: "◈", name: "Stream Keeper", desc: "10 water samples", unlocked: false },
-  { icon: "◉", name: "Ground Truth", desc: "50 reports with a live reading beside them", unlocked: false },
+  { icon: "◬", unlocked: true },
+  { icon: "❋", unlocked: false },
+  { icon: "◈", unlocked: false },
+  { icon: "◉", unlocked: false },
 ];
+
+/** Initials from the name as shown, so a Cyrillic name gets Cyrillic initials. */
+const initialsOf = (name: string) =>
+  name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .join("") || "AN";
+
+const STATION_ID_BY_NAME = new Map(getStations().map((s) => [s.name, s.id]));
+
+/** The card's text in the reader's language: seeded examples are
+ *  translated; real reports keep the author's own words, with only the
+ *  city label and the time rendered locally. */
+function shown(r: Report, t: CommunityText, locale: ReturnType<typeof useLocale>) {
+  const seed = t.seeds[r.id];
+  return {
+    author: seed?.author ?? r.author,
+    city: seed?.city ?? placeName(r.city, locale, STATION_ID_BY_NAME),
+    time: r.createdAt ? relativeTimeIn(r.createdAt, t.time) : (seed?.time ?? r.time ?? ""),
+    title: seed?.title || r.title,
+    body: seed?.body || r.body,
+  };
+}
 
 /* ── AI context, per card ─────────────────────────────────────
    Fetched in the browser from the same feeds the city pages use. Air and
@@ -114,6 +139,7 @@ const ACHIEVEMENTS = [
 function useAiContext(
   report: Report,
   stations: ReturnType<typeof useLiveStations>,
+  locale: ReturnType<typeof useLocale>,
 ): { context: AiContext | null; loading: boolean; failed: boolean } {
   const [context, setContext] = useState<AiContext | null>(null);
   const [loading, setLoading] = useState(true);
@@ -128,7 +154,7 @@ function useAiContext(
     let alive = true;
     setLoading(true);
     setFailed(false);
-    buildAiContext(report, stations.stations, stations.live, stations.fetchedAt, ac.signal)
+    buildAiContext(report, stations.stations, stations.live, stations.fetchedAt, ac.signal, locale)
       .then((c) => {
         if (!alive) return;
         setContext(c);
@@ -143,7 +169,7 @@ function useAiContext(
       alive = false;
       ac.abort();
     };
-  }, [report, stations.stations, stations.live, stations.fetchedAt]);
+  }, [report, stations.stations, stations.live, stations.fetchedAt, locale]);
 
   return { context, loading, failed };
 }
@@ -163,22 +189,25 @@ function ReportCard({
 }) {
   const [deleting, setDeleting] = useState(false);
   const [deleteNote, setDeleteNote] = useState<string | null>(null);
+  const t = useCommunityText();
+  const locale = useLocale();
+  const view = shown(r, t, locale);
 
   async function remove() {
     if (deleting) return;
-    if (!window.confirm("Delete this report? It will be removed from the shared feed and from this device. This cannot be undone.")) return;
+    if (!window.confirm(t.card.deleteConfirm)) return;
     setDeleting(true);
     setDeleteNote(null);
     const result = await deleteMyReport(r.id);
     setDeleting(false);
     if (result === "deleted" || result === "local-only") {
-      onDeleted?.(r.id, "Report deleted");
+      onDeleted?.(r.id, t.page.toastDeleted);
     } else if (result === "refused") {
-      setDeleteNote("This report has already been passed to an organisation, so it can't be deleted from here. Write to izbanovj3@gmail.com with a link to it and the team will remove it.");
+      setDeleteNote(t.card.deleteRefused);
     } else if (result === "unsupported") {
-      setDeleteNote("Deleting from the device isn't available yet. Write to izbanovj3@gmail.com with a link to the report and the team will remove it.");
+      setDeleteNote(t.card.deleteUnsupported);
     } else {
-      setDeleteNote("Couldn't reach the database. Nothing was deleted — try again in a moment.");
+      setDeleteNote(t.card.deleteFailed);
     }
   }
   const [votes, setVotes] = useState(r.upvotes);
@@ -186,7 +215,7 @@ function ReportCard({
   const cat = CATEGORIES[r.category];
   const sev = SEVERITIES[r.severity];
 
-  const { context, loading, failed } = useAiContext(r, live);
+  const { context, loading, failed } = useAiContext(r, live, locale);
   // ② is derived: a report shows "AI-контекст добавлен" once real context
   // has actually resolved for it, and not before.
   const status = resolveStatus(r, Boolean(context) && context?.kind !== "none");
@@ -200,45 +229,45 @@ function ReportCard({
       <div className="flex flex-wrap items-start justify-between gap-4 mb-3">
         <div className="flex items-center gap-3">
           <span className="grid place-items-center w-9 h-9 rounded-full bg-carbon-3 border border-line-bright text-[0.9375rem] font-semibold text-ink-dim">
-            {r.initials}
+            {initialsOf(view.author)}
           </span>
           <div>
             <div className="text-sm font-medium flex items-center gap-2 flex-wrap">
-              {r.author}
+              {view.author}
               {r.userCreated && (
                 <span className="telemetry !text-[0.9375rem] text-emerald border border-emerald/30 rounded-full px-1.5 py-0.5">
-                  You
+                  {t.card.you}
                 </span>
               )}
               {/* Seeded illustrative rows carry the mark; real submissions
                   never do, so the two can't be confused either way. */}
               {!r.remote && !r.createdAt && (
                 <span
-                  title="Illustrative example written to demonstrate the feed — not a real submission."
+                  title={t.card.sampleTitle}
                   className="telemetry !text-[0.9375rem] text-amber border border-amber/30 rounded-full px-1.5 py-0.5 cursor-help"
                 >
-                  Sample
+                  {t.card.sample}
                 </span>
               )}
               {r.remote && (
                 <span
-                  title="Real submission, stored in the shared database and visible to every visitor."
+                  title={t.card.filedTitle}
                   className="telemetry !text-[0.9375rem] text-cyan border border-cyan/30 rounded-full px-1.5 py-0.5 cursor-help"
                 >
-                  Filed
+                  {t.card.filed}
                 </span>
               )}
               {r.parentId && (
                 <span
-                  title="A follow-up update on an earlier report."
+                  title={t.card.updateTitle}
                   className="telemetry !text-[0.9375rem] text-atmos border border-atmos/30 rounded-full px-1.5 py-0.5 cursor-help"
                 >
-                  Update
+                  {t.card.update}
                 </span>
               )}
             </div>
             <div className="telemetry !text-[0.9375rem] mt-0.5">
-              {r.city} · {displayTime(r)}
+              {view.city} · {view.time}
             </div>
           </div>
         </div>
@@ -247,15 +276,15 @@ function ReportCard({
 
       <div className="flex flex-wrap items-center gap-2 mb-1.5">
         <span className={`text-sm ${TONE_TEXT[cat.tone]}`}>{cat.glyph}</span>
-        <span className="telemetry">{cat.label}</span>
+        <span className="telemetry">{t.categories[r.category].label}</span>
         <span className={`telemetry !text-[0.9375rem] border rounded-full px-2 py-0.5 ml-1 ${TONE_CHIP[sev.tone]}`}>
-          {sev.label}
+          {t.severities[r.severity]}
         </span>
       </div>
       <h3 className="font-[family-name:var(--font-syne)] font-bold text-lg leading-snug mb-2">
-        {r.title}
+        {view.title}
       </h3>
-      <p className="text-base text-ink-dim font-light leading-relaxed mb-4">{r.body}</p>
+      <p className="text-base text-ink-dim font-light leading-relaxed mb-4">{view.body}</p>
 
       {/* The report's own words are never altered. When they name an outside
           organisation, this sits beside them so nobody reads the mention as
@@ -266,9 +295,7 @@ function ReportCard({
             ⚠
           </span>
           <p className="text-base text-ink-dim font-light leading-relaxed">
-            <span className="text-amber">Independent report.</span> This account
-            names an outside organisation. Aetheris is not affiliated with it, and
-            the organisation has neither reviewed nor commented on this report.
+            <span className="text-amber">{t.card.independentLead}</span> {t.card.independentBody}
           </p>
         </div>
       )}
@@ -278,11 +305,11 @@ function ReportCard({
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={r.photo}
-            alt={`Your photo for ${r.title}`}
+            alt={t.card.photoAlt(view.title)}
             className="w-full max-h-64 object-cover rounded-xl border border-line"
           />
           <figcaption className="telemetry !text-[0.9375rem] mt-1.5">
-            Only you can see this photo — it was never uploaded and stays on this device.
+            {t.card.photoCaption}
           </figcaption>
         </figure>
       )}
@@ -293,12 +320,9 @@ function ReportCard({
       {/* ④ / ⑤ — only ever present when an operator recorded them. */}
       {r.forwardedAt && (
         <div className="rounded-xl border border-amber/25 bg-amber/[0.04] px-3.5 py-2.5 mb-4">
-          <div className="telemetry !text-[0.9375rem] text-amber/80 mb-1">Transfer log</div>
+          <div className="telemetry !text-[0.9375rem] text-amber/80 mb-1">{t.card.transferTitle}</div>
           <p className="text-base text-ink-dim font-light leading-relaxed">
-            Passed to {r.forwardedTo} on{" "}
-            {new Date(r.forwardedAt).toISOString().slice(0, 10)}. This records that
-            the data was sent, and nothing about how it was received or whether
-            anything followed.
+            {t.card.transferBody(r.forwardedTo ?? "", new Date(r.forwardedAt).toISOString().slice(0, 10))}
           </p>
         </div>
       )}
@@ -321,8 +345,8 @@ function ReportCard({
             setVotes((v) => (voted ? v - 1 : v + 1));
           }}
           aria-pressed={voted}
-          aria-label={voted ? "Remove reaction" : "I see it too"}
-          title="I see it too"
+          aria-label={voted ? t.card.removeReaction : t.card.seeToo}
+          title={t.card.seeToo}
           className={`flex items-center gap-2 text-[0.9375rem] rounded-full border px-3.5 py-1.5 transition-all duration-300 ${
             voted
               ? "border-emerald/40 text-emerald bg-emerald/[0.07]"
@@ -334,22 +358,17 @@ function ReportCard({
         </button>
 
         {/* Concept 5.2 — hands this specific report to the Analyst that
-            already exists on /assistant, rather than building a second
-            chat. The deep link is the ?q= the assistant already reads.
-
-            The Russian tree, not the English one: the prompt is written in
-            Russian (as the concept writes it, and as this button is
-            labelled), and the Analyst answers in the language of the route
-            it is opened on. Sending a Russian question to /assistant would
-            get an English answer back. */}
+            already exists on /assistant. The question is written in the
+            page's language and opens the assistant in that same language,
+            so the answer comes back in it too. */}
         <Link
-          href={`/ru/assistant?q=${encodeURIComponent(assistantPrompt(r, context))}`}
+          href={`${localePath("/assistant", locale)}?q=${encodeURIComponent(assistantPrompt(r, context, locale))}`}
           className="flex items-center gap-2 text-[0.9375rem] rounded-full border border-line text-ink-dim hover:text-emerald hover:border-emerald/30 px-3.5 py-1.5 transition-colors duration-300"
         >
           <span className="text-[0.9375rem] font-bold" aria-hidden>
             Æ
           </span>
-          Спросить ИИ
+          {t.card.askAi}
         </Link>
 
         {r.userCreated && (
@@ -359,12 +378,12 @@ function ReportCard({
             disabled={deleting}
             className="flex items-center gap-2 text-[0.9375rem] rounded-full border border-line text-ink-dim hover:text-coral hover:border-coral/40 px-3.5 py-1.5 transition-colors duration-300 disabled:opacity-50"
           >
-            {deleting ? "Deleting…" : "Delete"}
+            {deleting ? t.card.deleting : t.card.delete}
           </button>
         )}
 
         <span className="ml-auto telemetry !text-[0.9375rem] text-emerald/60">
-          +{POINTS.corroboration} Eco-Points on corroboration
+          {t.card.corroborationPoints(POINTS.corroboration)}
         </span>
       </div>
       {deleteNote && (
@@ -378,21 +397,23 @@ function ReportCard({
 
 function MissionCard({ m, index }: { m: Mission; index: number }) {
   const [joined, setJoined] = useState(m.joined);
+  const t = useCommunityText();
+  const text = t.missions[index];
   const pct = (m.progress / m.total) * 100;
   return (
     <Reveal index={index}>
       <div className="glass rounded-xl p-5">
         <div className="flex items-start justify-between gap-3 mb-1.5">
-          <h4 className="font-[family-name:var(--font-syne)] font-bold text-[15px]">{m.title}</h4>
+          <h4 className="font-[family-name:var(--font-syne)] font-bold text-[15px]">{text.title}</h4>
           <span className="readout text-sm text-emerald whitespace-nowrap">
             +{m.reward} Eco-Points
           </span>
         </div>
-        <p className="text-[0.9375rem] text-ink-faint font-light leading-relaxed mb-3.5">{m.desc}</p>
+        <p className="text-[0.9375rem] text-ink-faint font-light leading-relaxed mb-3.5">{text.desc}</p>
         {joined ? (
           <>
             <div className="flex justify-between mb-1.5">
-              <span className="telemetry !text-[0.9375rem]">Progress</span>
+              <span className="telemetry !text-[0.9375rem]">{t.missionProgress}</span>
               <span className="readout text-[0.9375rem] text-cyan">
                 {m.progress}/{m.total}
               </span>
@@ -412,7 +433,7 @@ function MissionCard({ m, index }: { m: Mission; index: number }) {
             onClick={() => setJoined(true)}
             className="w-full rounded-lg border border-emerald/30 text-emerald text-[0.9375rem] font-semibold py-2 hover:bg-emerald/[0.08] transition-colors duration-300"
           >
-            Join mission
+            {t.missionJoin}
           </button>
         )}
       </div>
@@ -423,6 +444,7 @@ function MissionCard({ m, index }: { m: Mission; index: number }) {
 /* ── Success toast ────────────────────────────────────────────── */
 
 function Toast({ message, onClose }: { message: string; onClose: () => void }) {
+  const t = useCommunityText();
   useEffect(() => {
     const t = window.setTimeout(onClose, 4200);
     return () => window.clearTimeout(t);
@@ -448,13 +470,13 @@ function Toast({ message, onClose }: { message: string; onClose: () => void }) {
             sensor cross-check", which promised an instrument step that
             does not exist. */}
         <div className="telemetry !text-[0.9375rem] mt-0.5">
-          {STATUS_META.submitted.label} · nobody has reviewed it
+          {t.statuses.submitted.label} · {t.page.toastSub}
         </div>
       </div>
       <button
         type="button"
         onClick={onClose}
-        aria-label="Dismiss"
+        aria-label={t.page.dismiss}
         className="ml-1 text-ink-faint hover:text-ink transition-colors"
       >
         <svg viewBox="0 0 14 14" className="w-3 h-3" fill="none" aria-hidden>
@@ -468,6 +490,7 @@ function Toast({ message, onClose }: { message: string; onClose: () => void }) {
 /* ── Page ─────────────────────────────────────────────────────── */
 
 export default function Community() {
+  const t = useCommunityText();
   const [reports, setReports] = useState<Report[]>(SEED_REPORTS);
   const [mine, setMine] = useState<Report[]>([]);
   const [flowOpen, setFlowOpen] = useState(false);
@@ -538,7 +561,7 @@ export default function Community() {
     setReports((prev) => [report, ...prev.filter((r) => r.id !== report.id)]);
     setMine((prev) => [report, ...prev.filter((r) => r.id !== report.id)]);
     setJustAddedId(report.id);
-    setToast("Report filed");
+    setToast(t.page.toastFiled);
     window.setTimeout(() => setJustAddedId((id) => (id === report.id ? null : id)), 4000);
   }
 
@@ -548,11 +571,11 @@ export default function Community() {
       <div className="flex flex-wrap items-end justify-between gap-6 mb-10">
         <div>
           <Reveal>
-            <TelemetryTag tone="cyan">Ground truth network</TelemetryTag>
+            <TelemetryTag tone="cyan">{t.page.kicker}</TelemetryTag>
           </Reveal>
           <Reveal index={1}>
             <h1 className="font-[family-name:var(--font-syne)] font-bold text-4xl sm:text-5xl mt-4 tracking-tight">
-              Community
+              {t.page.title}
             </h1>
           </Reveal>
         </div>
@@ -565,18 +588,18 @@ export default function Community() {
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-3">
                 <h2 className="font-[family-name:var(--font-syne)] font-bold text-xl">
-                  Field reports
+                  {t.page.feedTitle}
                 </h2>
                 {/* The seeded entries are written examples, not submissions
                     from real people. Anything you post yourself IS real. */}
                 <SampleTag
                   note={
                     backendLive
-                      ? `The ${PILOT.reports} entries marked "Sample" are illustrative, written to demonstrate the feed. Anything without that mark is a real submission stored in the shared database and visible to every visitor.`
-                      : `Seeded sample data — ${PILOT.reports} illustrative reports from ${PILOT.contributors} example contributors, written to demonstrate the feed. Not real submissions. Reports you file yourself are real but persist only to this browser; the shared datastore is unreachable right now.`
+                      ? t.page.sampleNoteLive(PILOT.reports)
+                      : t.page.sampleNoteOffline(PILOT.reports, PILOT.contributors)
                   }
                 >
-                  {PILOT.reports} seeded examples
+                  {t.page.sampleCount(PILOT.reports)}
                 </SampleTag>
               </div>
               <button
@@ -587,7 +610,7 @@ export default function Community() {
                 <svg viewBox="0 0 16 16" className="w-3.5 h-3.5" fill="none" aria-hidden>
                   <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
                 </svg>
-                New report
+                {t.page.newReport}
               </button>
             </div>
           </Reveal>
@@ -635,11 +658,9 @@ export default function Community() {
             <Reveal>
               <div className="flex flex-wrap items-center gap-2.5 mb-4">
                 <h2 className="font-[family-name:var(--font-syne)] font-bold text-xl">
-                  Active missions
+                  {t.page.missionsTitle}
                 </h2>
-                <SampleTag note="Illustrative mission designs with example progress — no mission system is running yet, and the progress shown is not anyone's.">
-                  Sample data
-                </SampleTag>
+                <SampleTag note={t.page.missionsNote}>{t.page.sampleData}</SampleTag>
               </div>
             </Reveal>
             <div className="flex flex-col gap-3.5">
@@ -653,19 +674,17 @@ export default function Community() {
             <Reveal>
               <div className="flex flex-wrap items-center gap-2.5 mb-4">
                 <h2 className="font-[family-name:var(--font-syne)] font-bold text-xl">
-                  Achievements
+                  {t.page.achievementsTitle}
                 </h2>
-                <SampleTag note="Illustrative badge set — these four are not wired to anything yet. The geographic badges and the rank ladder above them are real and are computed from your own reports.">
-                  Sample data
-                </SampleTag>
+                <SampleTag note={t.page.achievementsNote}>{t.page.sampleData}</SampleTag>
               </div>
             </Reveal>
             <Reveal index={1}>
               <GlassCard className="p-4 grid grid-cols-4 gap-2.5">
-                {ACHIEVEMENTS.map((a) => (
+                {ACHIEVEMENTS.map((a, i) => (
                   <div
-                    key={a.name}
-                    title={`${a.name} — ${a.desc}`}
+                    key={a.icon}
+                    title={`${t.achievements[i].name} — ${t.achievements[i].desc}`}
                     className={`group relative flex flex-col items-center gap-1.5 rounded-xl border p-3 text-center transition-all duration-300 ${
                       a.unlocked
                         ? "border-emerald/25 bg-emerald/[0.05] hover:bg-emerald/[0.1]"
@@ -675,7 +694,7 @@ export default function Community() {
                     <span className={`text-xl ${a.unlocked ? "text-emerald" : "text-ink-faint"}`}>
                       {a.icon}
                     </span>
-                    <span className="text-[0.9375rem] font-medium leading-tight">{a.name}</span>
+                    <span className="text-[0.9375rem] font-medium leading-tight break-words max-w-full">{t.achievements[i].name}</span>
                   </div>
                 ))}
               </GlassCard>

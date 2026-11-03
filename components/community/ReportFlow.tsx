@@ -11,7 +11,6 @@ import {
   PHOTO_MIN_EDGE,
   RateLimitError,
   SEVERITIES,
-  STATUS_META,
   createReport,
   getUserReports,
   processPhoto,
@@ -21,6 +20,10 @@ import {
   type Tone,
 } from "@/lib/reports";
 import { PinMap } from "./PinMap";
+import { coarsen } from "@/lib/supabase";
+import { localePath } from "@/lib/i18n";
+import { placeName } from "@/lib/communityText";
+import { useCommunityText, useLocale } from "@/lib/useLocale";
 
 /* ─────────────────────────────────────────────────────────────
    Report submission — the five-step flow from concept section 1.1.
@@ -73,13 +76,6 @@ const FALLBACK: [number, number] = [43.238, 76.889]; // Almaty
 
 const NOTE_MAX = 280;
 
-const STEP_TITLES = [
-  "Photo",
-  "Location",
-  "Category",
-  "Severity & note",
-  "Submitted",
-];
 
 type GeoState = "idle" | "locating" | "ok" | "denied" | "unsupported";
 
@@ -91,6 +87,9 @@ export function ReportFlow({
   onCreated: (r: Report) => void;
 }) {
   const [step, setStep] = useState(0);
+  const t = useCommunityText();
+  const f = t.flow;
+  const locale = useLocale();
 
   /* step 1 */
   const [consent, setConsent] = useState(false);
@@ -123,9 +122,15 @@ export function ReportFlow({
   const restoreFocusRef = useRef<HTMLElement | null>(null);
 
   const stations = useMemo(() => getStations(), []);
+  const idByName = useMemo(() => new Map(stations.map((s) => [s.name, s.id])), [stations]);
+  // Values stay the English station names (the key the per-city counts
+  // join on); only the visible label is translated.
   const cities = useMemo(
-    () => [...new Set(stations.map((s) => s.name))].sort((a, b) => a.localeCompare(b)),
-    [stations],
+    () =>
+      [...new Set(stations.map((s) => s.name))]
+        .map((n) => ({ value: n, label: placeName(n, locale, idByName) }))
+        .sort((a, b) => a.label.localeCompare(b.label, locale)),
+    [stations, locale, idByName],
   );
 
   /** Reports this device filed, offered as the target of a follow-up. */
@@ -211,13 +216,22 @@ export function ReportFlow({
       setPhotoQuality(p.quality);
       setPhotoNote(
         p.quality
-          ? `Sharp and large enough — +${POINTS.photoQuality} Eco-Points.`
+          ? f.photoNoteGood(POINTS.photoQuality)
           : Math.max(p.width, p.height) < PHOTO_MIN_EDGE
-            ? `Small image (${p.width}×${p.height}). It will still be filed; it just doesn't earn the photo bonus.`
-            : "Looks soft or out of focus. It will still be filed; it just doesn't earn the photo bonus.",
+            ? f.photoNoteSmall(p.width, p.height)
+            : f.photoNoteSoft,
       );
     } catch (err) {
-      setPhotoError(err instanceof Error ? err.message : "Couldn't add that image.");
+      const msg = err instanceof Error ? err.message : "";
+      setPhotoError(
+        msg === "Please choose an image file."
+          ? f.photoErrNotImage
+          : msg === "Couldn't read that file."
+            ? f.photoErrRead
+            : msg === "Couldn't load that image."
+              ? f.photoErrLoad
+              : f.photoErrGeneric,
+      );
       setPhoto(null);
       setPhotoName(null);
       setPhotoQuality(false);
@@ -234,13 +248,10 @@ export function ReportFlow({
      about what they saw. */
   function buildText(): { title: string; body: string } {
     const trimmed = note.trim();
-    const label = category ? CATEGORIES[category].label : "Field report";
-    const where = city ?? "unspecified location";
+    const label = category ? t.categories[category].label : f.fieldReport;
+    const where = city ? placeName(city, locale, idByName) : f.unspecified;
     if (!trimmed) {
-      return {
-        title: `${label} · ${where}`,
-        body: `Filed from ${where} with no written description. Category and severity were chosen by the reporter; nothing further was stated.`,
-      };
+      return { title: f.autoTitle(label, where), body: f.autoBody(where) };
     }
     return {
       title: trimmed.length <= 90 ? trimmed : `${trimmed.slice(0, 87).trimEnd()}…`,
@@ -272,12 +283,10 @@ export function ReportFlow({
     } catch (err) {
       if (err instanceof RateLimitError) {
         setSubmitError(
-          err.scope === "hourly"
-            ? "You've hit the submission limit for now — everything you entered is still here, try again in a little while."
-            : "You've hit today's submission limit — everything you entered is still here, try again tomorrow.",
+          err.scope === "hourly" ? f.rateHourly : f.rateDaily,
         );
       } else {
-        setSubmitError(err instanceof Error ? err.message : "Submission failed. Please try again.");
+        setSubmitError(f.submitFailed);
       }
     } finally {
       setSubmitting(false);
@@ -303,7 +312,7 @@ export function ReportFlow({
     >
       <button
         type="button"
-        aria-label="Close report flow"
+        aria-label={f.closeFlow}
         onClick={onClose}
         className="absolute inset-0 bg-abyss/85 backdrop-blur-sm cursor-default"
         tabIndex={-1}
@@ -326,7 +335,7 @@ export function ReportFlow({
           <div className="flex items-start justify-between gap-3">
             <div>
               <div className="telemetry mb-1.5">
-                Step {Math.min(step + 1, 5)} of 5 · {STEP_TITLES[step]}
+                {f.stepOf(Math.min(step + 1, 5), f.steps[step])}
               </div>
               {/* Not the status name here — the confirmation panel below
                   owns that, and printing «Отправлен» in both places put it
@@ -335,13 +344,13 @@ export function ReportFlow({
                 id="report-flow-title"
                 className="font-[family-name:var(--font-syne)] font-bold text-xl leading-none"
               >
-                {step === 4 ? "Report filed" : "File a field report"}
+                {step === 4 ? f.titleFiled : f.titleFiling}
               </h2>
             </div>
             <button
               type="button"
               onClick={onClose}
-              aria-label="Close"
+              aria-label={f.close}
               className="grid place-items-center w-8 h-8 rounded-lg border border-line text-ink-dim hover:text-ink hover:border-line-bright transition-colors shrink-0"
             >
               <svg viewBox="0 0 14 14" className="w-3 h-3" fill="none" aria-hidden>
@@ -365,7 +374,7 @@ export function ReportFlow({
         <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-5">
           {step === 0 && (
             <Step
-              lede="Optional, and only for you: the photo is not uploaded and nobody else will see it. It stays in this browser as your own record — a repeat photo of the same place later shows what changed. The grid is a framing guide for that."
+              lede={f.photoLede}
             >
               <input
                 ref={fileRef}
@@ -375,13 +384,13 @@ export function ReportFlow({
                 onChange={onPickPhoto}
                 className="sr-only"
                 id="report-photo"
-                aria-label="Take or choose a photo"
+                aria-label={f.photoInputLabel}
               />
               {photo ? (
                 <div className="flex flex-col gap-3">
                   <div className="relative rounded-xl overflow-hidden border border-line">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img src={photo} alt="Report photo preview" className="w-full max-h-[46svh] object-cover" />
+                    <img src={photo} alt={f.photoPreviewAlt} className="w-full max-h-[46svh] object-cover" />
                     <ThirdsGrid />
                   </div>
                   <div className="flex items-center gap-3">
@@ -402,7 +411,7 @@ export function ReportFlow({
                       onClick={() => fileRef.current?.click()}
                       className="text-[0.9375rem] text-ink-dim hover:text-ink px-2 py-1 transition-colors"
                     >
-                      Replace
+                      {f.replace}
                     </button>
                   </div>
                 </div>
@@ -420,23 +429,21 @@ export function ReportFlow({
                       <circle cx="12" cy="12.6" r="3.4" stroke="currentColor" strokeWidth="1.4" />
                     </svg>
                     <span className="text-[0.9375rem] font-medium">
-                      {photoBusy ? "Processing image…" : "Open camera"}
+                      {photoBusy ? f.processing : f.openCamera}
                     </span>
-                    <span className="telemetry !text-[0.9375rem]">or choose an existing photo</span>
+                    <span className="telemetry !text-[0.9375rem]">{f.orChoose}</span>
                   </span>
                 </button>
               )}
               {photoError && <FieldError>{photoError}</FieldError>}
               <p className="telemetry !text-[0.9375rem] mt-3">
-                The image is shrunk and re-saved on your device, which removes the
-                camera&apos;s metadata, including its GPS position. The report itself
-                is just as valid without a photo.
+                {f.photoFooter}
               </p>
             </Step>
           )}
 
           {step === 1 && (
-            <Step lede="Your position is filled in automatically. Drag the pin — or tap the map — if it landed in the wrong place, which is common when the photo was taken from a window or from higher ground.">
+            <Step lede={f.locLede}>
               <div className="flex flex-col gap-3">
                 <PinMap
                   lat={lat}
@@ -449,21 +456,22 @@ export function ReportFlow({
                   height={240}
                   label={
                     geo === "locating"
-                      ? "Finding your position…"
+                      ? f.locFinding
                       : geo === "denied"
-                        ? "Location permission refused — drag the pin to where this was seen."
+                        ? f.locDenied
                         : geo === "unsupported"
-                          ? "This browser can't report a position — drag the pin to where this was seen."
-                          : "Drag the pin, or tap the map, to correct the location."
+                          ? f.locUnsupported
+                          : f.locDrag
                   }
                 />
+                {/* What will actually be published — not the exact pin. */}
                 <div className="readout text-[0.9375rem] text-ink-faint">
-                  {lat.toFixed(5)}, {lon.toFixed(5)}
+                  {f.locPublished((coarsen(lat) ?? 0).toFixed(2), (coarsen(lon) ?? 0).toFixed(2))}
                 </div>
 
                 <div>
                   <label htmlFor="report-city" className="telemetry mb-2 block">
-                    Filed under
+                    {f.filedUnder}
                   </label>
                   <div className="relative">
                     <select
@@ -474,12 +482,12 @@ export function ReportFlow({
                     >
                       {!city && (
                         <option value="" disabled>
-                          Select the nearest monitored city…
+                          {f.selectCity}
                         </option>
                       )}
                       {cities.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
+                        <option key={c.value} value={c.value}>
+                          {c.label}
                         </option>
                       ))}
                     </select>
@@ -488,9 +496,7 @@ export function ReportFlow({
                     </svg>
                   </div>
                   <p className="telemetry !text-[0.9375rem] mt-2">
-                    {derivedCity && !cityOverride
-                      ? `Nearest monitored city to the pin. This is the city the report is grouped under.`
-                      : `The report is grouped under this city on the map and in the per-city counts.`}
+                    {derivedCity && !cityOverride ? f.cityDerived : f.cityManual}
                   </p>
                 </div>
               </div>
@@ -498,7 +504,7 @@ export function ReportFlow({
           )}
 
           {step === 2 && (
-            <Step lede="What kind of problem is this? The five categories match the layers on the map.">
+            <Step lede={f.catLede}>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {CATEGORY_KEYS.map((k) => {
                   const c = CATEGORIES[k];
@@ -517,9 +523,9 @@ export function ReportFlow({
                         {c.glyph}
                       </span>
                       <span className="min-w-0">
-                        <span className="block text-[0.9375rem] font-medium">{c.label}</span>
+                        <span className="block text-[0.9375rem] font-medium">{t.categories[k].label}</span>
                         <span className="block telemetry !text-[0.9375rem] mt-0.5 truncate">
-                          {c.example.replace(/^e\.g\. /, "")}
+                          {t.categories[k].example.replace(/^(e\.g\.|напр\.|мыс\.) /, "")}
                         </span>
                       </span>
                     </button>
@@ -530,10 +536,10 @@ export function ReportFlow({
           )}
 
           {step === 3 && (
-            <Step lede="How bad is it, and anything you want to add. The note is optional.">
+            <Step lede={f.detailsLede}>
               <div className="flex flex-col gap-5">
                 <fieldset>
-                  <legend className="telemetry mb-2">Severity</legend>
+                  <legend className="telemetry mb-2">{f.severity}</legend>
                   <div className="grid grid-cols-4 gap-1.5">
                     {SEVERITY_KEYS.map((k) => {
                       const sv = SEVERITIES[k];
@@ -548,7 +554,7 @@ export function ReportFlow({
                             on ? TONE_ACTIVE[sv.tone] : "border-line text-ink-faint hover:text-ink hover:border-line-bright"
                           }`}
                         >
-                          {sv.label}
+                          {t.severities[k]}
                         </button>
                       );
                     })}
@@ -557,7 +563,7 @@ export function ReportFlow({
 
                 <div>
                   <label htmlFor="report-note" className="telemetry mb-2 block">
-                    Note (optional)
+                    {f.noteLabel}
                   </label>
                   <textarea
                     id="report-note"
@@ -565,7 +571,7 @@ export function ReportFlow({
                     onChange={(e) => setNote(e.target.value.slice(0, NOTE_MAX))}
                     rows={4}
                     maxLength={NOTE_MAX}
-                    placeholder="What did you see? Smells, colours, how long it has been there, anything affected."
+                    placeholder={f.notePlaceholder}
                     className="w-full bg-carbon-2/60 border border-line rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-emerald/40 placeholder:text-ink-faint transition-colors resize-none leading-relaxed"
                   />
                   <div className="telemetry !text-[0.9375rem] text-right mt-1">
@@ -576,7 +582,7 @@ export function ReportFlow({
                 {ownReports.length > 0 && (
                   <div>
                     <label htmlFor="report-parent" className="telemetry mb-2 block">
-                      Is this an update on one of your earlier reports?
+                      {f.parentQuestion}
                     </label>
                     <div className="relative">
                       <select
@@ -585,7 +591,7 @@ export function ReportFlow({
                         onChange={(e) => setParentId(e.target.value)}
                         className="w-full appearance-none bg-carbon-2/60 border border-line rounded-xl pl-3.5 pr-9 py-2.5 text-sm outline-none focus:border-emerald/40 transition-colors cursor-pointer"
                       >
-                        <option value="">No — this is a new report</option>
+                        <option value="">{f.parentNone}</option>
                         {ownReports.map((r) => (
                           <option key={r.id} value={r.id}>
                             {r.title.length > 52 ? `${r.title.slice(0, 52)}…` : r.title}
@@ -597,27 +603,21 @@ export function ReportFlow({
                       </svg>
                     </div>
                     <p className="telemetry !text-[0.9375rem] mt-2">
-                      An &quot;after&quot; photo following a cleanup or a response is worth
-                      +{POINTS.followUp} Eco-Points.
+                      {f.parentPoints(POINTS.followUp)}
                     </p>
                   </div>
                 )}
 
                 <fieldset className="rounded-xl border border-line-bright bg-carbon-2/50 p-4 flex flex-col gap-3">
-                  <legend className="telemetry px-1">Before you send</legend>
+                  <legend className="telemetry px-1">{f.consentLegend}</legend>
                   <p className="text-base text-ink-dim font-light leading-relaxed">
-                    <span className="text-ink">Public, for everyone to see:</span> category,
-                    severity, your note, the city, the time, and the pin rounded to about
-                    1&nbsp;km.
+                    <span className="text-ink">{f.consentPublicLead}</span> {f.consentPublic}
                   </p>
                   <p className="text-base text-ink-dim font-light leading-relaxed">
-                    <span className="text-ink">Not sent anywhere:</span> the photo, which
-                    stays in this browser, and the exact pin. No name, e-mail or phone
-                    number is asked for or stored.
+                    <span className="text-ink">{f.consentPrivateLead}</span> {f.consentPrivate}
                   </p>
                   <p className="text-base text-ink-dim font-light leading-relaxed">
-                    Please don&apos;t include other people&apos;s names, phone numbers, car plates
-                    or home addresses. You can delete the report from this device later.
+                    {f.consentRules}
                   </p>
                   <label className="flex items-start gap-3 cursor-pointer">
                     <input
@@ -628,19 +628,19 @@ export function ReportFlow({
                       aria-describedby="report-consent-links"
                     />
                     <span className="text-base text-ink leading-relaxed">
-                      I understand this report will be public as described above.
+                      {f.consentCheck}
                     </span>
                   </label>
                   <p id="report-consent-links" className="text-[0.9375rem] text-ink-faint">
-                    Details:{" "}
-                    <a href="/privacy/" target="_blank" rel="noopener" className="underline underline-offset-4 hover:text-ink">
-                      privacy policy
+                    {f.consentDetails}{" "}
+                    <a href={`${localePath("/privacy", locale)}/`} target="_blank" rel="noopener" className="underline underline-offset-4 hover:text-ink">
+                      {f.privacy}
                     </a>{" "}
                     ·{" "}
-                    <a href="/terms/" target="_blank" rel="noopener" className="underline underline-offset-4 hover:text-ink">
-                      terms of use
+                    <a href={`${localePath("/terms", locale)}/`} target="_blank" rel="noopener" className="underline underline-offset-4 hover:text-ink">
+                      {f.terms}
                     </a>{" "}
-                    (drafts under legal review).
+                    {f.consentDrafts}
                   </p>
                 </fieldset>
 
@@ -664,7 +664,7 @@ export function ReportFlow({
               onClick={() => (step === 0 ? onClose() : setStep((s) => s - 1))}
               className="rounded-xl border border-line text-ink-dim hover:text-ink hover:border-line-bright px-4 py-2.5 text-[0.9375rem] font-medium transition-colors"
             >
-              {step === 0 ? "Cancel" : "Back"}
+              {step === 0 ? f.cancel : f.back}
             </button>
             <button
               type="button"
@@ -675,12 +675,12 @@ export function ReportFlow({
               {submitting ? (
                 <>
                   <span className="w-3.5 h-3.5 rounded-full border-2 border-abyss/40 border-t-abyss animate-spin" />
-                  Submitting…
+                  {f.submitting}
                 </>
               ) : step === 3 ? (
-                "Submit report"
+                f.submit
               ) : (
-                "Continue"
+                f.cont
               )}
             </button>
           </div>
@@ -693,7 +693,7 @@ export function ReportFlow({
               onClick={onClose}
               className="w-full rounded-xl bg-emerald text-abyss py-3 text-[0.9375rem] font-semibold hover:shadow-[0_0_24px_rgba(45,226,166,0.4)] transition-shadow"
             >
-              Back to the feed
+              {f.backToFeed}
             </button>
           </div>
         )}
@@ -709,7 +709,10 @@ export function ReportFlow({
    has been verified") would be a claim the platform cannot make. */
 
 function Confirmation({ report }: { report: Report }) {
-  const meta = STATUS_META.submitted;
+  const t = useCommunityText();
+  const locale = useLocale();
+  const c = t.confirm;
+  const ids = useMemo(() => new Map(getStations().map((s) => [s.name, s.id])), []);
   return (
     <div className="flex flex-col items-center text-center gap-5 py-4">
       <span className="grid place-items-center w-16 h-16 rounded-full bg-emerald/12 border border-emerald/35 text-emerald">
@@ -720,9 +723,9 @@ function Confirmation({ report }: { report: Report }) {
 
       <div>
         <div className="font-[family-name:var(--font-syne)] font-bold text-2xl">
-          {meta.label}
+          {t.statuses.submitted.label}
         </div>
-        <div className="telemetry !text-[0.9375rem] mt-1.5">{meta.gloss} · status ①</div>
+        <div className="telemetry !text-[0.9375rem] mt-1.5">{c.statusLine(t.statuses.submitted.gloss)}</div>
       </div>
 
       {/* Two different things can have happened, and the screen must not
@@ -731,41 +734,23 @@ function Confirmation({ report }: { report: Report }) {
           back to this browser's storage, and telling that person their
           report is "visible to everyone" would be a straight untruth. */}
       <p className="text-base text-ink-dim font-light leading-relaxed max-w-sm">
-        {report.remote ? (
-          <>
-            Your report is stored and is now visible to everyone on the map and in
-            the feed, with its position rounded to about 1&nbsp;km. Any photo stayed on
-            this device.
-          </>
-        ) : (
-          <>
-            The shared database could not be reached, so your report is saved in
-            this browser only — you can see it, nobody else can. It is not lost,
-            but it has not been filed to the network either.
-          </>
-        )}{" "}
-        That is all that has happened to it: nobody has reviewed it, no instrument
-        has been compared against it, and Aetheris is not stating that what you
-        described is or is not the case.
+        {report.remote ? c.stored : c.local} {c.nothingElse}
       </p>
 
       <div className="w-full rounded-xl border border-line bg-carbon-2/50 p-4 text-left flex flex-col gap-2.5">
-        <div className="telemetry !text-[0.9375rem]">What can happen next</div>
+        <div className="telemetry !text-[0.9375rem]">{c.nextTitle}</div>
         <p className="text-base text-ink-dim font-light leading-relaxed">
-          {/* Status names are quoted, never case-folded: lowercasing
-              «AI-контекст добавлен» to fit a sentence also destroyed the
-              abbreviation. */}
-          If a live feed covers your category and area, Aetheris Analyst will attach
-          a reading beside it as context — «{STATUS_META["ai-context"].label}».
-          If someone else reports the same category in {report.city} within 72 hours
-          from a different device, both move to «{STATUS_META.corroborated.label}» —
-          which means independent people described the same thing, not that either of
-          you is right.
+          {/* Status names are quoted, never case-folded. */}
+          {c.next(
+            t.statuses["ai-context"].label,
+            placeName(report.city, locale, ids),
+            t.statuses.corroborated.label,
+          )}
         </p>
         <p className="telemetry !text-[0.9375rem] text-emerald/70">
-          +{POINTS.submission} Eco-Points for filing
-          {report.photoQuality ? ` · +${POINTS.photoQuality} for the photo` : ""}
-          {report.parentId ? ` · +${POINTS.followUp} for the follow-up` : ""}
+          {c.points(POINTS.submission)}
+          {report.photoQuality ? c.photoPoints(POINTS.photoQuality) : ""}
+          {report.parentId ? c.followPoints(POINTS.followUp) : ""}
         </p>
       </div>
     </div>
