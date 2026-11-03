@@ -57,7 +57,13 @@ jobs:
           restore-keys: |
             nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
       - name: Build static export
+        # lib/supabase.ts has no built-in project. The e2e specs stub every
+        # Supabase request, and Lighthouse reads from the TEST project — never
+        # production. This build is kept 3 days as a CI artifact only.
         run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_TEST_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_TEST_KEY }}
       - uses: actions/upload-artifact@v7
         with:
           name: out
@@ -158,11 +164,36 @@ jobs:
         run: npm run build
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_TEST_URL }}
-          NEXT_PUBLIC_SUPABASE_KEY: ${{ secrets.SUPABASE_TEST_KEY }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_TEST_KEY }}
       - name: Install Chromium for Playwright
         run: npx playwright install --with-deps chromium
       - name: Submit and delete a report on the test database
         run: npx playwright test tests/e2e/live-report.spec.ts
+
+  no-backend:
+    name: No-backend build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - name: Build with no Supabase variables
+        run: npm run build
+      - name: The bundle names no Supabase host
+        run: |
+          if grep -rl "supabase\.co" out/_next/static/; then
+            echo "::error::A build without NEXT_PUBLIC_SUPABASE_URL contains a Supabase host"; exit 1
+          fi
+      - name: Install Chromium for Playwright
+        run: npx playwright install --with-deps chromium
+      - name: Community page says so, keeps reports local, calls nothing
+        run: npx playwright test tests/e2e/no-backend.spec.ts
+        env:
+          E2E_NO_BACKEND: "1"
 
   security:
     name: Access control (test Supabase)

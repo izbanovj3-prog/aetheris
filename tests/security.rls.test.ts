@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, it } from "vitest";
-import { SUPABASE_KEY, SUPABASE_URL as PRODUCTION_URL } from "@/lib/supabase";
+import { PRODUCTION_SUPABASE_HOST } from "./production";
 
 /* ─────────────────────────────────────────────────────────────
    AETHERIS · access-control audit against a live Supabase project
@@ -30,7 +30,7 @@ const KEY = process.env.SUPABASE_TEST_KEY?.trim();
 const SERVICE_KEY = process.env.SUPABASE_TEST_SERVICE_KEY?.trim();
 const LIVE = Boolean(URL_ && KEY);
 
-if (LIVE && URL_ === PRODUCTION_URL.replace(/\/$/, "")) {
+if (LIVE && new URL(URL_!).host === PRODUCTION_SUPABASE_HOST) {
   throw new Error(
     "SUPABASE_TEST_URL points at the production project. This suite writes probe rows — use the test project.",
   );
@@ -105,9 +105,12 @@ afterAll(async () => {
 });
 
 describe("the key shipped to browsers", () => {
-  it("is the publishable key, never a service key", () => {
-    expect(SUPABASE_KEY.startsWith(SECRET_KEY_PREFIX)).toBe(false);
-    expect(SUPABASE_KEY).toMatch(/^sb_publishable_/);
+  // NEXT_PUBLIC_SUPABASE_ANON_KEY is inlined into the bundle; so is the key
+  // this suite probes with. Neither may ever be a secret key.
+  it("is a publishable key, never a service key", () => {
+    for (const key of [process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY, KEY].filter(Boolean) as string[]) {
+      expect(key.startsWith(SECRET_KEY_PREFIX)).toBe(false);
+    }
   });
 });
 

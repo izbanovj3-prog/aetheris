@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { communityText } from "../../lib/communityText";
 import { offsite } from "./site";
+import { PRODUCTION_SUPABASE_HOST as PRODUCTION_HOST } from "../production";
 
 /* The resident scenario against a REAL database — the separate TEST
    Supabase project, never production: consent → submit → the row exists →
@@ -8,7 +9,7 @@ import { offsite } from "./site";
 
    Runs only when E2E_LIVE_SUPABASE_URL / E2E_LIVE_SUPABASE_KEY are set, and
    only against a build made with those same values as
-   NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_KEY (CI job "Live report
+   NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY (CI job "Live report
    flow"). Any request to a Supabase host other than that test project is
    blocked and fails the test, so a build pointed at production cannot
    write there even by mistake. */
@@ -16,7 +17,6 @@ import { offsite } from "./site";
 const LIVE_URL = process.env.E2E_LIVE_SUPABASE_URL?.trim().replace(/\/$/, "");
 const LIVE_KEY = process.env.E2E_LIVE_SUPABASE_KEY?.trim();
 const LIVE_HOST = LIVE_URL ? new URL(LIVE_URL).host : "";
-const PRODUCTION_HOST = "effxsftaolpjjlpuqwax.supabase.co";
 
 test.skip(!LIVE_URL || !LIVE_KEY, "E2E_LIVE_SUPABASE_URL / E2E_LIVE_SUPABASE_KEY not set");
 

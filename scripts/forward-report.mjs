@@ -26,9 +26,14 @@
    the mistake this project has already made once.
    ───────────────────────────────────────────────────────────── */
 
-const URL_BASE =
-  process.env.SUPABASE_URL ?? "https://effxsftaolpjjlpuqwax.supabase.co";
+// The project is never assumed: name it, so the script cannot act on a
+// database by default.
+const URL_BASE = process.env.SUPABASE_URL?.trim().replace(/\/$/, "");
 const KEY = process.env.SUPABASE_SERVICE_KEY;
+if (!URL_BASE) {
+  console.error("Set SUPABASE_URL to the project to act on (and SUPABASE_SERVICE_KEY).");
+  process.exit(2);
+}
 
 function args(argv) {
   const out = {};

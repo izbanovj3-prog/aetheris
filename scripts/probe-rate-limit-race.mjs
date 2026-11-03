@@ -18,16 +18,17 @@
    be run by hand in the SQL editor. Point it at a staging project if you
    have one. It refuses to run without --yes for that reason.
 
-     node scripts/probe-rate-limit-race.mjs --yes
-     node scripts/probe-rate-limit-race.mjs --yes --burst 12
-     SUPABASE_URL=https://staging.supabase.co \
-     SUPABASE_KEY=sb_publishable_… node scripts/probe-rate-limit-race.mjs --yes
+     SUPABASE_URL=https://<test-ref>.supabase.co \
+     SUPABASE_KEY=sb_publishable_… node scripts/probe-rate-limit-race.mjs --yes [--burst 12]
    ───────────────────────────────────────────────────────────── */
 
-const URL_BASE =
-  process.env.SUPABASE_URL ?? "https://effxsftaolpjjlpuqwax.supabase.co";
-const KEY =
-  process.env.SUPABASE_KEY ?? "sb_publishable_YERf0Mpcy2YhOFyvIz5H1w_rQ9-H6go";
+// No default project: this writes rows, so it only runs where pointed.
+const URL_BASE = process.env.SUPABASE_URL?.trim().replace(/\/$/, "");
+const KEY = process.env.SUPABASE_KEY?.trim();
+if (!URL_BASE || !KEY) {
+  console.error("Set SUPABASE_URL and SUPABASE_KEY (publishable) for the TEST project.");
+  process.exit(2);
+}
 
 const args = process.argv.slice(2);
 const has = (f) => args.includes(f);
