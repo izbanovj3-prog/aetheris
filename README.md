@@ -222,7 +222,8 @@ components/      chrome, map, dashboard, assistant, community, ui
 lib/             site.ts (metadata), data.ts (model), live.ts + gbif.ts (open data),
                  supabase.ts (PostgREST client), i18n.ts + communityText.ts (copy)
 supabase/        migrations 1–7, rollback/, README (order, applied state)
-scripts/         serve-static, lighthouse-check, og-images, forward-report, probe-rate-limit-race
+scripts/         serve-static, lighthouse-check, og-images, forward-report, probe-rate-limit-race,
+                 build-glyphs (map label glyphs; public/fonts/noto, Noto Sans, OFL)
 tests/           unit (vitest) · e2e/ (Playwright) · security.rls.test.ts
 docs/            security, legal-review, kk-review, terminology
 ```
