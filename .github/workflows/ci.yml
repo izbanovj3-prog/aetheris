@@ -16,6 +16,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      probe_network:
+        description: "Also run the forged-header network-limit probe (uses up this runner's hourly report allowance on the test project)"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -171,6 +176,7 @@ jobs:
       SUPABASE_TEST_URL: ${{ secrets.SUPABASE_TEST_URL }}
       SUPABASE_TEST_KEY: ${{ secrets.SUPABASE_TEST_KEY }}
       SUPABASE_TEST_SERVICE_KEY: ${{ secrets.SUPABASE_TEST_SERVICE_KEY }}
+      SECURITY_PROBE_NETWORK: ${{ inputs.probe_network && '1' || '' }}
     steps:
       - name: Require the test project secrets
         # A skipped live suite is not a pass, so missing secrets fail the job.

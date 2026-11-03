@@ -43,10 +43,9 @@ jobs:
     steps:
       - name: Check routes and headers
         run: |
-          case "$SITE" in
-            https://aetherisearth.live|https://www.aetherisearth.live|https://*.vercel.app) ;;
-            *) echo "::error::Unexpected site: $SITE"; exit 1 ;;
-          esac
+          if ! printf '%s' "$SITE" | grep -Eq '^https://([a-z0-9-]+\.vercel\.app|(www\.)?aetherisearth\.live)$'; then
+            echo "::error::Unexpected site: $SITE"; exit 1
+          fi
           failed=0
           for path in / /ru/ /kk/ /map/ /ru/map/ /kk/map/ /dashboard/ \
                       /community/ /ru/community/ /kk/community/ \
@@ -72,10 +71,9 @@ jobs:
     steps:
       - name: Check the site URL
         run: |
-          case "$SITE" in
-            https://aetherisearth.live|https://www.aetherisearth.live|https://*.vercel.app) ;;
-            *) echo "::error::Unexpected site: $SITE"; exit 1 ;;
-          esac
+          if ! printf '%s' "$SITE" | grep -Eq '^https://([a-z0-9-]+\.vercel\.app|(www\.)?aetherisearth\.live)$'; then
+            echo "::error::Unexpected site: $SITE"; exit 1
+          fi
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
