@@ -10,9 +10,11 @@
    policies in supabase/reports.sql, not in key secrecy. A `sb_secret_`
    key must never appear here.
 
-   Everything degrades: if the project is unreachable, the table is
-   missing, or RLS rejects the write, the caller falls back to
-   localStorage and the app behaves exactly as it did before. That
+   Everything degrades: if the project is unreachable or the table is
+   missing, the caller falls back to localStorage and the app behaves
+   exactly as it did before. A write the database declines (RLS, a
+   constraint, a trigger) is not an outage: it is reported as refused and
+   nothing is kept, because a local copy would never sync. That
    fallback is why the "no backend" copy stays until persistence is
    actually verified.
    ───────────────────────────────────────────────────────────── */
@@ -195,6 +197,7 @@ export async function listRemoteReports(
 export type InsertResult =
   | { ok: true; row: RemoteReport }
   | { ok: false; reason: "rate-limited"; scope: "hourly" | "daily" }
+  | { ok: false; reason: "refused"; code: string }
   | { ok: false; reason: "unavailable" };
 
 /** One POST attempt. Separated so the caller can retry with fewer columns. */
@@ -237,6 +240,16 @@ async function postReport(
     MIGRATION_ONLY_COLUMNS.some((c) => msg.includes(`'${c}'`) || msg.includes(`"${c}"`))
   ) {
     return "unknown-column";
+  }
+
+  // Any other 4xx is the database declining this row — a pin outside the
+  // coverage area, a follow-up to someone else's report, a check
+  // constraint. That is an answer, not an outage: saying "unreachable" and
+  // keeping it on the device would promise a sync that will never happen.
+  // 404 stays "unavailable": it means the table is missing, which the
+  // device-only fallback exists for.
+  if (res.status >= 400 && res.status < 500 && res.status !== 404) {
+    return { ok: false, reason: "refused", code: body?.code ?? String(res.status) };
   }
 
   return { ok: false, reason: "unavailable" };

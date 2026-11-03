@@ -167,6 +167,45 @@ describe("events", () => {
     respondWith(() => null, 204);
     const { checkIn } = await import("@/lib/events");
     await checkIn("00000000-0000-0000-0000-0000000000aa", 43.2385, 76.8895);
+    expect(calls).toHaveLength(1);
     expect(calls[0].url).toContain("/rpc/check_in_event");
+  });
+
+  it("takes a fresh device id when the database says the current one is burned", async () => {
+    respondWith(() => ({ message: "device_id_invalid: reload the page and try again" }), 400);
+    const { setRsvp } = await import("@/lib/events");
+    const { anonId } = await import("@/lib/reports");
+    const before = anonId();
+    await expect(setRsvp("00000000-0000-0000-0000-0000000000aa", true)).rejects.toThrow();
+    const after = anonId();
+    expect(after).toMatch(/^v2-/);
+    expect(after).not.toBe(before);
+  });
+});
+
+describe("a report the database declines", () => {
+  const input = {
+    category: "air" as const,
+    severity: "low" as const,
+    title: "Smoke over the river",
+    body: "Thick smoke since the morning.",
+    city: "Almaty",
+    lat: 43.238123,
+    lon: 76.889456,
+  };
+
+  it("is reported as refused, and nothing is kept on the device", async () => {
+    respondWith(() => ({ code: "P0001", message: "outside_coverage: the pin is outside Kazakhstan" }), 400);
+    const { createReport, ReportRefusedError } = await import("@/lib/reports");
+    await expect(createReport(input)).rejects.toBeInstanceOf(ReportRefusedError);
+    expect(store["aetheris.community.reports.v1"]).toBeUndefined();
+  });
+
+  it("still falls back to the device when the server is down", async () => {
+    respondWith(() => ({ message: "upstream error" }), 503);
+    const { createReport } = await import("@/lib/reports");
+    const report = await createReport(input);
+    expect(report.remote).toBeFalsy();
+    expect(store["aetheris.community.reports.v1"]).toBeDefined();
   });
 });

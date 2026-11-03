@@ -509,6 +509,20 @@ export class RateLimitError extends Error {
   }
 }
 
+/**
+ * The database declined this report (a constraint, a trigger, a follow-up
+ * to a report that is not this device's). Nothing was saved — not there
+ * and not on this device — and the user is told it did not go through.
+ */
+export class ReportRefusedError extends Error {
+  readonly code: string;
+  constructor(code: string) {
+    super(`report refused by the database (${code})`);
+    this.name = "ReportRefusedError";
+    this.code = code;
+  }
+}
+
 const ms = (s: string | null | undefined): number | null =>
   s ? new Date(s).getTime() : null;
 
@@ -720,6 +734,9 @@ export async function createReport(input: NewReportInput): Promise<Report> {
   // would show the user a success toast for a report the database declined.
   if (!result.ok && result.reason === "rate-limited") {
     throw new RateLimitError(result.scope);
+  }
+  if (!result.ok && result.reason === "refused") {
+    throw new ReportRefusedError(result.code);
   }
 
   if (result.ok) {
