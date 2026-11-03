@@ -54,7 +54,8 @@ const SECRET_KEY_PREFIX = "sb_secret_";
 /** Fresh private-format device id for this run. */
 const device = () => `v2-${crypto.randomUUID()}`;
 const PROBE_DEVICE = device();
-const created: string[] = [];
+/** Rows this run filed, with the device that filed them — needed to delete them. */
+const created: Array<{ id: string; device: string }> = [];
 
 const PUBLIC_COLS =
   "id,created_at,author,city,lat,lon,category,severity,title,body,status,upvotes";
@@ -87,7 +88,7 @@ async function insertReport(extra: Record<string, unknown> = {}, headers: Record
   const text = await res.text();
   if (res.status === 201) {
     const row = JSON.parse(text)[0] as { id: string };
-    created.push(row.id);
+    created.push({ id: row.id, device: String(extra.anon_id ?? PROBE_DEVICE) });
   }
   return { status: res.status, body: text };
 }
@@ -98,8 +99,8 @@ const ABSENT_ID = "00000000-0000-0000-0000-0000000000ff";
 
 afterAll(async () => {
   if (!LIVE) return;
-  for (const id of created) {
-    await rpc("delete_my_report", { p_report_id: id, p_anon_id: PROBE_DEVICE });
+  for (const { id, device } of created) {
+    await rpc("delete_my_report", { p_report_id: id, p_anon_id: device });
   }
 });
 
@@ -149,7 +150,16 @@ describe.skipIf(!LIVE)("anonymous role · statuses ④ and ⑤", () => {
     const made = await insertReport();
     expect(made.status, made.body).toBe(201);
     const row = JSON.parse(made.body)[0] as { id: string; status: string };
-    expect(row.status).toBe("submitted");
+    // ③ is set by a trigger after the insert, so the returned row can lag
+    // behind: read the stored status as the baseline.
+    const status = async () =>
+      (
+        (await (
+          await fetch(`${URL_}/rest/v1/reports?select=status&id=eq.${row.id}`, { headers: anonHeaders })
+        ).json()) as Array<{ status: string }>
+      )[0]?.status;
+    const before = await status();
+    expect(["submitted", "corroborated"]).toContain(before);
 
     for (const target of ["forwarded", "org-response"]) {
       await fetch(`${URL_}/rest/v1/reports?id=eq.${row.id}`, {
@@ -160,11 +170,7 @@ describe.skipIf(!LIVE)("anonymous role · statuses ④ and ⑤", () => {
     }
     await fetch(`${URL_}/rest/v1/reports?id=eq.${row.id}`, { method: "DELETE", headers: anonHeaders });
 
-    const after = await fetch(`${URL_}/rest/v1/reports?select=status&id=eq.${row.id}`, {
-      headers: anonHeaders,
-    });
-    const [state] = (await after.json()) as Array<{ status: string }>;
-    expect(state?.status).toBe("submitted");
+    expect(await status(), "PATCH/DELETE must change nothing").toBe(before);
   });
 });
 
