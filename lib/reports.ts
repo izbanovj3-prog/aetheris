@@ -455,6 +455,22 @@ export function anonId(): string {
   }
 }
 
+/**
+ * Replace this device's id with a fresh one. Called when the database
+ * says the id can no longer act for the device — it was written while ids
+ * were still public, and privacy-hardening.sql burned it. Rows filed under
+ * the old id stay where they are; only the team can remove them.
+ */
+export function rotateAnonId(): string {
+  const id = newV2Id();
+  try {
+    window.localStorage.setItem(ANON_KEY, id);
+  } catch {
+    /* storage unavailable: anonId() already returns a fresh id each call */
+  }
+  return id;
+}
+
 const V2_RE = /^v2-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 export const isV2Id = (s: string) => V2_RE.test(s);
 

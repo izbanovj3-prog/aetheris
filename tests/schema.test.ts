@@ -683,6 +683,58 @@ describe("rollback of privacy-hardening.sql", () => {
     await fresh.close();
   }, 60_000);
 
+  it("burns device ids that were readable before hardening, and only those", async () => {
+    /* The front-end ships before the hardening file, so v2 ids are written
+       while anon_id is still public. Those must not prove ownership after
+       hardening; ids written afterwards must, also across a re-run of the
+       file — and a rollback re-publishes them, so re-applying burns again. */
+    const fresh = new PGlite();
+    await fresh.exec(`
+      create role anon nologin noinherit;
+      create role authenticated nologin noinherit;
+      create role service_role nologin noinherit bypassrls;
+      grant usage on schema public to anon, authenticated, service_role;
+      alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
+      alter default privileges in schema public grant all on functions to anon, authenticated, service_role;
+    `);
+    for (const f of MIGRATIONS.filter((m) => m !== HARDENING)) {
+      await fresh.exec(readFileSync(join(DIR, f), "utf8"));
+    }
+    await fresh.exec(`grant all on all tables in schema public to anon, authenticated, service_role;`);
+
+    const file = async (device: string) =>
+      (
+        await fresh.query<{ id: string }>(
+          `insert into public.reports (anon_id, author, city, lat, lon, category, severity, title, body)
+           values ($1,'Anonymous','Almaty',43.238,76.889,'air','low',${VALID}) returning id`,
+          [device],
+        )
+      ).rows[0].id;
+    const deleteAsAnon = async (id: string, device: string) => {
+      await fresh.exec(`set role anon`);
+      try {
+        return (await fresh.query<{ ok: boolean }>(`select public.delete_my_report($1, $2) as ok`, [id, device]))
+          .rows[0].ok;
+      } finally {
+        await fresh.exec(`reset role`);
+      }
+    };
+
+    const published = await file(dev(900)); // written while anon_id was public
+    await fresh.exec(readFileSync(join(DIR, HARDENING), "utf8"));
+    expect(await deleteAsAnon(published, dev(900)), "a published id must not delete").toBe(false);
+
+    const afterwards = await file(dev(901)); // written after hardening: never public
+    await fresh.exec(readFileSync(join(DIR, HARDENING), "utf8")); // re-run
+    expect(await deleteAsAnon(afterwards, dev(901)), "a re-run must not burn private ids").toBe(true);
+
+    const beforeRollback = await file(dev(902));
+    await fresh.exec(readFileSync(join(DIR, "rollback", "privacy-hardening.down.sql"), "utf8"));
+    await fresh.exec(readFileSync(join(DIR, HARDENING), "utf8")); // the rollback re-published it
+    expect(await deleteAsAnon(beforeRollback, dev(902)), "re-applying after rollback burns again").toBe(false);
+    await fresh.close();
+  }, 60_000);
+
   it("re-running the hardening on a hardened database is a no-op", async () => {
     await db.exec(readFileSync(join(DIR, HARDENING), "utf8"));
     const r = await asRole("anon", `select anon_id from public.reports limit 1`);

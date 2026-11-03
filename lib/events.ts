@@ -18,7 +18,7 @@
    accidental and the casual case, not a deliberate forgery.
    ───────────────────────────────────────────────────────────── */
 
-import { anonId } from "./reports";
+import { anonId, rotateAnonId } from "./reports";
 import { SUPABASE_KEY, SUPABASE_URL, callRpc, isConfigured } from "./supabase";
 
 /** Columns a visitor may read on events — anon_id is not one of them. */
@@ -109,6 +109,9 @@ function reasonFrom(msg: string): EventError["reason"] {
 async function failure(res: Response): Promise<EventError> {
   const body = (await res.json().catch(() => null)) as { message?: string } | null;
   const msg = body?.message ?? "";
+  // The database burned this device's id (it was public before hardening):
+  // take a fresh one so the retry the message asks for can succeed.
+  if (msg.includes("device_id_invalid")) rotateAnonId();
   return new EventError(reasonFrom(msg), msg || undefined);
 }
 

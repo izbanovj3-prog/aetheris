@@ -62,15 +62,44 @@ create table if not exists private.network_hits (
 create index if not exists network_hits_lookup_idx
   on private.network_hits (ip_hash, kind, created_at desc);
 
+/* v2 ids that were nevertheless public. The front-end is deployed before
+   this file (see README), and until this file runs anon_id is readable by
+   anyone, so every v2 id written in that window was published. Those ids
+   are recorded here and never prove ownership. The burn below runs only
+   while anon can still read anon_id — i.e. before hardening, or again after
+   the rollback re-opened it — so re-running this file on a hardened
+   database burns nothing. */
+create table if not exists private.burned_device_ids (
+  anon_id    text        primary key,
+  burned_at  timestamptz not null default now()
+);
+
+do $$
+begin
+  if has_column_privilege('anon', 'public.reports', 'anon_id', 'SELECT') then
+    insert into private.burned_device_ids (anon_id)
+    select anon_id from public.reports        where anon_id is not null
+    union
+    select anon_id from public.events         where anon_id is not null
+    union
+    select anon_id from public.event_rsvps    where anon_id is not null
+    union
+    select anon_id from public.event_checkins where anon_id is not null
+    on conflict (anon_id) do nothing;
+  end if;
+end;
+$$;
+
 /** True for a device id that has never been publicly readable. */
 create or replace function private.is_private_device_id(p text)
 returns boolean
 language sql
-immutable
+stable
 as $$
   select coalesce(
     p ~ '^v2-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
     false)
+    and not exists (select 1 from private.burned_device_ids b where b.anon_id = p)
 $$;
 
 /**
