@@ -1,11 +1,12 @@
 import { expect, test } from "@playwright/test";
 import { getDict } from "../../lib/i18n";
+import { offsite } from "./site";
 
 /* The 404 page answers with status 404 and speaks the language of the
    address that was not found. */
 for (const [locale, path] of [["en", "/no-such-page/"], ["ru", "/ru/no-such-page/"], ["kk", "/kk/no-such-page/"]] as const) {
   test(`404 in ${locale}`, async ({ page }) => {
-    await page.route(/^https:\/\//, (r) => r.fulfill({ status: 204, body: "" }));
+    await page.route(offsite, (r) => r.fulfill({ status: 204, body: "" }));
     const res = await page.goto(path);
     expect(res?.status()).toBe(404);
     const e = getDict(locale).errors;

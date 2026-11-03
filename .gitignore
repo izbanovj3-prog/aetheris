@@ -48,5 +48,6 @@ next-env.d.ts
 # playwright
 /test-results/
 /playwright-report/
+/.e2e-state/
 /lighthouse-reports/
 /lighthouse-summary.json

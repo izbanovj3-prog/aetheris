@@ -1,5 +1,6 @@
 import AxeBuilder from "@axe-core/playwright";
 import { expect, test, type Page } from "@playwright/test";
+import { offsite } from "./site";
 
 /* No horizontal scroll at 320 / 375 / 768 / 1024 / 1440 px, and no
    colour-contrast violations (axe), in the normal text size, the largest
@@ -22,7 +23,7 @@ async function prepare(page: Page, prefs: Record<string, string>) {
   await page.addInitScript((p) => {
     for (const [k, v] of Object.entries(p)) localStorage.setItem(k, v);
   }, prefs);
-  await page.route(/^https:\/\//, (r) => {
+  await page.route(offsite, (r) => {
     const url = r.request().url();
     if (url.includes("supabase.co")) return r.fulfill({ status: 200, contentType: "application/json", body: "[]" });
     return r.fulfill({ status: 204, body: "" });

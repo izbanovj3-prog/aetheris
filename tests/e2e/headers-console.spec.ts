@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { offsite } from "./site";
 
 /* Security headers are present, and the Content-Security-Policy breaks
    nothing: on every key route there is no CSP violation and no console
@@ -56,7 +57,7 @@ for (const route of ROUTES) {
     page.on("pageerror", (e) => problems.push(`pageerror: ${e.message}`));
 
     if (LOCAL) {
-      await page.route(/^https:\/\//, (r) => {
+      await page.route(offsite, (r) => {
         const url = r.request().url();
         if (url.includes("supabase.co")) return r.fulfill({ status: 200, contentType: "application/json", body: "[]" });
         return r.fulfill({ status: 204, body: "" });

@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { offsite } from "./site";
 
 /* Search and sharing metadata on every language tree. */
 const PAGES: Array<[string, "en" | "ru" | "kk"]> = [
@@ -15,7 +16,7 @@ const PAGES: Array<[string, "en" | "ru" | "kk"]> = [
 ];
 
 test.beforeEach(async ({ page }) => {
-  await page.route(/^https:\/\//, (r) => r.fulfill({ status: 204, body: "" }));
+  await page.route(offsite, (r) => r.fulfill({ status: 204, body: "" }));
 });
 
 for (const [path, lang] of PAGES) {

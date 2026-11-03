@@ -1,5 +1,6 @@
 import { expect, test, type Page, type Request } from "@playwright/test";
 import { communityText } from "../../lib/communityText";
+import { offsite } from "./site";
 
 /* The main resident scenario: file a report, end to end, to the
    confirmation screen — with the database stubbed, so this runs offline
@@ -66,7 +67,7 @@ const hasExif = (buf: Buffer) =>
 async function stubBackend(page: Page, posted: Request[]) {
   // Everything off-site is cut: map tiles, weather, species. The test is
   // about the form, and must not depend on — or talk to — anything outside.
-  await page.route(/^https:\/\/(?!localhost)/, (route) => {
+  await page.route(offsite, (route) => {
     const url = route.request().url();
     if (!url.includes("supabase.co")) return route.fulfill({ status: 204, body: "" });
 

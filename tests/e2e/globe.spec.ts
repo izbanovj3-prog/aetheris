@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { offsite } from "./site";
 
 /* The globe is decoration and the heaviest download on the site. Under
    prefers-reduced-motion it must not load at all — neither the land
@@ -9,7 +10,7 @@ test.describe("globe under prefers-reduced-motion", () => {
   test("is never downloaded", async ({ page }) => {
     const fetched: string[] = [];
     page.on("request", (r) => fetched.push(r.url()));
-    await page.route(/^https:\/\//, (r) => r.fulfill({ status: 204, body: "" }));
+    await page.route(offsite, (r) => r.fulfill({ status: 204, body: "" }));
     await page.goto("/", { waitUntil: "load" });
     await page.waitForTimeout(4000);
     expect(fetched.filter((u) => u.includes("/data/land.json"))).toEqual([]);
