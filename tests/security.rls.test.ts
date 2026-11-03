@@ -126,6 +126,8 @@ describe.skipIf(!LIVE)("anonymous role · statuses ④ and ⑤", () => {
       const r = await insertReport({ status });
       expect(r.status).toBeGreaterThanOrEqual(400);
       expect(r.status).toBeLessThan(500);
+      // A rate-limit refusal would make this pass without testing anything.
+      expect(r.body).not.toMatch(/rate_limit/);
     },
   );
 
@@ -138,6 +140,7 @@ describe.skipIf(!LIVE)("anonymous role · statuses ④ and ⑤", () => {
     const r = await insertReport({ [col]: val });
     expect(r.status).toBeGreaterThanOrEqual(400);
     expect(r.status).toBeLessThan(500);
+    expect(r.body).not.toMatch(/rate_limit/);
   });
 
   /* RLS denial on PATCH can be silent (2xx, nothing changed), so the

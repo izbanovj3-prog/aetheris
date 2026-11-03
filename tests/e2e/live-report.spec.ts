@@ -112,7 +112,9 @@ for (const [locale, prefix] of [["en", ""], ["ru", "/ru"], ["kk", "/kk"]] as con
     expect(res.status(), await res.text()).toBe(201);
     const [row] = (await res.json()) as Array<{ id: string; lat: number; lon: number }>;
     expect(row.id).toBeTruthy();
-    // Stored coarsened to ~1 km (migration 7), never the precise pin.
+    // Stored coarsened to ~1 km. The client rounds before sending, so this
+    // holds with or without migration 7; the database's own rounding is
+    // checked by tests/security.rls.test.ts with an unrounded insert.
     expect(row.lat).toBe(43.24);
     expect(row.lon).toBe(76.89);
 
