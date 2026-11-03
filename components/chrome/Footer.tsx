@@ -35,6 +35,8 @@ export function Footer() {
         { label: dict.footer.press, href: "/press" },
         { label: "Oxford Challenge 2026", href: "/oxford-challenge" },
         { label: dict.footer.contact, href: "/contact" },
+        { label: dict.footer.privacy, href: "/privacy" },
+        { label: dict.footer.terms, href: "/terms" },
       ],
     },
   ];

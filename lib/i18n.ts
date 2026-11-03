@@ -52,6 +52,8 @@ const LOCALIZED_ROOTS = [
   /^\/mission(\/|$)/,
   /^\/press(\/|$)/,
   /^\/contact(\/|$)/,
+  /^\/privacy(\/|$)/,
+  /^\/terms(\/|$)/,
 ];
 
 export function isLocalized(path: string): boolean {
@@ -335,6 +337,8 @@ export interface Dict {
     mission: string;
     press: string;
     contact: string;
+    privacy: string;
+    terms: string;
     independence: string;
     bottomLeft: string;
     bottomRight: string;
@@ -576,7 +580,7 @@ const en: Dict = {
     tag: "Ground truth network",
     titleA: "Satellites see the planet.",
     titleB: "People verify it.",
-    lede: "Every Aetheris layer is sharpened by citizen scientists — photographing waterways, logging species, flagging pollution events. Reports are cross-checked against sensor data and rewarded.",
+    lede: "Every Aetheris layer is sharpened by citizen scientists — photographing waterways, logging species, flagging pollution events. Reports are public as filed and unchecked; when independent devices describe the same thing, the report says so.",
     cta: "Join the network",
     statLabels: [
       "Field reports in the pilot feed",
@@ -609,6 +613,8 @@ const en: Dict = {
     mission: "Mission",
     press: "Press kit",
     contact: "Contact",
+    privacy: "Privacy (draft)",
+    terms: "Terms (draft)",
     independence:
       "Aetheris is an independent student project. It is not affiliated with, endorsed by, or operated in partnership with Kazhydromet or any government agency unless explicitly stated.",
     bottomLeft: "© 2026 Aetheris Systems · Kazakhstan environmental intelligence",
@@ -901,7 +907,7 @@ const ru: Dict = {
     tag: "Сеть наземной проверки",
     titleA: "Спутники видят планету.",
     titleB: "Люди подтверждают.",
-    lede: "Каждый слой Aetheris уточняют гражданские учёные: фотографируют водоёмы, фиксируют виды, отмечают загрязнения. Отчёты сверяются с данными сенсоров и вознаграждаются.",
+    lede: "Каждый слой Aetheris уточняют гражданские учёные: фотографируют водоёмы, фиксируют виды, отмечают загрязнения. Сообщения публикуются как есть и никем не проверяются; если независимые устройства описывают одно и то же, это видно в статусе.",
     cta: "Присоединиться",
     statLabels: [
       "Полевых отчётов в пилотной ленте",
@@ -934,6 +940,8 @@ const ru: Dict = {
     mission: "Миссия",
     press: "Пресс-кит",
     contact: "Контакты",
+    privacy: "Конфиденциальность (черновик)",
+    terms: "Условия (черновик)",
     independence:
       "Aetheris — независимый студенческий проект. Он не аффилирован с Казгидрометом или каким-либо государственным органом, не одобрен ими и не работает с ними в партнёрстве, если прямо не указано иное.",
     bottomLeft: "© 2026 Aetheris Systems · Экологический интеллект Казахстана",
@@ -1226,7 +1234,7 @@ const kk: Dict = {
     tag: "Жердегі растау желісі",
     titleA: "Жерсеріктер планетаны көреді.",
     titleB: "Адамдар растайды.",
-    lede: "Aetheris-тің әр қабатын азаматтық ғалымдар нақтылайды: су айдындарын суретке түсіреді, түрлерді тіркейді, ластануды белгілейді. Есептер сенсор деректерімен салыстырылып, марапатталады.",
+    lede: "Aetheris-тің әр қабатын азаматтық ғалымдар нақтылайды: су айдындарын суретке түсіреді, түрлерді тіркейді, ластануды белгілейді. Хабарламалар жіберілген күйінде жарияланады және ешкім тексермейді; тәуелсіз құрылғылар бір нәрсені сипаттаса, бұл мәртебеде көрінеді.",
     cta: "Желіге қосылу",
     statLabels: [
       "Пилоттық таспадағы далалық есептер",
@@ -1259,6 +1267,8 @@ const kk: Dict = {
     mission: "Миссия",
     press: "Баспасөз жинағы",
     contact: "Байланыс",
+    privacy: "Құпиялылық (жоба)",
+    terms: "Шарттар (жоба)",
     independence:
       "Aetheris — тәуелсіз студенттік жоба. Ол Қазгидрометпен немесе кез келген мемлекеттік органмен аффилиирленбеген, олармен мақұлданбаған және серіктестікте жұмыс істемейді, егер тікелей өзгеше көрсетілмесе.",
     bottomLeft: "© 2026 Aetheris Systems · Қазақстанның экологиялық интеллектісі",

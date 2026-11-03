@@ -47,6 +47,8 @@ export const ROUTES = [
   "/mission",
   "/press",
   "/contact",
+  "/privacy",
+  "/terms",
 ] as const;
 
 /** Brand palette references used by generated images. */
