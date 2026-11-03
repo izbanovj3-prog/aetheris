@@ -20,10 +20,17 @@ const ROUTES = [
   "/city/almaty/",
   "/methodology/",
   "/privacy/",
+  "/terms/",
   "/ru/",
   "/ru/map/",
+  "/ru/community/",
+  "/ru/privacy/",
+  "/ru/terms/",
   "/kk/",
   "/kk/dashboard/",
+  "/kk/community/",
+  "/kk/privacy/",
+  "/kk/terms/",
 ];
 
 const REQUIRED_HEADERS = [

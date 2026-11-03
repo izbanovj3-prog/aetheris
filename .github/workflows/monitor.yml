@@ -3,7 +3,7 @@
 #   uptime     every 30 min: key routes in en/ru/kk answer 200, the security
 #              headers are present, robots.txt and sitemap.xml are served.
 #   console    once a day: the header/console Playwright check against
-#              production — any CSP violation or JavaScript error on 12 key
+#              production — any CSP violation or JavaScript error on 19 key
 #              routes fails it. A synthetic visitor, so no personal data.
 #
 # A failed run is the alert: GitHub notifies about failed scheduled runs

@@ -105,7 +105,7 @@ to `main`, and by hand:
 
 `.github/workflows/monitor.yml` — **Monitor production**, from `main`
 only: every 30 minutes the key routes in three languages must answer 200
-with the security headers, and once a day a synthetic visit checks 12 key
+with the security headers, and once a day a synthetic visit checks 19 key
 routes for CSP violations and JavaScript errors. Nothing about real
 visitors is collected; a failed run is the alert (GitHub's notifications
 for failed scheduled runs). The site also includes Vercel Analytics and

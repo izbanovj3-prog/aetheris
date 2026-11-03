@@ -35,7 +35,7 @@ Trade-offs, stated:
   unaffected. Disable the toolbar in the Vercel project settings if that is
   noise.
 
-`tests/e2e/headers-console.spec.ts` checks the headers and that 12 key
+`tests/e2e/headers-console.spec.ts` checks the headers and that 19 key
 routes produce no CSP violation and no console error. Removing `blob:` from
 `worker-src` makes it fail — it is not a vacuous check.
 
