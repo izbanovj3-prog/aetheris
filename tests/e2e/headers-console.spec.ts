@@ -69,7 +69,13 @@ for (const route of ROUTES) {
         const url = new URL(u);
         return `${url.host}${url.pathname}`;
       };
-      page.on("requestfailed", (r) => problems.push(`request failed: ${where(r.url())} — ${r.failure()?.errorText ?? "?"}`));
+      page.on("requestfailed", (r) => {
+        const why = r.failure()?.errorText ?? "?";
+        // ERR_ABORTED is a request the page itself cancelled — typically a
+        // link prefetch dropped on navigation. Nothing failed to load.
+        if (why === "net::ERR_ABORTED") return;
+        problems.push(`request failed: ${where(r.url())} — ${why}`);
+      });
       page.on("response", (r) => {
         if (r.status() >= 400) problems.push(`HTTP ${r.status()}: ${where(r.url())}`);
       });
