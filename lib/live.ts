@@ -88,6 +88,7 @@ export async function fetchLiveStations(signal?: AbortSignal): Promise<LiveResul
 
       const merged: Station = {
         ...s,
+        liveAir: usAqi != null,
         aqi: usAqi != null ? clamp(Math.round(usAqi), 0, 500) : s.aqi,
         pm25: pm25 != null ? Math.round(pm25 * 10) / 10 : s.pm25,
         pm10: pm10 != null ? Math.round(pm10 * 10) / 10 : s.pm10,

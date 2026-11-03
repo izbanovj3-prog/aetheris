@@ -18,6 +18,7 @@ import {
   aqiBand,
   genSeries,
   getStations,
+  originOf,
   scoreBand,
   type DataOrigin,
   type LayerKey,
@@ -619,6 +620,7 @@ export default function EnvironmentalMap() {
       <GlobalPulse isDesktop={isDesktop} />
 
       <LayerLegend
+        liveAir={liveOn}
         layer={activeLayer}
         label={dict.atlas.layers[activeLayer].label}
         unit={LAYERS[activeLayer].unit}
@@ -1098,9 +1100,9 @@ const StationPanel = memo(function StationPanel({
         </div>
 
         <div className="flex flex-col gap-4">
-          <MetricRow label={dict.map.airMetric(aqiBandLabel(air.label, locale))} value={s.aqi} max={300} color={TONE_HEX[air.tone]} origin={METRIC_ORIGIN.aqi} />
-          <MetricRow label={dict.map.pm25} value={s.pm25} max={150} color={TONE_HEX.cyan} origin={METRIC_ORIGIN.pm25} />
-          <MetricRow label={dict.map.pm10} value={s.pm10} max={250} color={TONE_HEX.cyan} origin={METRIC_ORIGIN.pm10} />
+          <MetricRow label={dict.map.airMetric(aqiBandLabel(air.label, locale))} value={s.aqi} max={300} color={TONE_HEX[air.tone]} origin={originOf("aqi", Boolean(s.liveAir))} />
+          <MetricRow label={dict.map.pm25} value={s.pm25} max={150} color={TONE_HEX.cyan} origin={originOf("pm25", Boolean(s.liveAir))} />
+          <MetricRow label={dict.map.pm10} value={s.pm10} max={250} color={TONE_HEX.cyan} origin={originOf("pm10", Boolean(s.liveAir))} />
           <MetricRow label={dict.map.industrial} value={s.industrialEmissions} max={100} color={TONE_HEX.coral} origin={METRIC_ORIGIN.industrialEmissions} />
           <MetricRow label={dict.map.water} value={s.waterQuality} max={100} color="#4f9dde" origin={METRIC_ORIGIN.waterQuality} />
           <MetricRow label={dict.map.bio} value={s.biodiversity} max={100} color={TONE_HEX.emerald} origin={METRIC_ORIGIN.biodiversity} />

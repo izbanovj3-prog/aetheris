@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useMemo, useRef } from "react";
-import { EASE, GlowButton, SourceNote, TelemetryTag } from "@/components/ui/primitives";
+import { EASE, GlowButton, OriginBadge, SourceNote, TelemetryTag } from "@/components/ui/primitives";
 import {
   CLIMATE_BASELINE,
   HOTSPOTS,
@@ -116,6 +116,10 @@ export function Hero() {
             <div className={`readout text-lg font-medium ${c.tone}`}>
               {chipValues[c.key]}
             </div>
+            <OriginBadge
+              origin={c.key === "aqi" && live ? "live" : "modeled"}
+              className="mt-1.5 pointer-events-auto"
+            />
             {/* Direction of travel, not just a level — a single anomaly
                 number says nothing about trend. */}
             {c.key === "anomaly" && (
