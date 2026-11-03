@@ -61,7 +61,7 @@ export function Footer() {
             <span className="telemetry">
               {dict.footer.stations(networkStats().cities)}
               <SourceNote
-                source="Aetheris station registry · one station per monitored city, fed by Open-Meteo grid readings"
+                source={dict.footer.citiesSource}
                 className="ml-1.5"
               />
             </span>

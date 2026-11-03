@@ -54,6 +54,7 @@ const LOCALIZED_ROOTS = [
   /^\/contact(\/|$)/,
   /^\/privacy(\/|$)/,
   /^\/terms(\/|$)/,
+  /^\/community(\/|$)/,
 ];
 
 export function isLocalized(path: string): boolean {
@@ -255,6 +256,8 @@ export interface Dict {
     critical: string;
   };
   /** Provenance badge shown next to every displayed measurement. */
+  sourceNote: { source: string; asOf: string; noBuild: string };
+  skipLink: string;
   dataOrigin: {
     live: string;
     modeled: string;
@@ -339,6 +342,7 @@ export interface Dict {
     contact: string;
     privacy: string;
     terms: string;
+    citiesSource: string;
     independence: string;
     bottomLeft: string;
     bottomRight: string;
@@ -468,6 +472,8 @@ export interface Dict {
     atlasDescription: string;
     dashboardTitle: string;
     dashboardDescription: string;
+    communityTitle: string;
+    communityDescription: string;
   };
 }
 
@@ -501,6 +507,8 @@ const en: Dict = {
     networkMean: "MEAN AQI · ALL CITIES",
     critical: "CRITICAL",
   },
+  skipLink: "Skip to main content",
+  sourceNote: { source: "Source", asOf: "as of", noBuild: "build time unavailable" },
   dataOrigin: {
     live: "Live",
     modeled: "Modeled",
@@ -614,6 +622,7 @@ const en: Dict = {
     contact: "Contact",
     privacy: "Privacy (draft)",
     terms: "Terms (draft)",
+    citiesSource: "City list · one grid point per city, air quality from Open-Meteo (CAMS model)",
     independence:
       "Aetheris is an independent student project. It is not affiliated with, endorsed by, or operated in partnership with Kazhydromet or any government agency unless explicitly stated.",
     bottomLeft: "© 2026 Aetheris · an independent student project",
@@ -794,6 +803,9 @@ const en: Dict = {
     dashboardTitle: "Intelligence",
     dashboardDescription:
       "Environmental analytics for Kazakhstan — mean AQI from open data, temperature anomaly, city rankings and the hotspot registry, with modelled values marked.",
+    communityTitle: "Community",
+    communityDescription:
+      "Residents' reports from across Kazakhstan — public as filed and unchecked, with matches between independent devices shown, Eco-Points, geographic badges and local eco-events.",
   },
 };
 
@@ -827,6 +839,8 @@ const ru: Dict = {
     networkMean: "СРЕДНИЙ AQI · ВСЕ ГОРОДА",
     critical: "КРИТИЧНО",
   },
+  skipLink: "Перейти к основному содержанию",
+  sourceNote: { source: "Источник", asOf: "на", noBuild: "время сборки неизвестно" },
   dataOrigin: {
     live: "Live",
     modeled: "Модель",
@@ -940,6 +954,7 @@ const ru: Dict = {
     contact: "Контакты",
     privacy: "Конфиденциальность (черновик)",
     terms: "Условия (черновик)",
+    citiesSource: "Список городов · одна точка сетки на город, качество воздуха из Open-Meteo (модель CAMS)",
     independence:
       "Aetheris — независимый студенческий проект. Он не аффилирован с Казгидрометом или каким-либо государственным органом, не одобрен ими и не работает с ними в партнёрстве, если прямо не указано иное.",
     bottomLeft: "© 2026 Aetheris · независимый студенческий проект",
@@ -1120,6 +1135,9 @@ const ru: Dict = {
     dashboardTitle: "Аналитика",
     dashboardDescription:
       "Экологическая аналитика Казахстана — средний AQI по открытым данным, температурная аномалия, рейтинги городов и реестр горячих точек; модельные значения помечены.",
+    communityTitle: "Сообщество",
+    communityDescription:
+      "Сообщения жителей со всего Казахстана — публикуются как есть и никем не проверяются; видно, когда независимые устройства сообщают одно и то же. Eco-Points, географические значки и местные экособытия.",
   },
 };
 
@@ -1153,6 +1171,8 @@ const kk: Dict = {
     networkMean: "ОРТАША AQI · БАРЛЫҚ ҚАЛАЛАР",
     critical: "КРИТИКАЛЫҚ",
   },
+  skipLink: "Негізгі мазмұнға өту",
+  sourceNote: { source: "Дереккөз", asOf: "уақыты", noBuild: "құрастыру уақыты белгісіз" },
   dataOrigin: {
     live: "Live",
     modeled: "Модель",
@@ -1266,6 +1286,7 @@ const kk: Dict = {
     contact: "Байланыс",
     privacy: "Құпиялылық (жоба)",
     terms: "Шарттар (жоба)",
+    citiesSource: "Қалалар тізімі · әр қалаға бір тор нүктесі, ауа сапасы Open-Meteo-дан (CAMS моделі)",
     independence:
       "Aetheris — тәуелсіз студенттік жоба. Ол Қазгидрометпен немесе кез келген мемлекеттік органмен аффилиирленбеген, олармен мақұлданбаған және серіктестікте жұмыс істемейді, егер тікелей өзгеше көрсетілмесе.",
     bottomLeft: "© 2026 Aetheris · тәуелсіз студенттік жоба",
@@ -1446,6 +1467,9 @@ const kk: Dict = {
     dashboardTitle: "Аналитика",
     dashboardDescription:
       "Қазақстанның экологиялық аналитикасы — ашық деректер бойынша орташа AQI, температура ауытқуы, қала рейтингтері және ошақтар тізілімі; модельдік мәндер белгіленген.",
+    communityTitle: "Қауымдастық",
+    communityDescription:
+      "Қазақстанның түкпір-түкпірінен тұрғындар хабарламалары — жіберілген күйінде жарияланады және тексерілмейді; тәуелсіз құрылғылар бір нәрсені хабарлағаны көрінеді. Eco-Points, географиялық белгілер және жергілікті экоіс-шаралар.",
   },
 };
 

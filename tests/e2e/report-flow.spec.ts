@@ -1,4 +1,5 @@
 import { expect, test, type Page, type Request } from "@playwright/test";
+import { communityText } from "../../lib/communityText";
 
 /* The main resident scenario: file a report, end to end, to the
    confirmation screen — with the database stubbed, so this runs offline
@@ -97,59 +98,65 @@ test.use({
   permissions: ["geolocation"],
 });
 
-test("a resident files a report and reaches the confirmation screen", async ({ page }) => {
-  const posted: Request[] = [];
-  await stubBackend(page, posted);
-  await page.goto("/community/");
+for (const [locale, prefix] of [["en", ""], ["ru", "/ru"], ["kk", "/kk"]] as const) {
+  const t = communityText(locale);
+  test(`a resident files a report and reaches the confirmation screen (${locale})`, async ({ page }) => {
+    const posted: Request[] = [];
+    await stubBackend(page, posted);
+    await page.goto(`${prefix}/community/`);
+    await expect(page.getByRole("heading", { level: 1, name: t.page.title })).toBeVisible();
 
-  await page.getByRole("button", { name: "New report" }).click();
+    await page.getByRole("button", { name: t.page.newReport }).click();
 
-  // 1 · Photo — with EXIF/GPS in the original file.
-  const original = await jpegWithExif(page);
-  expect(hasExif(original)).toBe(true);
-  await page.locator("#report-photo").setInputFiles({
-    name: "camera.jpg",
-    mimeType: "image/jpeg",
-    buffer: original,
+    // 1 · Photo — with EXIF/GPS in the original file.
+    const original = await jpegWithExif(page);
+    expect(hasExif(original)).toBe(true);
+    await page.locator("#report-photo").setInputFiles({
+      name: "camera.jpg",
+      mimeType: "image/jpeg",
+      buffer: original,
+    });
+    const preview = page.getByRole("img", { name: t.flow.photoPreviewAlt });
+    await expect(preview).toBeVisible();
+    const processed = Buffer.from(
+      ((await preview.getAttribute("src")) ?? "").split(",")[1] ?? "",
+      "base64",
+    );
+    expect(processed.length).toBeGreaterThan(1000);
+    expect(hasExif(processed), "EXIF survived processing").toBe(false);
+    await page.getByRole("button", { name: t.flow.cont, exact: true }).click();
+
+    // 2 · Location — from (stubbed) geolocation; city derived from the pin.
+    await expect(page.locator("#report-city")).toHaveValue(/.+/);
+    await expect(page.getByText(t.flow.locPublished("43.24", "76.89"))).toBeVisible();
+    await page.getByRole("button", { name: t.flow.cont, exact: true }).click();
+
+    // 3 · Category
+    await page.getByRole("button", { name: new RegExp(t.categories.air.label) }).first().click();
+    await page.getByRole("button", { name: t.flow.cont, exact: true }).click();
+
+    // 4 · Details + consent
+    await page.locator("#report-note").fill("Grey smoke over the river since morning.");
+    const submit = page.getByRole("button", { name: t.flow.submit, exact: true });
+    await expect(submit, "submit must wait for consent").toBeDisabled();
+    expect(posted).toHaveLength(0);
+    await expect(page.getByRole("link", { name: t.flow.privacy })).toHaveAttribute("href", `${prefix}/privacy/`);
+    await page.getByRole("checkbox").check();
+    await expect(submit).toBeEnabled();
+    await submit.click();
+
+    // 5 · Confirmation — and it does not claim more than happened.
+    await expect(page.getByText(t.confirm.stored.slice(0, 40))).toBeVisible();
+    await expect(page.getByText(t.confirm.nothingElse.slice(0, 40))).toBeVisible();
+
+    expect(posted).toHaveLength(1);
+    const body = posted[0].postData() ?? "";
+    const sent = JSON.parse(body);
+    expect(sent.lat).toBe(43.24);
+    expect(sent.lon).toBe(76.89);
+    expect(body).not.toContain("data:image");
+    expect(sent).not.toHaveProperty("photo");
+    expect(sent).not.toHaveProperty("author");
+    expect(posted[0].url()).not.toContain("anon_id");
   });
-  const preview = page.getByRole("img", { name: "Report photo preview" });
-  await expect(preview).toBeVisible();
-  const processed = Buffer.from(
-    ((await preview.getAttribute("src")) ?? "").split(",")[1] ?? "",
-    "base64",
-  );
-  expect(processed.length).toBeGreaterThan(1000);
-  expect(hasExif(processed), "EXIF survived processing").toBe(false);
-  await page.getByRole("button", { name: "Continue" }).click();
-
-  // 2 · Location — from (stubbed) geolocation; city derived from the pin.
-  await expect(page.locator("#report-city")).toHaveValue(/.+/);
-  await page.getByRole("button", { name: "Continue" }).click();
-
-  // 3 · Category
-  await page.getByRole("button", { name: /Air/ }).first().click();
-  await page.getByRole("button", { name: "Continue" }).click();
-
-  // 4 · Details + consent
-  await page.locator("#report-note").fill("Grey smoke over the river since morning.");
-  const submit = page.getByRole("button", { name: "Submit report" });
-  await expect(submit, "submit must wait for consent").toBeDisabled();
-  expect(posted).toHaveLength(0);
-  await page.getByRole("checkbox").check();
-  await expect(submit).toBeEnabled();
-  await submit.click();
-
-  // 5 · Confirmation — and it does not claim more than happened.
-  await expect(page.getByText("Your report is stored and is now visible to everyone")).toBeVisible();
-  await expect(page.getByText(/nobody has reviewed it, no instrument/)).toBeVisible();
-
-  expect(posted).toHaveLength(1);
-  const body = posted[0].postData() ?? "";
-  const sent = JSON.parse(body);
-  expect(sent.lat).toBe(43.24);
-  expect(sent.lon).toBe(76.89);
-  expect(body).not.toContain("data:image");
-  expect(sent).not.toHaveProperty("photo");
-  expect(sent).not.toHaveProperty("author");
-  expect(posted[0].url()).not.toContain("anon_id");
-});
+}

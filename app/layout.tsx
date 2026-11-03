@@ -5,6 +5,7 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import { LangSync } from "@/components/chrome/LangSync";
 import { Nav } from "@/components/chrome/Nav";
+import { SkipLink } from "@/components/chrome/SkipLink";
 import { Providers } from "./providers";
 import { SITE } from "@/lib/site";
 
@@ -156,9 +157,7 @@ export default function RootLayout({
         <div className="gridlines" aria-hidden />
         <Providers>
           <LangSync />
-          <a href="#main-content" className="skip-link">
-            Skip to main content
-          </a>
+          <SkipLink />
           <Nav />
           <div id="main-content" tabIndex={-1} className="flex flex-col flex-1 outline-none">
             {children}

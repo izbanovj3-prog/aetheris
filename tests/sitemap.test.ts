@@ -63,17 +63,22 @@ describe("sitemap", () => {
     for (const e of entries) expect(e.lastModified).toBeInstanceOf(Date);
   });
 
-  /* /community is the one route with no RU or KK tree — /ru/community/ is a
-     404. Advertising it would put two dead URLs in front of a crawler.
-     Map, dashboard and assistant were translated later and do have trees;
-     this test is the reminder to move community across if it ever follows. */
-  it("does not advertise the untranslated community route", () => {
-    expect(urls).not.toContain(`${SITE.url}/ru/community/`);
-    expect(urls).not.toContain(`${SITE.url}/kk/community/`);
+  /* Every advertised URL must be a page that exists, in every language
+     tree — /ru/community/ was once listed in navigation and 404'd. */
+  it("advertises no URL without a page behind it", () => {
+    const { existsSync } = require("node:fs") as typeof import("node:fs");
+    const { join } = require("node:path") as typeof import("node:path");
+    for (const u of urls) {
+      const path = u.slice(SITE.url.length).replace(/^\/|\/$/g, "");
+      const segs = path ? path.split("/") : [];
+      const mapped = segs.map((s, i) => (segs[i - 1] === "city" ? "[id]" : s));
+      const file = join(process.cwd(), "app", ...mapped, "page.tsx");
+      expect(existsSync(file), `${u} → ${file}`).toBe(true);
+    }
   });
 
   it("does advertise the routes that are translated", () => {
-    for (const p of ["map", "dashboard", "assistant", "methodology"]) {
+    for (const p of ["map", "dashboard", "assistant", "methodology", "community", "privacy", "terms"]) {
       expect(urls).toContain(`${SITE.url}/ru/${p}/`);
       expect(urls).toContain(`${SITE.url}/kk/${p}/`);
     }
