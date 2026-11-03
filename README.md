@@ -97,6 +97,18 @@ to `main`, and by hand:
 3. **Lighthouse (mobile)** against that `out/`.
 4. **Access control (test Supabase)** — fails if the test project secrets
    are missing.
+5. **Live report flow (test Supabase)** — a build pointed at the test
+   project files a report in en/ru/kk and deletes it again from the page;
+   any request to another Supabase project fails the test.
+
+`.github/workflows/monitor.yml` — **Monitor production**, from `main`
+only: every 30 minutes the key routes in three languages must answer 200
+with the security headers, and once a day a synthetic visit checks 12 key
+routes for CSP violations and JavaScript errors. Nothing about real
+visitors is collected; a failed run is the alert (GitHub's notifications
+for failed scheduled runs). The site also includes Vercel Analytics and
+Speed Insights (`app/layout.tsx`); they report in the Vercel dashboard if
+they are enabled for the project.
 
 `.github/workflows/preview.yml` — **Deployment check**: whenever Vercel
 reports a deployment as ready (each preview, and production after a
@@ -107,7 +119,7 @@ Repository secrets used:
 
 | Secret | Used by | Required |
 | --- | --- | --- |
-| `SUPABASE_TEST_URL`, `SUPABASE_TEST_KEY` | CI → access control | yes |
+| `SUPABASE_TEST_URL`, `SUPABASE_TEST_KEY` | CI → access control, live report flow | yes |
 | `SUPABASE_TEST_SERVICE_KEY` | CI → service-role half of access control | no (those checks are skipped) |
 | `VERCEL_AUTOMATION_BYPASS_SECRET` | Deployment check, while Vercel Deployment Protection is on for previews | yes, while protection is on |
 
@@ -137,20 +149,48 @@ decisions.
 
 ## Roll back
 
-**Front-end.** In the Vercel dashboard, open the project's Deployments,
-pick the last good production deployment and use Instant Rollback (or
-"Promote to Production"). It takes effect without a rebuild. After an
-Instant Rollback, Vercel stops pointing the production domain at new
-deployments until one is promoted again — check the project page before
-the next release. To make the rollback permanent in git, revert on `main`
-in a new pull request — `git revert -m 1 <merge-sha>` for a merge commit,
-`git revert <sha>` for a squash merge — never by force-pushing.
+Which combinations work: the **current** front-end works with the database
+both before and after migration 7; the **previous** front-end works only
+before it. So the database can be rolled back on its own, but rolling the
+front-end back after migration 7 is applied also needs step B.
 
-**Database.** `supabase/rollback/privacy-hardening.down.sql` restores the
-access model from before migration 7. It cannot restore precise
-coordinates — only the backup taken before applying 7 has them. Roll back
-the database only together with a front-end that works with the older
-schema.
+**A. Front-end — previous Vercel deployment**
+
+1. Vercel dashboard → the project → Deployments.
+2. Find the last good **production** deployment (not a preview).
+3. Its menu → Instant Rollback (or "Promote to Production"). The domain
+   switches without a rebuild.
+4. After an Instant Rollback, Vercel stops pointing the production domain
+   at new deployments until one is promoted again — check the banner on
+   the project page before the next release.
+5. Open aetherisearth.live and check it; the Monitor workflow can be run
+   by hand (Actions → Monitor production → Run workflow).
+6. To make it permanent in git, revert on `main` in a new pull request —
+   `git revert -m 1 <merge-sha>` for a merge commit, `git revert <sha>` for
+   a squash merge. Never by force-pushing.
+
+**B. Database — undo migration 7**
+
+1. Only if needed: the current front-end does not need it (see above).
+2. Supabase dashboard → SQL editor → run
+   `supabase/rollback/privacy-hardening.down.sql`. It restores the access
+   model from before migration 7 — and with it the holes 7 closed.
+3. Update "Applied state" in `supabase/README.md`.
+4. It does not bring back precise coordinates or check-in positions:
+   migration 7 rounded and erased them. Only the backup from C has them.
+   `tests/schema.test.ts` checks that the rollback applies and that 7 can
+   be applied again afterwards.
+
+**C. Backup — before migration 7, not after**
+
+1. Take it right before applying 7 to production:
+   `pg_dump "<connection string from the Supabase dashboard>" --data-only -t public.reports -t public.event_checkins -f backup-before-7.sql`
+   (or the dashboard's Database → Backups, if the plan provides them).
+2. Keep the file outside the repository — it contains residents' reports.
+3. Restoring precise coordinates from it (not rehearsed): load the dump
+   into a separate table and `update public.reports … set lat, lon … where
+   id` matches. That reverses the ~1 km decision, so do it only for a
+   concrete reason.
 
 ## Checking a deployment
 
