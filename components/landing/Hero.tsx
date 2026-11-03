@@ -11,7 +11,7 @@ import {
   networkStats,
   planetSummary,
 } from "@/lib/data";
-import { localePath, numberLocale } from "@/lib/i18n";
+import { formatInt, localePath } from "@/lib/i18n";
 import { useDict, useLocale } from "@/lib/useLocale";
 import { useLiveStations } from "@/lib/useLiveStations";
 
@@ -120,10 +120,10 @@ export function Hero() {
                 number says nothing about trend. */}
             {c.key === "anomaly" && (
               <div className="flex items-center gap-1.5 mt-1.5">
-                <span className="telemetry !text-[14px] text-ink-faint">
+                <span className="telemetry !text-[0.9375rem] text-ink-faint">
                   vs {CLIMATE_BASELINE.period}
                 </span>
-                <span className="telemetry !text-[14px] text-amber">
+                <span className="telemetry !text-[0.9375rem] text-amber">
                   ▲ +{TREND.perDecade.toFixed(2)} °C/decade
                 </span>
               </div>
@@ -198,7 +198,7 @@ export function Hero() {
             <span className="w-px h-3 bg-line-bright" />
             <span className="telemetry hidden sm:inline">
               {dict.hero.statReadings(
-                NET.dailyReadings.toLocaleString(numberLocale(locale)),
+                formatInt(NET.dailyReadings, locale),
               )}
               <SourceNote
                 source={`Open-Meteo (CAMS): ${NET.cities} cities × ${NET.liveMetrics} metrics × ${NET.refreshesPerDay} hourly updates`}

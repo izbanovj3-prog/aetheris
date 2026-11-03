@@ -185,7 +185,7 @@ const EN: AiStrings = {
     `I can analyze any of the **${count} monitored cities** across Kazakhstan — ask about a specific place ("air quality in Temirtau"), request a **risk outlook**, ask for **recommendations**, or say **"national summary"** for the country-wide view.\n\nCoverage expands as community stations come online — the fastest way to add one is through the Community hub.`,
   cite: {
     natCities: "Open-Meteo (CAMS) air-quality feed · 28 cities",
-    natBaseline: "Aetheris modeled baseline — water, biodiversity, industry (simulated)",
+    natBaseline: "Aetheris modeled baseline — water, biodiversity, industrial pollution (simulated)",
     cluster: (name) => `${name} station cluster · live`,
     riskModel: "Aetheris environmental risk model ERI-4",
     seasonal: "Copernicus seasonal forecast (simulated feed)",

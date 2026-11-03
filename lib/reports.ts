@@ -161,7 +161,7 @@ export const STATUS_META: Record<
   },
   corroborated: {
     step: 3,
-    label: "Corroborated сообществом",
+    label: "Совпадает с другими сообщениями",
     gloss: "Corroborated by the community",
     tone: "emerald",
     note: "At least two different devices reported this category in this city within 72 hours. That is corroboration, not verification: independent people described the same kind of problem in the same place. It does not mean the reports are accurate, and no instrument has checked them.",

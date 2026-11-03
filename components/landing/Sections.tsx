@@ -30,7 +30,7 @@ import {
   getDict,
   hotspotName,
   localePath,
-  numberLocale,
+  formatInt,
   type Locale,
 } from "@/lib/i18n";
 import { useDict, useLocale } from "@/lib/useLocale";
@@ -116,7 +116,7 @@ const PILLAR_ACCENTS = ["from-cyan/60", "from-emerald/60", "from-atmos/60"];
 export function Pillars() {
   const locale = useLocale();
   const dict = useDict();
-  const readings = NET.dailyReadings.toLocaleString(numberLocale(locale));
+  const readings = formatInt(NET.dailyReadings, locale);
   return (
     <section className="max-w-6xl mx-auto px-6 pt-28">
       <SectionHeading

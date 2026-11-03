@@ -29,7 +29,7 @@ import type { Report, ReportStatus } from "./reports";
 export const POINTS = {
   /** Filing a report. */
   submission: 10,
-  /** The report reached ③ Corroborated сообществом. */
+  /** The report reached ③ Совпадает с другими сообщениями. */
   corroboration: 25,
   /** The attached photo passed the sharpness/resolution check. */
   photoQuality: 5,

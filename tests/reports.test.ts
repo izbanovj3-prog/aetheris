@@ -44,7 +44,7 @@ describe("the status vocabulary", () => {
     expect(STATUS_ORDER.map((s) => STATUS_META[s].label)).toEqual([
       "Отправлен",
       "AI-контекст добавлен",
-      "Corroborated сообществом",
+      "Совпадает с другими сообщениями",
       "Передано в акимат/эко-инспекцию",
       "Ответ организации",
     ]);

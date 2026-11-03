@@ -24,6 +24,15 @@ export function numberLocale(locale: Locale): string {
   return { en: "en-US", ru: "ru-RU", kk: "kk-KZ" }[locale];
 }
 
+/** Integer with thousands grouping, identical on server and browser.
+    toLocaleString() differs between the Node that prerenders and the
+    visitor's browser (CLDR versions disagree on how kk groups 4-digit
+    numbers), which caused a hydration mismatch on the Kazakh home page. */
+export function formatInt(n: number, locale: Locale): string {
+  const sep = locale === "en" ? "," : "\u00A0";
+  return String(Math.round(n)).replace(/\B(?=(\d{3})+(?!\d))/g, sep);
+}
+
 export function localeFromPathname(pathname: string): Locale {
   if (/^\/ru(\/|$)/.test(pathname)) return "ru";
   if (/^\/kk(\/|$)/.test(pathname)) return "kk";
@@ -192,7 +201,7 @@ export const kindLabel = (kind: string, l: Locale) => KIND_LABELS[l][kind] ?? KI
 export const HOTSPOT_TYPE_LABELS: Record<Locale, Record<string, string>> = {
   en: { industrial: "Industrial", water: "Water", radiation: "Radiation", wildfire: "Wildfire", desertification: "Desertification", oilgas: "Oil & gas" },
   ru: { industrial: "Промышленное загрязнение", water: "Вода", radiation: "Радиация", wildfire: "Пожары", desertification: "Опустынивание", oilgas: "Нефть и газ" },
-  kk: { industrial: "Өнеркәсіп", water: "Су", radiation: "Радиация", wildfire: "Өрттер", desertification: "Шөлейттену", oilgas: "Мұнай-газ" },
+  kk: { industrial: "Өнеркәсіптік ластану", water: "Су", radiation: "Радиация", wildfire: "Өрттер", desertification: "Шөлейттену", oilgas: "Мұнай-газ" },
 };
 export const hotspotTypeLabel = (type: string, l: Locale) => HOTSPOT_TYPE_LABELS[l][type] ?? type;
 
@@ -379,6 +388,7 @@ export interface Dict {
     anomalyTitle: string;
     vsBaseline: string;
     window90: string;
+    anomalyTrend: (perDecade: string, years: number) => string;
     gaugeLabel: string;
     gaugeLede: (n: number) => string;
     meanAqi: string;
@@ -473,7 +483,7 @@ const en: Dict = {
     h1a: "The operating",
     h1b: "system for",
     h1Accent: "Kazakhstan.",
-    lede: "Aetheris fuses satellites, ground stations, and AI into a single living picture of Kazakhstan — live air quality across every region, with water, industry, and ecology on a modeled baseline.",
+    lede: "Aetheris fuses satellites, ground stations, and AI into a single living picture of Kazakhstan — live air quality across every region, with water, industrial pollution, biodiversity and ecological risk on a modeled baseline.",
     ctaAtlas: "Open the Atlas",
     ctaIntel: "View intelligence",
     statCities: (c, r) => `${c} cities · ${r} regions`,
@@ -529,7 +539,7 @@ const en: Dict = {
     tag: "The Kazakhstan Atlas",
     title1: "Five layers.",
     title2: "One living map.",
-    lede: "Air, industry, water, life, and risk — rendered as continuous fields across Kazakhstan, not a spreadsheet of disconnected readings.",
+    lede: "Air, industrial pollution, water, biodiversity and risk — rendered as continuous fields across Kazakhstan, not a spreadsheet of disconnected readings.",
     cta: "Explore the Atlas",
     layers: {
       air: { label: "Air Quality", describe: "PM2.5 / PM10 / NO₂ composite — live Open-Meteo (CAMS) readings over a modeled baseline" },
@@ -554,7 +564,7 @@ const en: Dict = {
     online: "Online",
     emptyTitle: "Ask the network anything.",
     emptyLede:
-      "I read Kazakhstan's environmental model — live air quality, plus modeled water, industry, biodiversity and ecological risk — and answer with sources.",
+      "I read Kazakhstan's environmental model — live air quality, plus modeled water, industrial pollution, biodiversity and ecological risk — and answer with sources.",
     reading: "Reading sensor field…",
     placeholder: "Ask about any city, risk, or metric…",
     sendAria: "Send",
@@ -637,7 +647,7 @@ const en: Dict = {
       `Counts cover the last ${days} days and are self-reported by the public. They are not verified against any instrument and reflect who is looking as much as what is happening. They sit beside the modeled Water Quality baseline above; they do not feed into it.`,
     gbifUnavailable: "GBIF did not respond in time. The modeled indices above are unaffected.",
     gbifNote: (km, from, to) =>
-      `Species recorded within ${km} km and published to GBIF between ${from} and ${to}. This reflects recording effort as well as ecology — a well-surveyed area scores higher partly because more people looked. It sits beside the modeled Biodiversity Intactness Index above; it does not replace it.`,
+      `Species recorded within ${km} km and published to GBIF between ${from} and ${to}. This reflects recording effort as well as the state of nature — a well-surveyed area scores higher partly because more people looked. It sits beside the modeled Biodiversity Intactness Index above; it does not replace it.`,
     pm25: "PM2.5",
     pm10: "PM10",
     no2: "NO₂",
@@ -672,6 +682,7 @@ const en: Dict = {
     anomalyTitle: "Global temperature anomaly",
     vsBaseline: "vs 1991–2020",
     window90: "90-day window",
+    anomalyTrend: (d, y) => `▲ +${d} °C per decade over the last ${y} modeled years`,
     gaugeLabel: "Network sustainability",
     gaugeLede: (n) =>
       `Composite of air, water, biodiversity, pollution and inverse environmental risk across ${n} cities.`,
@@ -996,6 +1007,7 @@ const ru: Dict = {
     anomalyTitle: "Глобальная температурная аномалия",
     vsBaseline: "к 1991–2020",
     window90: "окно 90 дней",
+    anomalyTrend: (d, y) => `▲ +${d} °C за десятилетие по модельным данным за последние ${y} лет`,
     gaugeLabel: "Устойчивость сети",
     gaugeLede: (n) =>
       `Композит воздуха, воды, биоразнообразия, загрязнения и обратного экологического риска по ${n} городам.`,
@@ -1121,7 +1133,7 @@ const kk: Dict = {
     h1a: "Қазақстанның",
     h1b: "операциялық",
     h1Accent: "жүйесі.",
-    lede: "Aetheris жерсеріктерді, жер станцияларын және ЖИ-ді Қазақстанның біртұтас тірі бейнесіне біріктіреді — барлық өңірлерде нақты уақыттағы ауа сапасы, ал су, өнеркәсіп және экология модельдік базалық сызықта.",
+    lede: "Aetheris жерсеріктерді, жер станцияларын және ЖИ-ді Қазақстанның біртұтас тірі бейнесіне біріктіреді — барлық өңірлерде нақты уақыттағы ауа сапасы, ал су, өнеркәсіптік ластану, биоалуантүрлілік және экологиялық тәуекел модельдік базалық сызықта.",
     ctaAtlas: "Атласты ашу",
     ctaIntel: "Аналитиканы көру",
     statCities: (c, r) => `${c} қала · ${r} өңір`,
@@ -1285,7 +1297,7 @@ const kk: Dict = {
       `Есеп соңғы ${days} күнді қамтиды және оны тұрғындардың өздері жібереді. Ешбір аспаппен тексерілмеген және кім қарайтынын да көрсетеді. Көрсеткіш жоғарыдағы модельдік су сапасы индексінің қасында тұрады, оған кірмейді.`,
     gbifUnavailable: "GBIF уақытында жауап бермеді. Жоғарыдағы модельдік индекстерге бұл әсер етпейді.",
     gbifNote: (km, from, to) =>
-      `${km} км радиуста тіркеліп, GBIF-те ${from}–${to} жылдары жарияланған түрлер. Бұл көрсеткіш экологияны ғана емес, бақылау белсенділігін де көрсетеді: бақылаушы көп жерде сан жоғары. Ол жоғарыдағы модельдік биоалуантүрлілік индексін алмастырмайды, толықтырады.`,
+      `${km} км радиуста тіркеліп, GBIF-те ${from}–${to} жылдары жарияланған түрлер. Бұл көрсеткіш табиғат жағдайын ғана емес, бақылау белсенділігін де көрсетеді: бақылаушы көп жерде сан жоғары. Ол жоғарыдағы модельдік биоалуантүрлілік индексін алмастырмайды, толықтырады.`,
     pm25: "PM2.5",
     pm10: "PM10",
     no2: "NO₂",
@@ -1320,6 +1332,7 @@ const kk: Dict = {
     anomalyTitle: "Жаһандық температура ауытқуы",
     vsBaseline: "1991–2020-ға",
     window90: "90 күндік терезе",
+    anomalyTrend: (d, y) => `▲ +${d} °C онжылдыққа, соңғы ${y} жылдағы модельдік деректер бойынша`,
     gaugeLabel: "Желі тұрақтылығы",
     gaugeLede: (n) =>
       `${n} қала бойынша ауа, су, биоалуантүрлілік, ластану және кері экологиялық тәуекел композиті.`,
