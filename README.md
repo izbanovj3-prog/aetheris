@@ -55,6 +55,13 @@ Environment variables are listed, without values, in `.env.example`.
 Every `NEXT_PUBLIC_*` value ends up in the public bundle — never put a
 secret in one. Real values go in `.env.local`, which git ignores.
 
+The Supabase project comes only from `NEXT_PUBLIC_SUPABASE_URL` and
+`NEXT_PUBLIC_SUPABASE_ANON_KEY` (publishable key); there is no built-in
+default. Without them the site runs with no backend — reports stay in the
+browser and the community page says the shared database is not
+connected. For `npx playwright test`, build with any
+`https://<name>.supabase.co` and any key: the specs stub Supabase.
+
 ## Tests
 
 | Command | What it checks | Needs |
@@ -102,6 +109,10 @@ to `main`, and by hand:
 5. **Live report flow (test Supabase)** — a build pointed at the test
    project files a report in en/ru/kk and deletes it again from the page;
    any request to another Supabase project fails the test.
+6. **No-backend build** — built without the Supabase variables: the
+   bundle names no Supabase host, and in en/ru/kk the community page says
+   the database is not connected, a report is kept in the browser with a
+   message that says so, and no request reaches Supabase.
 
 `.github/workflows/monitor.yml` — **Monitor production**, from `main`
 only: every 30 minutes the key routes in three languages must answer 200
@@ -134,6 +145,10 @@ Nothing is deployed from this repository by script.
 Order for a release that includes database changes (details in
 `supabase/README.md`):
 
+0. In Vercel → Settings → Environment Variables, set
+   `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` for
+   **Production** (the production project) and **Preview** (the test
+   project). Without them a deployment has no backend.
 1. Open a pull request into `main`. CI must be green, and the Deployment
    check must pass on its preview.
 2. Merge. Vercel publishes the front-end. The current front-end works
