@@ -1,0 +1,90 @@
+# Production monitoring without collecting anything about visitors.
+#
+#   uptime     every 30 min: key routes in en/ru/kk answer 200, the security
+#              headers are present, robots.txt and sitemap.xml are served.
+#   console    once a day: the header/console Playwright check against
+#              production — any CSP violation or JavaScript error on 12 key
+#              routes fails it. A synthetic visitor, so no personal data.
+#
+# A failed run is the alert: GitHub notifies about failed scheduled runs
+# (Settings → Notifications → Actions). Scheduled workflows only run from
+# the default branch, so this starts working after the merge into main;
+# GitHub pauses schedules in a public repository after 60 days without
+# activity.
+
+name: Monitor production
+
+on:
+  schedule:
+    - cron: "17,47 * * * *"
+    - cron: "23 3 * * *"
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "Site to check"
+        required: false
+        default: "https://aetherisearth.live"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: monitor-${{ github.event.schedule || 'manual' }}
+  cancel-in-progress: false
+
+env:
+  SITE: ${{ inputs.url || 'https://aetherisearth.live' }}
+
+jobs:
+  uptime:
+    name: Uptime and headers
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check routes and headers
+        run: |
+          case "$SITE" in
+            https://aetherisearth.live|https://www.aetherisearth.live|https://*.vercel.app) ;;
+            *) echo "::error::Unexpected site: $SITE"; exit 1 ;;
+          esac
+          failed=0
+          for path in / /ru/ /kk/ /map/ /ru/map/ /kk/map/ /dashboard/ \
+                      /community/ /ru/community/ /kk/community/ \
+                      /privacy/ /ru/privacy/ /kk/privacy/ /terms/ /ru/terms/ /kk/terms/ \
+                      /robots.txt /sitemap.xml; do
+            code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 --retry 2 --retry-delay 5 "$SITE$path")
+            if [ "$code" = "200" ]; then echo "ok   $code $path"; else echo "FAIL $code $path"; failed=1; fi
+          done
+          headers=$(curl -sS -D - -o /dev/null --max-time 20 "$SITE/")
+          for h in content-security-policy strict-transport-security x-content-type-options \
+                   x-frame-options referrer-policy permissions-policy; do
+            if printf '%s' "$headers" | grep -qi "^$h:"; then echo "ok   header $h"; else echo "FAIL header $h missing"; failed=1; fi
+          done
+          code=$(curl -s -o /dev/null -w '%{http_code}' --max-time 20 "$SITE/no-such-page-monitor/")
+          if [ "$code" = "404" ]; then echo "ok   404 for a missing page"; else echo "FAIL missing page answered $code"; failed=1; fi
+          exit $failed
+
+  console:
+    name: No CSP violations or JS errors (synthetic visit)
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '23 3 * * *'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check the site URL
+        run: |
+          case "$SITE" in
+            https://aetherisearth.live|https://www.aetherisearth.live|https://*.vercel.app) ;;
+            *) echo "::error::Unexpected site: $SITE"; exit 1 ;;
+          esac
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - name: Install Chromium for Playwright
+        run: npx playwright install --with-deps chromium
+      - name: Header and console check against production
+        env:
+          E2E_BASE_URL: ${{ env.SITE }}
+        run: npx playwright test tests/e2e/headers-console.spec.ts tests/e2e/errors.spec.ts
