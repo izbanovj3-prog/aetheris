@@ -265,6 +265,7 @@ describe.skipIf(!LIVE || process.env.SECURITY_PROBE_NETWORK !== "1")(
     it("still stops one sender at 30 reports an hour", async () => {
       let accepted = 0;
       let refusedAt = -1;
+      let other: string | null = null;
       for (let i = 0; i < 31; i++) {
         const forged = `198.18.${Math.floor(i / 250)}.${(i % 250) + 1}`;
         const r = await insertReport(
@@ -275,10 +276,18 @@ describe.skipIf(!LIVE || process.env.SECURITY_PROBE_NETWORK !== "1")(
         else if (r.body.includes("rate_limit_hourly")) {
           refusedAt = i;
           break;
+        } else {
+          // Neither filed nor rate-limited: the probe itself did not work,
+          // which says nothing about the limit. Stop and say what came back.
+          other = `${r.status} ${r.body.slice(0, 300)}`;
+          break;
         }
       }
       // eslint-disable-next-line no-console
-      console.log(`[security] forged-header probe: accepted ${accepted}, refused at ${refusedAt}`);
+      console.log(
+        `[security] forged-header probe: accepted ${accepted}, refused at ${refusedAt}${other ? `, other answer: ${other}` : ""}`,
+      );
+      expect(other, "the probe could not file a report with forged headers").toBeNull();
       expect(refusedAt, "forged headers bypass the network limit").toBeGreaterThanOrEqual(0);
     });
   },
