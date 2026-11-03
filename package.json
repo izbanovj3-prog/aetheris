@@ -8,7 +8,9 @@
     "start": "next start",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:security": "vitest run --config vitest.security.config.ts"
+    "test:security": "vitest run --config vitest.security.config.ts",
+    "test:e2e": "playwright test",
+    "serve:static": "node scripts/serve-static.mjs"
   },
   "dependencies": {
     "@react-three/fiber": "^9.6.1",
@@ -22,7 +24,9 @@
     "three": "^0.184.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.14.0",
     "@electric-sql/pglite": "^0.5.4",
+    "@playwright/test": "1.63.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

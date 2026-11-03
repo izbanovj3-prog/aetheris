@@ -44,3 +44,7 @@ next-env.d.ts
 
 # allow the template, never real env files
 !.env.example
+
+# playwright
+/test-results/
+/playwright-report/
