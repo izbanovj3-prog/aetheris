@@ -1,6 +1,6 @@
 "use client";
 
-import dynamic from "next/dynamic";
+import { GlobeSlot } from "./GlobeSlot";
 import { motion, useScroll, useTransform } from "framer-motion";
 import { useMemo, useRef } from "react";
 import { EASE, GlowButton, OriginBadge, SourceNote, TelemetryTag } from "@/components/ui/primitives";
@@ -20,19 +20,20 @@ const NET = networkStats();
 // the server and client render the same figure.
 const TREND = anomalyTrend();
 
-const Globe = dynamic(() => import("./Globe"), { ssr: false });
 
 const heroStagger = {
   hidden: {},
   show: { transition: { staggerChildren: 0.14, delayChildren: 0.2 } },
 };
 
+/* Visible from the first paint: the headline and lede are the page's
+   largest content, and hiding them (opacity 0 + blur) until JavaScript ran
+   pushed Largest Contentful Paint to ~10 s on a throttled phone. They now
+   only settle into place. */
 const heroItem = {
-  hidden: { opacity: 0, y: 34, filter: "blur(6px)" },
+  hidden: { y: 18 },
   show: {
-    opacity: 1,
     y: 0,
-    filter: "blur(0px)",
     transition: { duration: 1.1, ease: EASE },
   },
 };
@@ -76,7 +77,7 @@ export function Hero() {
         style={{ y: globeY, opacity: globeOpacity }}
         className="absolute inset-y-0 right-[-30%] sm:right-[-18%] lg:right-[-8%] w-[110%] sm:w-[80%] lg:w-[62%] pointer-events-none lg:pointer-events-auto"
       >
-        <Globe className="w-full h-full" />
+        <GlobeSlot className="w-full h-full" />
       </motion.div>
 
       {/* floating telemetry chips over the globe */}

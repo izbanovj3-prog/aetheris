@@ -1,0 +1,66 @@
+// Lighthouse, mobile profile, median of 3 runs per page, against targets.
+//
+//   node scripts/lighthouse-check.mjs [baseUrl]     (default http://localhost:4321)
+//
+// Targets: Performance ≥ 80, Accessibility ≥ 95, Best Practices ≥ 95,
+// SEO ≥ 95. An exception is allowed only when it is listed below with its
+// reason — a lowered number with no reason next to it is not allowed.
+// Writes a JSON summary to lighthouse-summary.json.
+import { execFileSync } from "node:child_process";
+import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { join } from "node:path";
+
+const BASE = (process.argv[2] ?? "http://localhost:4321").replace(/\/$/, "");
+const PAGES = ["/", "/map/", "/dashboard/", "/community/"];
+const TARGET = { performance: 80, accessibility: 95, "best-practices": 95, seo: 95 };
+const EXCEPTIONS = {
+  // MapLibre GL renders the whole map in WebGL. Lighthouse's mobile run has
+  // no GPU (software WebGL) and a 4× CPU slowdown, so initialising the map
+  // is one 1–1.5 s main-thread task. Desktop profile: 94. Pending the
+  // owner's decision on a lighter phone view (README → Performance).
+  "/map/": { performance: 60 },
+};
+const RUNS = Number(process.env.LH_RUNS ?? 3);
+const OUT = join(process.cwd(), "lighthouse-reports");
+mkdirSync(OUT, { recursive: true });
+
+const chrome = process.env.CHROME_PATH;
+const results = {};
+let failed = false;
+
+for (const page of PAGES) {
+  const scores = [];
+  for (let i = 0; i < RUNS; i++) {
+    const file = join(OUT, `${page.replace(/\//g, "_") || "_"}-${i}.json`);
+    execFileSync(
+      "npx",
+      [
+        "lighthouse",
+        `${BASE}${page}`,
+        "--quiet",
+        "--output=json",
+        `--output-path=${file}`,
+        "--only-categories=performance,accessibility,best-practices,seo",
+        "--chrome-flags=--headless=new --no-sandbox",
+      ],
+      { stdio: "inherit", env: { ...process.env, ...(chrome ? { CHROME_PATH: chrome } : {}) } },
+    );
+    const cats = JSON.parse(readFileSync(file, "utf8")).categories;
+    scores.push(Object.fromEntries(Object.entries(cats).map(([k, v]) => [k, Math.round(v.score * 100)])));
+  }
+  const median = {};
+  for (const k of Object.keys(TARGET)) {
+    const v = scores.map((s) => s[k]).sort((a, b) => a - b);
+    median[k] = v[Math.floor(v.length / 2)];
+  }
+  results[page] = median;
+  for (const [k, min] of Object.entries(TARGET)) {
+    const need = EXCEPTIONS[page]?.[k] ?? min;
+    const ok = median[k] >= need;
+    if (!ok) failed = true;
+    console.log(`${ok ? "ok  " : "FAIL"} ${page.padEnd(13)} ${k.padEnd(15)} ${median[k]} (need ${need}${need !== min ? `, target ${min}` : ""})`);
+  }
+}
+
+writeFileSync("lighthouse-summary.json", JSON.stringify(results, null, 2));
+process.exit(failed ? 1 : 0);
