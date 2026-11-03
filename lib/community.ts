@@ -14,13 +14,13 @@
    by who happens to be looking. A city with no reports is not a clean
    city — it is a city nobody has reported from.
 
-   Aggregation runs client-side over the rows in the window. At current
-   volumes that is a single small request; if the feed ever grows past a
-   few thousand rows in 30 days this should become a Postgres view.
+   Aggregation runs in Postgres (community_city_signals() in
+   supabase/privacy-hardening.sql), which returns counts only: device ids
+   are not readable by visitors.
    ───────────────────────────────────────────────────────────── */
 
 import type { ReportCategory, Severity } from "./reports";
-import { SUPABASE_KEY, SUPABASE_URL, isConfigured, REPORTS_TABLE } from "./supabase";
+import { SUPABASE_KEY, SUPABASE_URL, callRpc, isConfigured, REPORTS_TABLE } from "./supabase";
 
 /** Rolling window the aggregate covers. */
 export const WINDOW_DAYS = 30;
@@ -65,7 +65,7 @@ export function emptySignal(city: string): CitySignal {
   };
 }
 
-interface Row {
+interface LegacyRow {
   city: string;
   category: ReportCategory;
   severity: Severity;
@@ -73,56 +73,91 @@ interface Row {
   created_at: string;
 }
 
+/** One row of community_city_signals() — counts only, no device ids. */
+interface SignalRow {
+  city: string;
+  category: ReportCategory;
+  severity: Severity;
+  reports: number;
+  latest: string;
+  city_reporters: number;
+}
+
 /**
  * Aggregate for every city at once — one request, since the map and the
  * city pages both want it. Returns null if the datastore is unreachable,
  * so the UI can distinguish "nobody has reported" from "we cannot tell".
+ *
+ * Reads the aggregate function from privacy-hardening.sql; device ids are
+ * no longer readable. Falls back to the row read only while that file has
+ * not been applied, and can be deleted once it has.
  */
 export async function fetchCommunitySignals(
   signal?: AbortSignal,
 ): Promise<Record<string, CitySignal> | null> {
   if (!isConfigured()) return null;
-  const since = new Date(Date.now() - WINDOW_DAYS * 86_400_000).toISOString();
   try {
-    const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/${REPORTS_TABLE}` +
-        `?select=city,category,severity,anon_id,created_at` +
-        `&created_at=gte.${since}&limit=2000`,
-      {
-        headers: {
-          apikey: SUPABASE_KEY,
-          Authorization: `Bearer ${SUPABASE_KEY}`,
-        },
-        signal,
-      },
-    );
-    if (!res.ok) return null;
-    const rows = (await res.json()) as Row[];
-
-    const out: Record<string, CitySignal> = {};
-    const devices: Record<string, Set<string>> = {};
-
-    for (const r of rows) {
-      // The submission form picks the city from the station list, so this
-      // key lines up with Station.name without any fuzzy matching.
-      const key = r.city;
-      out[key] ??= emptySignal(key);
-      devices[key] ??= new Set();
-
-      out[key].total += 1;
-      if (r.category in out[key].byCategory) out[key].byCategory[r.category] += 1;
-      if (r.severity in out[key].bySeverity) out[key].bySeverity[r.severity] += 1;
-      devices[key].add(r.anon_id);
-
-      const ts = new Date(r.created_at).getTime();
-      if (!out[key].latest || ts > out[key].latest) out[key].latest = ts;
+    const res = await callRpc("community_city_signals", { p_days: WINDOW_DAYS }, signal);
+    if (res) {
+      if (!res.ok) return null;
+      return foldSignals((await res.json()) as SignalRow[]);
     }
-
-    for (const key of Object.keys(out)) out[key].reporters = devices[key].size;
-    return out;
+    return await legacySignals(signal);
   } catch {
     return null;
   }
+}
+
+/** Exported for tests: fold aggregate rows into per-city signals. */
+export function foldSignals(rows: SignalRow[]): Record<string, CitySignal> {
+  const out: Record<string, CitySignal> = {};
+  for (const r of rows) {
+    // The submission form picks the city from the station list, so this
+    // key lines up with Station.name without any fuzzy matching.
+    const key = r.city;
+    out[key] ??= emptySignal(key);
+    out[key].total += r.reports;
+    if (r.category in out[key].byCategory) out[key].byCategory[r.category] += r.reports;
+    if (r.severity in out[key].bySeverity) out[key].bySeverity[r.severity] += r.reports;
+    out[key].reporters = r.city_reporters;
+    const ts = new Date(r.latest).getTime();
+    if (!out[key].latest || ts > out[key].latest) out[key].latest = ts;
+  }
+  return out;
+}
+
+async function legacySignals(signal?: AbortSignal): Promise<Record<string, CitySignal> | null> {
+  const since = new Date(Date.now() - WINDOW_DAYS * 86_400_000).toISOString();
+  const res = await fetch(
+    `${SUPABASE_URL}/rest/v1/${REPORTS_TABLE}` +
+      `?select=city,category,severity,anon_id,created_at` +
+      `&created_at=gte.${since}&limit=2000`,
+    {
+      headers: {
+        apikey: SUPABASE_KEY,
+        Authorization: `Bearer ${SUPABASE_KEY}`,
+      },
+      signal,
+    },
+  );
+  if (!res.ok) return null;
+  const rows = (await res.json()) as LegacyRow[];
+
+  const out: Record<string, CitySignal> = {};
+  const devices: Record<string, Set<string>> = {};
+  for (const r of rows) {
+    const key = r.city;
+    out[key] ??= emptySignal(key);
+    devices[key] ??= new Set();
+    out[key].total += 1;
+    if (r.category in out[key].byCategory) out[key].byCategory[r.category] += 1;
+    if (r.severity in out[key].bySeverity) out[key].bySeverity[r.severity] += 1;
+    devices[key].add(r.anon_id);
+    const ts = new Date(r.created_at).getTime();
+    if (!out[key].latest || ts > out[key].latest) out[key].latest = ts;
+  }
+  for (const key of Object.keys(out)) out[key].reporters = devices[key].size;
+  return out;
 }
 
 /** Attribution string in the same shape the Open-Meteo and GBIF notes use. */

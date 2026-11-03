@@ -28,6 +28,60 @@ export const REPORTS_TABLE = "reports";
 
 export const isConfigured = () => Boolean(SUPABASE_URL && SUPABASE_KEY);
 
+/**
+ * Columns a visitor may read. supabase/privacy-hardening.sql grants SELECT
+ * on exactly these — anon_id is deliberately absent — so `select=*` is
+ * refused once that file is applied. Every read names them.
+ */
+export const REPORT_PUBLIC_COLUMNS = [
+  "id",
+  "created_at",
+  "author",
+  "city",
+  "lat",
+  "lon",
+  "category",
+  "severity",
+  "title",
+  "body",
+  "status",
+  "upvotes",
+  "forwarded_at",
+  "forwarded_to",
+  "org_response",
+  "org_response_org",
+  "org_response_at",
+  "parent_id",
+  "photo_quality",
+].join(",");
+
+/** Two decimals ≈ 1 km — the most precise position the platform stores. */
+export const COORD_DECIMALS = 2;
+export function coarsen(v: number | null | undefined): number | null {
+  if (v == null || !Number.isFinite(v)) return null;
+  const f = 10 ** COORD_DECIMALS;
+  return Math.round(v * f) / f;
+}
+
+/**
+ * POST to a database function. Resolves to null when the function does not
+ * exist yet (PostgREST answers 404) — the caller then uses the path that
+ * works against a database without privacy-hardening.sql.
+ */
+export async function callRpc(
+  fn: string,
+  body: Record<string, unknown>,
+  signal?: AbortSignal,
+): Promise<Response | null> {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify(body),
+    signal,
+  });
+  return res.status === 404 ? null : res;
+}
+
 function headers(extra: Record<string, string> = {}) {
   return {
     apikey: SUPABASE_KEY,
@@ -60,7 +114,8 @@ export type RemoteStatus =
 export interface RemoteReport {
   id: string;
   created_at: string;
-  anon_id: string;
+  /** Not readable by visitors since privacy-hardening.sql. */
+  anon_id?: string;
   author: string;
   city: string;
   lat: number | null;
@@ -90,10 +145,12 @@ export interface RemoteReport {
   photo_quality?: boolean | null;
 }
 
-export type NewRemoteReport = Omit<
+export type NewRemoteReport = { anon_id: string } & Omit<
   RemoteReport,
   | "id"
   | "created_at"
+  | "anon_id"
+  | "author"
   | "status"
   | "upvotes"
   | "forwarded_at"
@@ -118,7 +175,7 @@ export async function listRemoteReports(
   if (!isConfigured()) return null;
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/${REPORTS_TABLE}?select=*&order=created_at.desc&limit=${limit}`,
+      `${SUPABASE_URL}/rest/v1/${REPORTS_TABLE}?select=${REPORT_PUBLIC_COLUMNS}&order=created_at.desc&limit=${limit}`,
       { headers: headers(), signal },
     );
     if (!res.ok) return null;
@@ -145,7 +202,9 @@ async function postReport(
   report: Record<string, unknown>,
   signal?: AbortSignal,
 ): Promise<InsertResult | "unknown-column"> {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${REPORTS_TABLE}`, {
+  // The explicit select matters: return=representation otherwise asks for
+  // every column back, including anon_id, which visitors cannot read.
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${REPORTS_TABLE}?select=${REPORT_PUBLIC_COLUMNS}`, {
     method: "POST",
     // Prefer: return=representation gives back the inserted row, so the
     // UI shows the server's id and timestamp rather than guessing.
@@ -234,6 +293,25 @@ export async function existingReportIds(
     return new Set(rows.map((r) => r.id));
   } catch {
     return null;
+  }
+}
+
+/**
+ * Delete one of this device's own reports. "unsupported" means the database
+ * predates privacy-hardening.sql and has no way to prove ownership.
+ */
+export async function deleteRemoteReport(
+  reportId: string,
+  anonId: string,
+): Promise<"deleted" | "refused" | "unsupported" | "unavailable"> {
+  if (!isConfigured()) return "unavailable";
+  try {
+    const res = await callRpc("delete_my_report", { p_report_id: reportId, p_anon_id: anonId });
+    if (!res) return "unsupported";
+    if (!res.ok) return "unavailable";
+    return (await res.json()) === true ? "deleted" : "refused";
+  } catch {
+    return "unavailable";
   }
 }
 

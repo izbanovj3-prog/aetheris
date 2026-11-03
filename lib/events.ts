@@ -19,7 +19,11 @@
    ───────────────────────────────────────────────────────────── */
 
 import { anonId } from "./reports";
-import { SUPABASE_KEY, SUPABASE_URL, isConfigured } from "./supabase";
+import { SUPABASE_KEY, SUPABASE_URL, callRpc, isConfigured } from "./supabase";
+
+/** Columns a visitor may read on events — anon_id is not one of them. */
+const EVENT_PUBLIC_COLUMNS =
+  "id,created_at,title,description,place,lat,lon,starts_at,capacity,cancelled";
 
 /** Metres from the event within which a check-in is accepted. */
 export const CHECKIN_RADIUS_M = 500;
@@ -98,6 +102,7 @@ function reasonFrom(msg: string): EventError["reason"] {
   if (msg.includes("checkin_too_early")) return "too-early";
   if (msg.includes("checkin_closed")) return "closed";
   if (msg.includes("checkin_cancelled")) return "cancelled";
+  if (msg.includes("event_full")) return "full";
   return "unavailable";
 }
 
@@ -110,7 +115,8 @@ async function failure(res: Response): Promise<EventError> {
 interface EventRow {
   id: string;
   created_at: string;
-  anon_id: string;
+  /** Present only on a database without privacy-hardening.sql. */
+  anon_id?: string;
   title: string;
   description: string;
   place: string;
@@ -142,66 +148,123 @@ export async function listEvents(signal?: AbortSignal): Promise<AetherisEvent[] 
   // window check-in is open for, so a gathering does not vanish from the
   // page while people are still standing in it.
   const since = new Date(Date.now() - 4 * 3_600_000).toISOString();
+  const eventsUrl =
+    `${SUPABASE_URL}/rest/v1/events?select=${EVENT_PUBLIC_COLUMNS}&starts_at=gte.${since}` +
+    `&cancelled=is.false&order=starts_at.asc&limit=50`;
   try {
-    const [evRes, rsvpRes, ciRes] = await Promise.all([
-      fetch(
-        `${SUPABASE_URL}/rest/v1/events?select=*&starts_at=gte.${since}` +
-          `&cancelled=is.false&order=starts_at.asc&limit=50`,
-        { headers: headers(), signal },
-      ),
-      fetch(`${SUPABASE_URL}/rest/v1/event_rsvps?select=event_id,anon_id&limit=2000`, {
-        headers: headers(),
-        signal,
-      }),
-      fetch(`${SUPABASE_URL}/rest/v1/event_checkins?select=event_id,anon_id&limit=2000`, {
-        headers: headers(),
-        signal,
-      }),
+    const [evRes, attRes, mineRes] = await Promise.all([
+      fetch(eventsUrl, { headers: headers(), signal }),
+      callRpc("event_attendance", {}, signal),
+      callRpc("my_event_state", { p_anon_id: me }, signal),
     ]);
-    if (!evRes.ok || !rsvpRes.ok || !ciRes.ok) return null;
+    // A database without privacy-hardening.sql has neither function.
+    if (!attRes || !mineRes) return await legacyListEvents(since, me, signal);
+    if (!evRes.ok || !attRes.ok || !mineRes.ok) return null;
 
     const rows = (await evRes.json()) as EventRow[];
-    const rsvps = (await rsvpRes.json()) as AttendeeRow[];
-    const checkins = (await ciRes.json()) as AttendeeRow[];
-
-    const tally = (list: AttendeeRow[]) => {
-      const count = new Map<string, number>();
-      const mine = new Set<string>();
-      for (const a of list) {
-        count.set(a.event_id, (count.get(a.event_id) ?? 0) + 1);
-        if (a.anon_id === me) mine.add(a.event_id);
-      }
-      return { count, mine };
-    };
-    const r = tally(rsvps);
-    const c = tally(checkins);
+    const att = new Map(
+      ((await attRes.json()) as Array<{ event_id: string; going: number; checked_in: number }>).map(
+        (a) => [a.event_id, a],
+      ),
+    );
+    const mine = new Map(
+      (
+        (await mineRes.json()) as Array<{
+          event_id: string;
+          organiser: boolean;
+          rsvp: boolean;
+          checked_in: boolean;
+        }>
+      ).map((m) => [m.event_id, m]),
+    );
 
     return rows.map((e) => ({
-      id: e.id,
-      createdAt: new Date(e.created_at).getTime(),
-      mine: e.anon_id === me,
-      title: e.title,
-      description: e.description,
-      place: e.place,
-      lat: e.lat,
-      lon: e.lon,
-      startsAt: new Date(e.starts_at).getTime(),
-      capacity: e.capacity,
-      cancelled: e.cancelled,
-      going: r.count.get(e.id) ?? 0,
-      iRsvpd: r.mine.has(e.id),
-      checkedIn: c.count.get(e.id) ?? 0,
-      iCheckedIn: c.mine.has(e.id),
+      ...fromRow(e),
+      mine: mine.get(e.id)?.organiser ?? false,
+      going: att.get(e.id)?.going ?? 0,
+      iRsvpd: mine.get(e.id)?.rsvp ?? false,
+      checkedIn: att.get(e.id)?.checked_in ?? 0,
+      iCheckedIn: mine.get(e.id)?.checked_in ?? false,
     }));
   } catch {
     return null;
   }
 }
 
+function fromRow(e: EventRow): AetherisEvent {
+  return {
+    id: e.id,
+    createdAt: new Date(e.created_at).getTime(),
+    mine: false,
+    title: e.title,
+    description: e.description,
+    place: e.place,
+    lat: e.lat,
+    lon: e.lon,
+    startsAt: new Date(e.starts_at).getTime(),
+    capacity: e.capacity,
+    cancelled: e.cancelled,
+    going: 0,
+    iRsvpd: false,
+    checkedIn: 0,
+    iCheckedIn: false,
+  };
+}
+
+/** Pre-hardening read, where attendee tables were public. Remove once
+ *  supabase/privacy-hardening.sql is applied everywhere. */
+async function legacyListEvents(
+  since: string,
+  me: string,
+  signal?: AbortSignal,
+): Promise<AetherisEvent[] | null> {
+  const [evRes, rsvpRes, ciRes] = await Promise.all([
+    fetch(
+      `${SUPABASE_URL}/rest/v1/events?select=*&starts_at=gte.${since}` +
+        `&cancelled=is.false&order=starts_at.asc&limit=50`,
+      { headers: headers(), signal },
+    ),
+    fetch(`${SUPABASE_URL}/rest/v1/event_rsvps?select=event_id,anon_id&limit=2000`, {
+      headers: headers(),
+      signal,
+    }),
+    fetch(`${SUPABASE_URL}/rest/v1/event_checkins?select=event_id,anon_id&limit=2000`, {
+      headers: headers(),
+      signal,
+    }),
+  ]);
+  if (!evRes.ok || !rsvpRes.ok || !ciRes.ok) return null;
+
+  const rows = (await evRes.json()) as EventRow[];
+  const rsvps = (await rsvpRes.json()) as AttendeeRow[];
+  const checkins = (await ciRes.json()) as AttendeeRow[];
+
+  const tally = (list: AttendeeRow[]) => {
+    const count = new Map<string, number>();
+    const mine = new Set<string>();
+    for (const a of list) {
+      count.set(a.event_id, (count.get(a.event_id) ?? 0) + 1);
+      if (a.anon_id === me) mine.add(a.event_id);
+    }
+    return { count, mine };
+  };
+  const r = tally(rsvps);
+  const c = tally(checkins);
+
+  return rows.map((e) => ({
+    ...fromRow(e),
+    mine: e.anon_id === me,
+    going: r.count.get(e.id) ?? 0,
+    iRsvpd: r.mine.has(e.id),
+    checkedIn: c.count.get(e.id) ?? 0,
+    iCheckedIn: c.mine.has(e.id),
+  }));
+}
+
 /** Create an event. Throws EventError on a refusal the user must see. */
 export async function createEvent(input: NewEventInput): Promise<AetherisEvent> {
   if (!isConfigured()) throw new EventError("unavailable");
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/events`, {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/events?select=${EVENT_PUBLIC_COLUMNS}`, {
     method: "POST",
     headers: headers({ Prefer: "return=representation" }),
     body: JSON.stringify({
@@ -219,49 +282,40 @@ export async function createEvent(input: NewEventInput): Promise<AetherisEvent> 
 
   const row = ((await res.json()) as EventRow[])[0];
   if (!row) throw new EventError("unavailable");
-  return {
-    id: row.id,
-    createdAt: new Date(row.created_at).getTime(),
-    mine: true,
-    title: row.title,
-    description: row.description,
-    place: row.place,
-    lat: row.lat,
-    lon: row.lon,
-    startsAt: new Date(row.starts_at).getTime(),
-    capacity: row.capacity,
-    cancelled: row.cancelled,
-    going: 0,
-    iRsvpd: false,
-    checkedIn: 0,
-    iCheckedIn: false,
-  };
+  return { ...fromRow(row), mine: true };
 }
 
 /**
- * RSVP, or withdraw one. The capacity check is advisory: it is read before
- * the write, so two people taking the last place at the same moment both
- * get it. A cap on a volunteer cleanup is a planning number, and enforcing
- * it exactly would need a locking trigger that is not worth the weight.
+ * RSVP, or withdraw one. The participant cap is enforced in Postgres
+ * (bounds-and-capacity.sql); a full event comes back as reason "full".
+ * Withdrawal goes through withdraw_rsvp(), which removes only this
+ * device's own RSVP.
  */
 export async function setRsvp(eventId: string, going: boolean): Promise<void> {
   if (!isConfigured()) throw new EventError("unavailable");
   const me = anonId();
 
+  const rpc = await callRpc(going ? "rsvp_event" : "withdraw_rsvp", {
+    p_event_id: eventId,
+    p_anon_id: me,
+  });
+  if (rpc) {
+    if (!rpc.ok) throw await failure(rpc);
+    return;
+  }
+
+  // Database without privacy-hardening.sql.
   if (going) {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/event_rsvps`, {
       method: "POST",
-      // Duplicate RSVPs from one device collapse onto the primary key
-      // rather than erroring — pressing the button twice is not a failure.
       headers: headers({ Prefer: "resolution=ignore-duplicates" }),
       body: JSON.stringify({ event_id: eventId, anon_id: me }),
     });
     if (!res.ok) throw await failure(res);
     return;
   }
-
   const res = await fetch(
-    `${SUPABASE_URL}/rest/v1/event_rsvps?event_id=eq.${eventId}&anon_id=eq.${encodeURIComponent(me)}`,
+    `${SUPABASE_URL}/rest/v1/event_rsvps?event_id=eq.${encodeURIComponent(eventId)}&anon_id=eq.${encodeURIComponent(me)}`,
     { method: "DELETE", headers: headers() },
   );
   if (!res.ok) throw await failure(res);
@@ -269,7 +323,8 @@ export async function setRsvp(eventId: string, going: boolean): Promise<void> {
 
 /**
  * Check in at an event. The geo-fence and the time window are enforced by
- * the trigger in Postgres, not here — this only reports what it said.
+ * the trigger in Postgres, not here — this only reports what it said. The
+ * position is used once for the distance and not stored.
  */
 export async function checkIn(
   eventId: string,
@@ -277,11 +332,19 @@ export async function checkIn(
   lon: number,
 ): Promise<void> {
   if (!isConfigured()) throw new EventError("unavailable");
+  const rpc = await callRpc("check_in_event", {
+    p_event_id: eventId,
+    p_anon_id: anonId(),
+    p_lat: lat,
+    p_lon: lon,
+  });
+  if (rpc) {
+    if (!rpc.ok) throw await failure(rpc);
+    return;
+  }
   const res = await fetch(`${SUPABASE_URL}/rest/v1/event_checkins`, {
     method: "POST",
     headers: headers({ Prefer: "resolution=ignore-duplicates" }),
-    // distance_m is overwritten by the trigger with the distance it
-    // computes itself; the value sent here is never trusted.
     body: JSON.stringify({ event_id: eventId, anon_id: anonId(), lat, lon, distance_m: 0 }),
   });
   if (!res.ok) throw await failure(res);

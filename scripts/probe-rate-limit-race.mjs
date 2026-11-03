@@ -61,7 +61,6 @@ const headers = {
 function submission(i) {
   return {
     anon_id: anonId,
-    author: "Anonymous",
     city: "Almaty",
     lat: 43.238,
     lon: 76.889,
