@@ -51,14 +51,21 @@ jobs:
           echo "Checking $DEPLOY_URL"
       - name: Reach the deployment
         run: |
-          args=(-s -o /dev/null -w '%{http_code}' --max-time 30)
+          args=(-s -o /dev/null -w '%{http_code} %{redirect_url}' --max-time 30)
           if [ -n "$VERCEL_AUTOMATION_BYPASS_SECRET" ]; then
             args+=(-H "x-vercel-protection-bypass: $VERCEL_AUTOMATION_BYPASS_SECRET")
           fi
-          code=$(curl "${args[@]}" "$E2E_BASE_URL/")
-          echo "GET / → $code"
-          if [ "$code" = "401" ] || [ "$code" = "403" ]; then
-            echo "::error::The deployment is protected ($code). Add Vercel's Protection Bypass for Automation secret as VERCEL_AUTOMATION_BYPASS_SECRET, or check that it is current."
+          out=$(curl "${args[@]}" "$E2E_BASE_URL/")
+          code="${out%% *}"
+          location="${out#* }"
+          # Never print a redirect's query string: it can carry a token.
+          where="${location%%\?*}"
+          echo "GET / → $code${where:+ → $where}"
+          protected=false
+          case "$code" in 401|403) protected=true ;; esac
+          case "$where" in https://vercel.com/*) protected=true ;; esac
+          if $protected; then
+            echo "::error::The deployment is behind Vercel Deployment Protection. Add the project's Protection Bypass for Automation secret as the repository secret VERCEL_AUTOMATION_BYPASS_SECRET, or check that it is current."
             exit 1
           fi
           [ "$code" = "200" ] || { echo "::error::Expected 200 from /, got $code"; exit 1; }
