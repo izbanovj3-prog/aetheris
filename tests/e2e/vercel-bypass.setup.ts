@@ -18,9 +18,18 @@ export default async function globalSetup() {
   if (!secret || !process.env.E2E_BASE_URL) return;
 
   const ctx = await request.newContext();
-  const res = await ctx.get(BASE_URL, {
-    headers: { "x-vercel-protection-bypass": secret, "x-vercel-set-bypass-cookie": "true" },
-  });
+  let res;
+  try {
+    res = await ctx.get(BASE_URL, {
+      headers: { "x-vercel-protection-bypass": secret, "x-vercel-set-bypass-cookie": "true" },
+    });
+  } catch (e) {
+    // Playwright's error carries a call log that lists the request headers,
+    // secret included. Report the failure without it.
+    await ctx.dispose();
+    const kind = e instanceof Error ? e.name : "Error";
+    throw new Error(`Vercel bypass: request to ${BASE_URL} failed (${kind}); details withheld because they include the secret`);
+  }
   if (!res.ok()) {
     await ctx.dispose();
     throw new Error(`Vercel bypass: ${BASE_URL} answered ${res.status()} — is the secret current?`);
