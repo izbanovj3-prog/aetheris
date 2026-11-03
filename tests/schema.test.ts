@@ -731,6 +731,48 @@ describe("rollback of privacy-hardening.sql", () => {
     await fresh.close();
   }, 60_000);
 
+  it("walks ③ back to ① when a deletion leaves fewer than two devices", async () => {
+    const fresh = new PGlite();
+    await fresh.exec(`
+      create role anon nologin noinherit;
+      create role authenticated nologin noinherit;
+      create role service_role nologin noinherit bypassrls;
+      grant usage on schema public to anon, authenticated, service_role;
+      alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
+      alter default privileges in schema public grant all on functions to anon, authenticated, service_role;
+    `);
+    for (const f of MIGRATIONS.filter((m) => m !== HARDENING)) {
+      await fresh.exec(readFileSync(join(DIR, f), "utf8"));
+    }
+    await fresh.exec(`grant all on all tables in schema public to anon, authenticated, service_role;`);
+    await fresh.exec(readFileSync(join(DIR, HARDENING), "utf8"));
+
+    const file = async (device: string) =>
+      (
+        await fresh.query<{ id: string }>(
+          `insert into public.reports (anon_id, author, city, lat, lon, category, severity, title, body)
+           values ($1,'Anonymous','Taraz',42.9,71.367,'water','low',${VALID}) returning id`,
+          [device],
+        )
+      ).rows[0].id;
+    const status = async (id: string) =>
+      (await fresh.query<{ status: string }>(`select status from public.reports where id = $1`, [id])).rows[0]
+        ?.status;
+
+    const first = await file(dev(950));
+    const second = await file(dev(951));
+    expect(await status(first)).toBe("corroborated");
+
+    await fresh.exec(`set role anon`);
+    const ok = (
+      await fresh.query<{ ok: boolean }>(`select public.delete_my_report($1, $2) as ok`, [second, dev(951)])
+    ).rows[0].ok;
+    await fresh.exec(`reset role`);
+    expect(ok).toBe(true);
+    expect(await status(first), "one device left: no longer ③").toBe("submitted");
+    await fresh.close();
+  }, 60_000);
+
   it("burns device ids that were readable before hardening, and only those", async () => {
     /* The front-end ships before the hardening file, so v2 ids are written
        while anon_id is still public. Those must not prove ownership after

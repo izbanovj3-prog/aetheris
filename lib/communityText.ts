@@ -333,7 +333,7 @@ const en: CommunityText = {
     corroborated: {
       label: "Matches other reports",
       gloss: "Two or more devices, same place and kind",
-      note: "At least two different devices reported this category in this city within 72 hours. That is corroboration, not verification: independent people described the same kind of problem in the same place. It does not mean the reports are accurate, and no instrument has checked them.",
+      note: "At least two different devices reported this category in this city within 72 hours. That is corroboration, not verification: two devices — not necessarily two people — described the same kind of problem in the same place. It does not mean the reports are accurate, and no instrument has checked them.",
     },
     forwarded: {
       label: "Forwarded to the akimat / environmental inspectorate",
@@ -348,7 +348,7 @@ const en: CommunityText = {
   },
   legend: {
     title: "Report statuses",
-    note: "There is no \"confirmed\" and no \"resolved\" status, and there will not be one until something real stands behind it. Aetheris has no moderators and no instrument check for a field report, so the furthest the platform goes is saying that independent people described the same thing, or that data was passed on. Neither of those means a report is right.",
+    note: "There is no \"confirmed\" and no \"resolved\" status, and there will not be one until something real stands behind it. Aetheris has no moderators and no instrument check for a field report, so the furthest the platform goes is saying that different devices described the same thing, or that data was passed on. Neither of those means a report is right.",
   },
   categories: {
     air: { label: "Air", example: "e.g. Heavy smog over Almaty after a morning inversion" },
@@ -456,7 +456,7 @@ const en: CommunityText = {
       "That is all that has happened to it: nobody has reviewed it, no instrument has been compared against it, and Aetheris is not stating that what you described is or is not the case.",
     nextTitle: "What can happen next",
     next: (ai, city, corr) =>
-      `If a live feed covers your category and area, Aetheris Analyst will attach open data beside it as context — «${ai}». If someone else reports the same category in ${city} within 72 hours from a different device, both move to «${corr}» — which means independent people described the same thing, not that either of you is right.`,
+      `If a live feed covers your category and area, Aetheris Analyst will attach open data beside it as context — «${ai}». If someone else reports the same category in ${city} within 72 hours from a different device, both move to «${corr}» — which means two devices described the same thing, not that either of you is right.`,
     points: (n) => `+${n} Eco-Points for filing`,
     photoPoints: (n) => ` · +${n} for the photo`,
     followPoints: (n) => ` · +${n} for the follow-up`,
@@ -643,7 +643,7 @@ const ru: CommunityText = {
     corroborated: {
       label: "Совпадает с другими сообщениями",
       gloss: "Два и более устройства, то же место и тема",
-      note: "Не менее двух разных устройств сообщили об этой категории в этом городе в течение 72 часов. Это совпадение, а не проверка: независимые люди описали похожую проблему в одном месте. Это не значит, что сообщения точны, и приборами их никто не сверял.",
+      note: "Не менее двух разных устройств сообщили об этой категории в этом городе в течение 72 часов. Это совпадение, а не проверка: два устройства — не обязательно два разных человека — описали похожую проблему в одном месте. Это не значит, что сообщения точны, и приборами их никто не сверял.",
     },
     forwarded: {
       label: "Передано в акимат/эко-инспекцию",
@@ -658,7 +658,7 @@ const ru: CommunityText = {
   },
   legend: {
     title: "Статусы сообщений",
-    note: "Статусов «подтверждено» и «решено» нет и не будет, пока за ними не стоит что-то реальное. У Aetheris нет модераторов и нет приборной проверки сообщений, поэтому дальше всего платформа может сказать, что независимые люди описали одно и то же или что данные переданы. Ни то ни другое не означает, что сообщение верно.",
+    note: "Статусов «подтверждено» и «решено» нет и не будет, пока за ними не стоит что-то реальное. У Aetheris нет модераторов и нет приборной проверки сообщений, поэтому дальше всего платформа может сказать, что разные устройства описали одно и то же или что данные переданы. Ни то ни другое не означает, что сообщение верно.",
   },
   categories: {
     air: { label: "Воздух", example: "напр. плотный смог над Алматы после утренней инверсии" },
@@ -765,7 +765,7 @@ const ru: CommunityText = {
       "Больше с ним ничего не произошло: его никто не проверял, с приборами его не сверяли, и Aetheris не утверждает, что описанное верно или неверно.",
     nextTitle: "Что может произойти дальше",
     next: (ai, city, corr) =>
-      `Если для вашей категории и района есть живой источник, аналитик Aetheris покажет рядом открытые данные как контекст — «${ai}». Если кто-то ещё в течение 72 часов с другого устройства сообщит о той же категории в городе ${city}, оба сообщения получат статус «${corr}» — это значит, что независимые люди описали одно и то же, а не что кто-то из вас прав.`,
+      `Если для вашей категории и района есть живой источник, аналитик Aetheris покажет рядом открытые данные как контекст — «${ai}». Если кто-то ещё в течение 72 часов с другого устройства сообщит о той же категории в городе ${city}, оба сообщения получат статус «${corr}» — это значит, что два устройства описали одно и то же, а не что кто-то из вас прав.`,
     points: (n) => `+${n} Eco-Points за сообщение`,
     photoPoints: (n) => ` · +${n} за фото`,
     followPoints: (n) => ` · +${n} за продолжение`,

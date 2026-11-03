@@ -339,7 +339,9 @@ security definer
 set search_path = public
 as $$
 declare
-  n integer;
+  v_city     text;
+  v_category text;
+  reporters  integer;
 begin
   if not private.is_private_device_id(p_anon_id) then
     return false;
@@ -347,9 +349,28 @@ begin
   delete from public.reports
    where id = p_report_id
      and anon_id = p_anon_id
-     and status not in ('forwarded', 'org-response');
-  get diagnostics n = row_count;
-  return n > 0;
+     and status not in ('forwarded', 'org-response')
+  returning city, category into v_city, v_category;
+  if not found then
+    return false;
+  end if;
+
+  -- ③ rests on two devices. If this report was one of them, the others in
+  -- its group go back to ①; ④/⑤ are never walked backwards.
+  select count(distinct anon_id) into reporters
+    from public.reports
+   where city = v_city
+     and category = v_category
+     and created_at > now() - interval '72 hours';
+  if reporters < 2 then
+    update public.reports
+       set status = 'submitted'
+     where city = v_city
+       and category = v_category
+       and created_at > now() - interval '72 hours'
+       and status = 'corroborated';
+  end if;
+  return true;
 end;
 $$;
 
