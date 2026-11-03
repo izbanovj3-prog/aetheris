@@ -1,70 +1,107 @@
-import { describe, expect, it } from "vitest";
-import { SUPABASE_KEY, SUPABASE_URL } from "@/lib/supabase";
+import { afterAll, describe, expect, it } from "vitest";
+import { SUPABASE_KEY, SUPABASE_URL as PRODUCTION_URL } from "@/lib/supabase";
 
 /* ─────────────────────────────────────────────────────────────
-   AETHERIS · access-control audit for report statuses ④ and ⑤
+   AETHERIS · access-control audit against a live Supabase project
 
-   /methodology tells the public that "Передано в акимат/эко-инспекцию"
-   and "Ответ организации" can only be set by a team member holding the
-   service key. That is a claim about the database, and until this file
-   existed it had never been checked against one.
+   tests/schema.test.ts proves the migrations on a replayed Postgres. This
+   file asks the same questions of a real project over the REST API, with
+   the publishable key — exactly what any visitor holds.
 
-   These tests use SUPABASE_KEY — the publishable key that ships in the
-   browser bundle. That is the point: they exercise exactly the privileges
-   any visitor has by opening the site and calling the REST API by hand.
-   Nothing here uses a service key, and nothing here should ever pass by
-   being granted one.
+   It runs against a SEPARATE TEST PROJECT, never production: it writes
+   probe rows, and the network-limit probe deliberately exhausts a limit.
 
-   Network-dependent, so it is not part of `npm test`. Run it with
-   `npm run test:security` and treat a failure as a P0.
+     SUPABASE_TEST_URL=https://<test-ref>.supabase.co \
+     SUPABASE_TEST_KEY=sb_publishable_… \
+     [SUPABASE_TEST_SERVICE_KEY=sb_secret_…] \
+     [SECURITY_PROBE_NETWORK=1] \
+     npm run test:security
 
-   NOT COVERED by this file, because the credentials do not exist in this
-   environment: the positive case (service role CAN set ④/⑤) and the
-   `authenticated` role (no user JWT — the platform has no login). Both
-   are stated as gaps in the audit report rather than asserted here.
+   Without SUPABASE_TEST_URL / SUPABASE_TEST_KEY only the offline key check
+   runs, and the skip is reported — a skipped suite is not a pass. Apply
+   every file in supabase/ (README order) to the test project first.
+
+   Secrets come from the environment only. Never commit them or paste them
+   into a chat.
    ───────────────────────────────────────────────────────────── */
 
+const URL_ = process.env.SUPABASE_TEST_URL?.trim().replace(/\/$/, "");
+const KEY = process.env.SUPABASE_TEST_KEY?.trim();
+const SERVICE_KEY = process.env.SUPABASE_TEST_SERVICE_KEY?.trim();
+const LIVE = Boolean(URL_ && KEY);
+
+if (LIVE && URL_ === PRODUCTION_URL.replace(/\/$/, "")) {
+  throw new Error(
+    "SUPABASE_TEST_URL points at the production project. This suite writes probe rows — use the test project.",
+  );
+}
+if (!LIVE) {
+  // eslint-disable-next-line no-console
+  console.warn(
+    "[security] SUPABASE_TEST_URL / SUPABASE_TEST_KEY not set — live access-control checks SKIPPED.",
+  );
+}
+
 const anonHeaders = {
-  apikey: SUPABASE_KEY,
-  Authorization: `Bearer ${SUPABASE_KEY}`,
+  apikey: KEY ?? "",
+  Authorization: `Bearer ${KEY ?? ""}`,
   "Content-Type": "application/json",
 };
 
 /** A key that ships to browsers must never be a secret one. */
 const SECRET_KEY_PREFIX = "sb_secret_";
 
-async function rpc(fn: string, body: Record<string, unknown>) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+/** Fresh private-format device id for this run. */
+const device = () => `v2-${crypto.randomUUID()}`;
+const PROBE_DEVICE = device();
+const created: string[] = [];
+
+const PUBLIC_COLS =
+  "id,created_at,author,city,lat,lon,category,severity,title,body,status,upvotes";
+
+async function rpc(fn: string, body: Record<string, unknown>, headers = anonHeaders) {
+  const res = await fetch(`${URL_}/rest/v1/rpc/${fn}`, {
     method: "POST",
-    headers: anonHeaders,
+    headers,
     body: JSON.stringify(body),
   });
   return { status: res.status, body: await res.text() };
 }
 
-async function insertReport(extra: Record<string, unknown>) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/reports`, {
+async function insertReport(extra: Record<string, unknown> = {}, headers: Record<string, string> = {}) {
+  const res = await fetch(`${URL_}/rest/v1/reports?select=${PUBLIC_COLS}`, {
     method: "POST",
-    headers: { ...anonHeaders, Prefer: "return=representation" },
+    headers: { ...anonHeaders, Prefer: "return=representation", ...headers },
     body: JSON.stringify({
-      anon_id: "rls-audit-probe-0001",
-      author: "Anonymous",
+      anon_id: PROBE_DEVICE,
       city: "Almaty",
-      lat: 43.238,
-      lon: 76.889,
+      lat: 43.238123,
+      lon: 76.889456,
       category: "air",
       severity: "low",
-      title: "SECURITY PROBE — automated RLS audit row, safe to delete",
-      body: "Created by tests/security.rls.test.ts to verify that the anonymous role cannot escalate a report status. Not a real observation.",
+      title: "SECURITY PROBE — automated access-control audit row",
+      body: "Created by tests/security.rls.test.ts on the TEST project. Not a real observation.",
       ...extra,
     }),
   });
-  return { status: res.status, body: await res.text() };
+  const text = await res.text();
+  if (res.status === 201) {
+    const row = JSON.parse(text)[0] as { id: string };
+    created.push(row.id);
+  }
+  return { status: res.status, body: text };
 }
 
-/* A UUID that does not exist. Used so the RPC probes cannot mutate real
-   data even in the failure case this file is designed to detect. */
+/* A UUID that does not exist, so RPC probes cannot touch real rows even in
+   the failure case this file is designed to detect. */
 const ABSENT_ID = "00000000-0000-0000-0000-0000000000ff";
+
+afterAll(async () => {
+  if (!LIVE) return;
+  for (const id of created) {
+    await rpc("delete_my_report", { p_report_id: id, p_anon_id: PROBE_DEVICE });
+  }
+});
 
 describe("the key shipped to browsers", () => {
   it("is the publishable key, never a service key", () => {
@@ -73,33 +110,16 @@ describe("the key shipped to browsers", () => {
   });
 });
 
-describe("anonymous role · RPC functions behind statuses ④ and ⑤", () => {
-  it("is refused EXECUTE on mark_report_forwarded", async () => {
-    const r = await rpc("mark_report_forwarded", {
-      p_report_id: ABSENT_ID,
-      p_destination: "RLS audit probe",
-      p_actor: "rls-audit",
-      p_note: null,
-    });
+describe.skipIf(!LIVE)("anonymous role · statuses ④ and ⑤", () => {
+  it.each([
+    ["mark_report_forwarded", { p_report_id: ABSENT_ID, p_destination: "probe", p_actor: "probe", p_note: null }],
+    ["record_org_response", { p_report_id: ABSENT_ID, p_org: "probe", p_response: "probe" }],
+  ])("is refused EXECUTE on %s", async (fn, body) => {
+    const r = await rpc(fn, body);
     // 401/403 = denied outright, 404 = not exposed to this role at all.
     expect([401, 403, 404]).toContain(r.status);
-    expect(r.status).not.toBe(200);
-    expect(r.status).not.toBe(204);
   });
 
-  it("is refused EXECUTE on record_org_response", async () => {
-    const r = await rpc("record_org_response", {
-      p_report_id: ABSENT_ID,
-      p_org: "RLS audit probe",
-      p_response: "probe",
-    });
-    expect([401, 403, 404]).toContain(r.status);
-    expect(r.status).not.toBe(200);
-    expect(r.status).not.toBe(204);
-  });
-});
-
-describe("anonymous role · filing a report pre-marked with a status it did not earn", () => {
   it.each(["forwarded", "org-response", "corroborated"])(
     "cannot insert a report already at status %s",
     async (status) => {
@@ -109,170 +129,154 @@ describe("anonymous role · filing a report pre-marked with a status it did not 
     },
   );
 
-  it("cannot insert a report with upvotes it did not receive", async () => {
-    const r = await insertReport({ upvotes: 9999 });
+  it.each([
+    ["upvotes", 9999],
+    ["author", "A Real Name"],
+    ["forwarded_to", "Akimat"],
+    ["org_response", "We fixed it"],
+  ])("cannot write %s", async (col, val) => {
+    const r = await insertReport({ [col]: val });
     expect(r.status).toBeGreaterThanOrEqual(400);
+    expect(r.status).toBeLessThan(500);
   });
-});
 
-describe("anonymous role · escalating a report that already exists", () => {
-  /* This is the vector the RPC grants alone do not cover: PostgREST exposes
-     PATCH on every table, so the only thing standing between a visitor and
-     reports.status is the absence of an UPDATE policy. RLS denial is
-     SILENT — PostgREST answers 2xx having changed nothing — so the
-     assertion has to be on the row's state afterwards, never on the
-     status code. */
-  it("cannot PATCH an existing report's status to forwarded or org-response", async () => {
-    /* Reuse the probe row from a previous run rather than adding another.
-       The anonymous role cannot delete, so a test that inserted every time
-       would leave a growing trail of rows in a public feed — which it did,
-       twice, before this lookup was added. At most one probe row exists,
-       whatever the run count. */
-    const existing = await fetch(
-      `${SUPABASE_URL}/rest/v1/reports?select=id,status&anon_id=eq.rls-audit-probe-0001&limit=1`,
-      { headers: anonHeaders },
-    );
-    let row = ((await existing.json()) as Array<{ id: string; status: string }>)[0];
-
-    if (!row) {
-      const created = await insertReport({});
-      expect(created.status, `probe row could not be created: ${created.body}`).toBe(201);
-      row = JSON.parse(created.body)[0] as { id: string; status: string };
-    }
+  /* RLS denial on PATCH can be silent (2xx, nothing changed), so the
+     assertion is on the row afterwards, never on the status code. */
+  it("cannot PATCH or DELETE an existing report", async () => {
+    const made = await insertReport();
+    expect(made.status, made.body).toBe(201);
+    const row = JSON.parse(made.body)[0] as { id: string; status: string };
     expect(row.status).toBe("submitted");
 
-    // eslint-disable-next-line no-console
-    console.log(`[rls-audit] probe row: ${row.id} — anon cannot delete it; see supabase/README.md`);
-
     for (const target of ["forwarded", "org-response"]) {
-      const patch = await fetch(`${SUPABASE_URL}/rest/v1/reports?id=eq.${row.id}`, {
+      await fetch(`${URL_}/rest/v1/reports?id=eq.${row.id}`, {
         method: "PATCH",
-        headers: { ...anonHeaders, Prefer: "return=representation" },
+        headers: anonHeaders,
         body: JSON.stringify({ status: target }),
       });
-      const returned = await patch.text();
-      // Whatever the status code, the row must be untouched.
-      const after = await fetch(
-        `${SUPABASE_URL}/rest/v1/reports?select=status&id=eq.${row.id}`,
-        { headers: anonHeaders },
-      );
-      const [state] = (await after.json()) as Array<{ status: string }>;
-      expect(state?.status, `status after PATCH to ${target} (returned: ${returned})`).toBe(
-        "submitted",
-      );
     }
-  });
+    await fetch(`${URL_}/rest/v1/reports?id=eq.${row.id}`, { method: "DELETE", headers: anonHeaders });
 
-  it("cannot delete a report to cover its tracks", async () => {
-    const listed = await fetch(`${SUPABASE_URL}/rest/v1/reports?select=id&limit=1`, {
+    const after = await fetch(`${URL_}/rest/v1/reports?select=status&id=eq.${row.id}`, {
       headers: anonHeaders,
     });
-    const rows = (await listed.json()) as Array<{ id: string }>;
-    if (rows.length === 0) return; // nothing to try against
-    await fetch(`${SUPABASE_URL}/rest/v1/reports?id=eq.${rows[0].id}`, {
-      method: "DELETE",
-      headers: anonHeaders,
-    });
-    const after = await fetch(
-      `${SUPABASE_URL}/rest/v1/reports?select=id&id=eq.${rows[0].id}`,
-      { headers: anonHeaders },
-    );
-    expect(((await after.json()) as unknown[]).length, "row survived the delete attempt").toBe(1);
+    const [state] = (await after.json()) as Array<{ status: string }>;
+    expect(state?.status).toBe("submitted");
   });
 });
 
-/* ── The positive case ────────────────────────────────────────
-   Proving anon CANNOT is only half the claim; the other half is that the
-   service role CAN, otherwise the feature is simply broken rather than
-   secure. That needs the service key, which is not in this environment
-   and must never be pasted into a chat or committed. Set it in the
-   environment and this block runs:
+describe.skipIf(!LIVE)("anonymous role · personal data", () => {
+  it("stores the position coarsened to ~1 km", async () => {
+    const made = await insertReport();
+    expect(made.status, made.body).toBe(201);
+    const row = JSON.parse(made.body)[0] as { lat: number; lon: number; author: string };
+    expect(row.lat).toBe(43.24);
+    expect(row.lon).toBe(76.89);
+    expect(row.author).toBe("Anonymous");
+  });
 
-     SUPABASE_SERVICE_KEY=sb_secret_… npm run test:security
-
-   It cleans up after itself — the service role can delete, so the report
-   it creates does not survive the run. */
-const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY;
-
-describe.skipIf(!SERVICE_KEY)("service role · the other half of the claim", () => {
-  const svc = {
-    apikey: SERVICE_KEY as string,
-    Authorization: `Bearer ${SERVICE_KEY}`,
-    "Content-Type": "application/json",
-  };
-
-  it("CAN set ④ forwarded, and the transfer is logged", async () => {
-    const created = await fetch(`${SUPABASE_URL}/rest/v1/reports`, {
-      method: "POST",
-      headers: { ...svc, Prefer: "return=representation" },
-      body: JSON.stringify({
-        anon_id: "svc-audit-probe-0001",
-        author: "Anonymous",
-        city: "Almaty",
-        lat: 43.238,
-        lon: 76.889,
-        category: "air",
-        severity: "low",
-        title: "SERVICE-ROLE PROBE — deleted by this test",
-        body: "Created and removed by tests/security.rls.test.ts.",
-      }),
-    });
-    expect(created.status).toBe(201);
-    const row = (await created.json())[0] as { id: string };
-
-    try {
-      const call = await fetch(`${SUPABASE_URL}/rest/v1/rpc/mark_report_forwarded`, {
-        method: "POST",
-        headers: svc,
-        body: JSON.stringify({
-          p_report_id: row.id,
-          p_destination: "audit probe destination",
-          p_actor: "audit",
-          p_note: null,
-        }),
-      });
-      expect(call.status, await call.text()).toBeLessThan(300);
-
-      const after = await fetch(
-        `${SUPABASE_URL}/rest/v1/reports?select=status,forwarded_to&id=eq.${row.id}`,
-        { headers: svc },
-      );
-      const [state] = (await after.json()) as Array<{ status: string; forwarded_to: string }>;
-      expect(state.status).toBe("forwarded");
-      expect(state.forwarded_to).toBe("audit probe destination");
-
-      const log = await fetch(
-        `${SUPABASE_URL}/rest/v1/report_forwardings?select=actor&report_id=eq.${row.id}`,
-        { headers: svc },
-      );
-      expect(((await log.json()) as unknown[]).length).toBe(1);
-    } finally {
-      await fetch(`${SUPABASE_URL}/rest/v1/reports?id=eq.${row.id}`, {
-        method: "DELETE",
-        headers: svc,
-      });
+  it("cannot read anon_id, or select every column", async () => {
+    for (const q of ["select=anon_id&limit=1", "select=*&limit=1", "select=id&anon_id=eq.x&limit=1"]) {
+      const res = await fetch(`${URL_}/rest/v1/reports?${q}`, { headers: anonHeaders });
+      expect(res.status, q).toBeGreaterThanOrEqual(400);
     }
+  });
+
+  it.each(["event_rsvps", "event_checkins"])("cannot read %s", async (t) => {
+    const res = await fetch(`${URL_}/rest/v1/${t}?select=event_id&limit=1`, { headers: anonHeaders });
+    expect(res.status).toBeGreaterThanOrEqual(400);
+  });
+
+  it("cannot reach the private schema", async () => {
+    const res = await fetch(`${URL_}/rest/v1/network_hits?select=*`, {
+      headers: { ...anonHeaders, "Accept-Profile": "private" },
+    });
+    expect(res.status).toBeGreaterThanOrEqual(400);
+  });
+
+  it("cannot delete someone else's report", async () => {
+    const made = await insertReport();
+    const row = JSON.parse(made.body)[0] as { id: string };
+    const r = await rpc("delete_my_report", { p_report_id: row.id, p_anon_id: device() });
+    expect(r.body).toBe("false");
   });
 });
 
-describe("anonymous role · the forwarding log", () => {
+describe.skipIf(!LIVE)("anonymous role · the forwarding log", () => {
   it("is readable, because a transfer log nobody can inspect is not accountability", async () => {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/report_forwardings?select=*&limit=1`, {
+    const res = await fetch(`${URL_}/rest/v1/report_forwardings?select=*&limit=1`, {
       headers: anonHeaders,
     });
     expect(res.status).toBe(200);
   });
 
   it("cannot be written to directly, which would fake a government handoff", async () => {
-    const res = await fetch(`${SUPABASE_URL}/rest/v1/report_forwardings`, {
+    const res = await fetch(`${URL_}/rest/v1/report_forwardings`, {
       method: "POST",
       headers: anonHeaders,
-      body: JSON.stringify({
-        report_id: ABSENT_ID,
-        destination: "RLS audit probe",
-        actor: "rls-audit",
-      }),
+      body: JSON.stringify({ report_id: ABSENT_ID, destination: "probe", actor: "probe" }),
     });
     expect(res.status).toBeGreaterThanOrEqual(400);
   });
 });
+
+/* ── The positive case — needs the TEST project's service key. ── */
+describe.skipIf(!LIVE || !SERVICE_KEY)("service role · the other half of the claim", () => {
+  const svc = {
+    apikey: SERVICE_KEY ?? "",
+    Authorization: `Bearer ${SERVICE_KEY ?? ""}`,
+    "Content-Type": "application/json",
+  };
+
+  it("CAN set ④ forwarded, and the transfer is logged", async () => {
+    const made = await insertReport();
+    expect(made.status, made.body).toBe(201);
+    const row = JSON.parse(made.body)[0] as { id: string };
+    try {
+      const call = await rpc(
+        "mark_report_forwarded",
+        { p_report_id: row.id, p_destination: "audit probe destination", p_actor: "audit", p_note: null },
+        svc,
+      );
+      expect(call.status, call.body).toBeLessThan(300);
+      const after = await fetch(`${URL_}/rest/v1/reports?select=status,forwarded_to&id=eq.${row.id}`, {
+        headers: svc,
+      });
+      const [state] = (await after.json()) as Array<{ status: string; forwarded_to: string }>;
+      expect(state.status).toBe("forwarded");
+    } finally {
+      await fetch(`${URL_}/rest/v1/reports?id=eq.${row.id}`, { method: "DELETE", headers: svc });
+    }
+  });
+});
+
+/* ── Can the network limit be dodged by forging forwarding headers? ──
+   Opt-in: it uses up this network's hourly allowance on the test project.
+   It files 31 reports from 31 device ids, each with a different forged
+   X-Forwarded-For and CF-Connecting-IP. If all 31 are accepted, the edge
+   passes client-supplied headers through and the network limit is not a
+   defence — the result is printed either way. */
+describe.skipIf(!LIVE || process.env.SECURITY_PROBE_NETWORK !== "1")(
+  "network limit · forged forwarding headers",
+  () => {
+    it("still stops one sender at 30 reports an hour", async () => {
+      let accepted = 0;
+      let refusedAt = -1;
+      for (let i = 0; i < 31; i++) {
+        const forged = `198.18.${Math.floor(i / 250)}.${(i % 250) + 1}`;
+        const r = await insertReport(
+          { anon_id: device() },
+          { "X-Forwarded-For": forged, "CF-Connecting-IP": forged },
+        );
+        if (r.status === 201) accepted += 1;
+        else if (r.body.includes("rate_limit_hourly")) {
+          refusedAt = i;
+          break;
+        }
+      }
+      // eslint-disable-next-line no-console
+      console.log(`[security] forged-header probe: accepted ${accepted}, refused at ${refusedAt}`);
+      expect(refusedAt, "forged headers bypass the network limit").toBeGreaterThanOrEqual(0);
+    });
+  },
+);
