@@ -18,6 +18,7 @@ import {
   SEED_REPORTS,
   SEVERITIES,
   STATUS_META,
+  deleteMyReport,
   displayTime,
   getRemoteReports,
   getUserReports,
@@ -153,11 +154,33 @@ function ReportCard({
   r,
   highlight,
   live,
+  onDeleted,
 }: {
   r: Report;
   highlight?: boolean;
   live: ReturnType<typeof useLiveStations>;
+  onDeleted?: (id: string, message: string) => void;
 }) {
+  const [deleting, setDeleting] = useState(false);
+  const [deleteNote, setDeleteNote] = useState<string | null>(null);
+
+  async function remove() {
+    if (deleting) return;
+    if (!window.confirm("Delete this report? It will be removed from the shared feed and from this device. This cannot be undone.")) return;
+    setDeleting(true);
+    setDeleteNote(null);
+    const result = await deleteMyReport(r.id);
+    setDeleting(false);
+    if (result === "deleted" || result === "local-only") {
+      onDeleted?.(r.id, "Report deleted");
+    } else if (result === "refused") {
+      setDeleteNote("This report has already been passed to an organisation, so it can't be deleted from here. Write to izbanovj3@gmail.com with a link to it and the team will remove it.");
+    } else if (result === "unsupported") {
+      setDeleteNote("Deleting from the device isn't available yet. Write to izbanovj3@gmail.com with a link to the report and the team will remove it.");
+    } else {
+      setDeleteNote("Couldn't reach the database. Nothing was deleted — try again in a moment.");
+    }
+  }
   const [votes, setVotes] = useState(r.upvotes);
   const [voted, setVoted] = useState(false);
   const cat = CATEGORIES[r.category];
@@ -251,12 +274,17 @@ function ReportCard({
       )}
 
       {r.photo && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={r.photo}
-          alt={`Field photo for ${r.title}`}
-          className="w-full max-h-64 object-cover rounded-xl border border-line mb-4"
-        />
+        <figure className="mb-4">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={r.photo}
+            alt={`Your photo for ${r.title}`}
+            className="w-full max-h-64 object-cover rounded-xl border border-line"
+          />
+          <figcaption className="telemetry !text-[0.9375rem] mt-1.5">
+            Only you can see this photo — it was never uploaded and stays on this device.
+          </figcaption>
+        </figure>
       )}
 
       {/* ② AI-контекст — collapsible, sitting under the photo. */}
@@ -324,10 +352,26 @@ function ReportCard({
           Спросить ИИ
         </Link>
 
+        {r.userCreated && (
+          <button
+            type="button"
+            onClick={remove}
+            disabled={deleting}
+            className="flex items-center gap-2 text-[0.9375rem] rounded-full border border-line text-ink-dim hover:text-coral hover:border-coral/40 px-3.5 py-1.5 transition-colors duration-300 disabled:opacity-50"
+          >
+            {deleting ? "Deleting…" : "Delete"}
+          </button>
+        )}
+
         <span className="ml-auto telemetry !text-[0.9375rem] text-emerald/60">
           +{POINTS.corroboration} Eco-Points on corroboration
         </span>
       </div>
+      {deleteNote && (
+        <p role="alert" className="text-[0.9375rem] text-coral mt-3 leading-relaxed">
+          {deleteNote}
+        </p>
+      )}
     </GlassCard>
   );
 }
@@ -483,6 +527,13 @@ export default function Community() {
     return () => ac.abort();
   }, []);
 
+  function handleDeleted(id: string, message: string) {
+    setReports((prev) => prev.filter((r) => r.id !== id));
+    setMine((prev) => prev.filter((r) => r.id !== id));
+    setDeadIds((prev) => new Set([...prev, id]));
+    setToast(message);
+  }
+
   function handleCreated(report: Report) {
     setReports((prev) => [report, ...prev.filter((r) => r.id !== report.id)]);
     setMine((prev) => [report, ...prev.filter((r) => r.id !== report.id)]);
@@ -558,7 +609,12 @@ export default function Community() {
                   exit={{ opacity: 0, scale: 0.97 }}
                   transition={{ duration: 0.35, ease: EASE }}
                 >
-                  <ReportCard r={r} highlight={r.id === justAddedId} live={live} />
+                  <ReportCard
+                    r={r}
+                    highlight={r.id === justAddedId}
+                    live={live}
+                    onDeleted={handleDeleted}
+                  />
                 </motion.div>
               ))}
             </AnimatePresence>

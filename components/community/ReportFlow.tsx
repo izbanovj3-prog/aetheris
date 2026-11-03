@@ -93,6 +93,7 @@ export function ReportFlow({
   const [step, setStep] = useState(0);
 
   /* step 1 */
+  const [consent, setConsent] = useState(false);
   const [photo, setPhoto] = useState<string | null>(null);
   const [photoName, setPhotoName] = useState<string | null>(null);
   const [photoQuality, setPhotoQuality] = useState(false);
@@ -210,7 +211,7 @@ export function ReportFlow({
       setPhotoQuality(p.quality);
       setPhotoNote(
         p.quality
-          ? `Sharp enough and large enough to be worth analysing — +${POINTS.photoQuality} Eco-Points.`
+          ? `Sharp and large enough — +${POINTS.photoQuality} Eco-Points.`
           : Math.max(p.width, p.height) < PHOTO_MIN_EDGE
             ? `Small image (${p.width}×${p.height}). It will still be filed; it just doesn't earn the photo bonus.`
             : "Looks soft or out of focus. It will still be filed; it just doesn't earn the photo bonus.",
@@ -238,7 +239,7 @@ export function ReportFlow({
     if (!trimmed) {
       return {
         title: `${label} · ${where}`,
-        body: `Filed from ${where} with a photo and no written description. Category and severity were chosen by the reporter; nothing further was stated.`,
+        body: `Filed from ${where} with no written description. Category and severity were chosen by the reporter; nothing further was stated.`,
       };
     }
     return {
@@ -285,12 +286,12 @@ export function ReportFlow({
 
   const canAdvance =
     step === 0
-      ? true // a photo is strongly encouraged, not enforced — see step 1 copy
+      ? true // the photo is optional and private — see step 1 copy
       : step === 1
         ? Boolean(city)
         : step === 2
           ? Boolean(category)
-          : true;
+          : consent; // nothing is sent until the person has read what goes public
 
   return (
     <motion.div
@@ -364,7 +365,7 @@ export function ReportFlow({
         <div className="flex-1 overflow-y-auto px-5 sm:px-6 py-5">
           {step === 0 && (
             <Step
-              lede="A photo is what makes a report usable. The grid is a framing guide — keeping the horizon or the subject on a line makes repeat photos of the same place comparable to each other."
+              lede="Optional, and only for you: the photo is not uploaded and nobody else will see it. It stays in this browser as your own record — a repeat photo of the same place later shows what changed. The grid is a framing guide for that."
             >
               <input
                 ref={fileRef}
@@ -427,8 +428,9 @@ export function ReportFlow({
               )}
               {photoError && <FieldError>{photoError}</FieldError>}
               <p className="telemetry !text-[0.9375rem] mt-3">
-                You can continue without one, but a report with no photo is much harder
-                for anyone to act on.
+                The image is shrunk and re-saved on your device, which removes the
+                camera&apos;s metadata, including its GPS position. The report itself
+                is just as valid without a photo.
               </p>
             </Step>
           )}
@@ -601,6 +603,47 @@ export function ReportFlow({
                   </div>
                 )}
 
+                <fieldset className="rounded-xl border border-line-bright bg-carbon-2/50 p-4 flex flex-col gap-3">
+                  <legend className="telemetry px-1">Before you send</legend>
+                  <p className="text-base text-ink-dim font-light leading-relaxed">
+                    <span className="text-ink">Public, for everyone to see:</span> category,
+                    severity, your note, the city, the time, and the pin rounded to about
+                    1&nbsp;km.
+                  </p>
+                  <p className="text-base text-ink-dim font-light leading-relaxed">
+                    <span className="text-ink">Not sent anywhere:</span> the photo, which
+                    stays in this browser, and the exact pin. No name, e-mail or phone
+                    number is asked for or stored.
+                  </p>
+                  <p className="text-base text-ink-dim font-light leading-relaxed">
+                    Please don&apos;t include other people&apos;s names, phone numbers, car plates
+                    or home addresses. You can delete the report from this device later.
+                  </p>
+                  <label className="flex items-start gap-3 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={consent}
+                      onChange={(e) => setConsent(e.target.checked)}
+                      className="mt-1 w-5 h-5 shrink-0 accent-emerald"
+                      aria-describedby="report-consent-links"
+                    />
+                    <span className="text-base text-ink leading-relaxed">
+                      I understand this report will be public as described above.
+                    </span>
+                  </label>
+                  <p id="report-consent-links" className="text-[0.9375rem] text-ink-faint">
+                    Details:{" "}
+                    <a href="/privacy/" target="_blank" rel="noopener" className="underline underline-offset-4 hover:text-ink">
+                      privacy policy
+                    </a>{" "}
+                    ·{" "}
+                    <a href="/terms/" target="_blank" rel="noopener" className="underline underline-offset-4 hover:text-ink">
+                      terms of use
+                    </a>{" "}
+                    (drafts under legal review).
+                  </p>
+                </fieldset>
+
                 {submitError && (
                   <div role="alert" className="rounded-xl border border-coral/40 bg-coral/[0.08] px-4 py-3 text-[0.9375rem] text-coral">
                     {submitError}
@@ -691,7 +734,8 @@ function Confirmation({ report }: { report: Report }) {
         {report.remote ? (
           <>
             Your report is stored and is now visible to everyone on the map and in
-            the feed.
+            the feed, with its position rounded to about 1&nbsp;km. Any photo stayed on
+            this device.
           </>
         ) : (
           <>
