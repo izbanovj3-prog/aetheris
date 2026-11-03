@@ -21,6 +21,15 @@ const EXCEPTIONS = {
   "/map/": { performance: 60 },
 };
 const RUNS = Number(process.env.LH_RUNS ?? 3);
+// Lighthouse's mobile profile slows the host CPU 4×, so a slow host scores
+// low for reasons that are not the page's. Lighthouse itself flags a run as
+// not representative when the host's benchmark index is at or below 1000
+// (SLOW_CPU_BENCHMARK_INDEX_THRESHOLD in
+// node_modules/lighthouse/core/gather/driver/environment.js). Such runs are
+// dropped and retried; if too few valid runs remain, the check fails and
+// says the host was too slow — it never passes on fewer runs.
+const SLOW_HOST_INDEX = 1000;
+const MAX_ATTEMPTS = RUNS * 3;
 const OUT = join(process.cwd(), "lighthouse-reports");
 mkdirSync(OUT, { recursive: true });
 
@@ -30,8 +39,8 @@ let failed = false;
 
 for (const page of PAGES) {
   const scores = [];
-  for (let i = 0; i < RUNS; i++) {
-    const file = join(OUT, `${page.replace(/\//g, "_") || "_"}-${i}.json`);
+  for (let attempt = 0; scores.length < RUNS && attempt < MAX_ATTEMPTS; attempt++) {
+    const file = join(OUT, `${page.replace(/\//g, "_") || "_"}-${attempt}.json`);
     execFileSync(
       "npx",
       [
@@ -45,8 +54,21 @@ for (const page of PAGES) {
       ],
       { stdio: "inherit", env: { ...process.env, ...(chrome ? { CHROME_PATH: chrome } : {}) } },
     );
-    const cats = JSON.parse(readFileSync(file, "utf8")).categories;
+    const report = JSON.parse(readFileSync(file, "utf8"));
+    const bench = Math.round(report.environment?.benchmarkIndex ?? 0);
+    if (bench <= SLOW_HOST_INDEX) {
+      console.log(`skip ${page.padEnd(13)} attempt ${attempt + 1}: host benchmark index ${bench} ≤ ${SLOW_HOST_INDEX}, not representative`);
+      continue;
+    }
+    const cats = report.categories;
     scores.push(Object.fromEntries(Object.entries(cats).map(([k, v]) => [k, Math.round(v.score * 100)])));
+    console.log(`run  ${page.padEnd(13)} attempt ${attempt + 1}: benchmark index ${bench}, performance ${scores.at(-1).performance}`);
+  }
+  if (scores.length < RUNS) {
+    console.log(`FAIL ${page.padEnd(13)} only ${scores.length} of ${RUNS} runs on a host fast enough for Lighthouse — re-run on another machine`);
+    failed = true;
+    results[page] = null;
+    continue;
   }
   const median = {};
   for (const k of Object.keys(TARGET)) {
