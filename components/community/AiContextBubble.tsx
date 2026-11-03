@@ -37,10 +37,10 @@ export function AiContextBubble({
   if (loading) {
     return (
       <div className="flex items-center gap-2.5 rounded-xl border border-line bg-carbon-2/40 px-3.5 py-2.5 mb-4">
-        <span className="grid place-items-center w-5 h-5 rounded-md bg-emerald/10 border border-emerald/25 text-emerald text-[14px] font-bold shrink-0">
+        <span className="grid place-items-center w-5 h-5 rounded-md bg-emerald/10 border border-emerald/25 text-emerald text-[0.9375rem] font-bold shrink-0">
           Æ
         </span>
-        <span className="telemetry !text-[14px]">Analyst is pulling comparable data…</span>
+        <span className="telemetry !text-[0.9375rem]">Analyst is pulling comparable data…</span>
       </div>
     );
   }
@@ -84,7 +84,7 @@ export function AiContextBubble({
         className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left hover:bg-ink/[0.02] transition-colors"
       >
         <span
-          className={`grid place-items-center w-5 h-5 rounded-md text-[14px] font-bold shrink-0 border ${
+          className={`grid place-items-center w-5 h-5 rounded-md text-[0.9375rem] font-bold shrink-0 border ${
             noSource
               ? "bg-carbon-3 border-line-bright text-ink-faint"
               : "bg-emerald/10 border-emerald/25 text-emerald"
@@ -94,10 +94,10 @@ export function AiContextBubble({
           Æ
         </span>
         <span className="min-w-0 flex-1">
-          <span className={`telemetry !text-[14px] ${noSource ? "" : "text-emerald/80"}`}>
+          <span className={`telemetry !text-[0.9375rem] ${noSource ? "" : "text-emerald/80"}`}>
             AI-контекст
           </span>
-          <span className="block text-[14px] text-ink-faint font-light mt-0.5">
+          <span className="block text-[0.9375rem] text-ink-faint font-light mt-0.5">
             Context, not a verdict — {noSource ? "no live source for this category" : "a reading from beside the report"}
           </span>
         </span>
@@ -126,14 +126,14 @@ export function AiContextBubble({
               </p>
 
               {!noSource && (
-                <p className="text-[14px] text-ink-faint font-light leading-relaxed">
+                <p className="text-[0.9375rem] text-ink-faint font-light leading-relaxed">
                   This reading was taken when this page loaded, not when the report
                   was filed. For a report from the last hour those are close to the
                   same thing; for an older one they are not.
                 </p>
               )}
 
-              <div className="telemetry !text-[14px] border-t border-line/60 pt-2.5 leading-relaxed">
+              <div className="telemetry !text-[0.9375rem] border-t border-line/60 pt-2.5 leading-relaxed">
                 ⌖ {context.source}
               </div>
             </div>

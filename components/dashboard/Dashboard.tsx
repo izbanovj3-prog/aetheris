@@ -197,7 +197,7 @@ function CityBars({
   return (
     <div>
       {/* Ranked on the sustainability composite — a modeled figure. */}
-      <div className="telemetry mb-4 flex items-center gap-2">
+      <div className="telemetry mb-4 flex flex-wrap items-center gap-x-2 gap-y-1">
         {title}
         <OriginBadge origin={METRIC_ORIGIN.sustainability} />
       </div>
@@ -208,7 +208,7 @@ function CityBars({
             : i < 2 ? "#2de2a6" : "#4fd8f7";
           return (
             <div key={it.name} className="grid grid-cols-[124px_1fr_44px] items-center gap-3">
-              <span className="text-[14px] text-ink-dim truncate">{it.name}</span>
+              <span className="text-[0.9375rem] text-ink-dim truncate">{it.name}</span>
               <div className="h-1.5 rounded-full bg-carbon-3 overflow-hidden">
                 {/* Width encodes the ranking value — rendered directly, not
                     grown from 0, so an unscrolled capture shows the real
@@ -328,13 +328,13 @@ export default function Dashboard() {
       </div>
 
       {/* top grid */}
-      <div className="grid lg:grid-cols-[1fr_320px] gap-5">
+      <div className="grid lg:grid-cols-[1fr_320px] gap-5 [&>*]:min-w-0">
         {/* anomaly chart */}
         <Reveal>
           <GlassCard bright ticks className="p-6 scanline">
-            <div className="flex items-center justify-between mb-2">
-              <div>
-                <div className="telemetry mb-1 flex items-center gap-2">
+            <div className="flex items-center justify-between mb-2 gap-3">
+              <div className="min-w-0">
+                <div className="telemetry mb-1 flex flex-wrap items-center gap-x-2 gap-y-1">
                   {dict.dashboard.anomalyTitle}
                   <OriginBadge origin={METRIC_ORIGIN.tempAnomaly} />
                   <SourceNote source={CLIMATE_BASELINE.note} />
@@ -345,9 +345,8 @@ export default function Dashboard() {
                 </div>
                 {/* Trend, not just level: the anomaly on its own says
                     nothing about direction of travel. */}
-                <div className="telemetry !text-[14px] text-amber mt-1">
-                  ▲ +{TREND.perDecade.toFixed(2)} °C/decade over the last{" "}
-                  {TREND.years} modeled years
+                <div className="telemetry !text-[0.9375rem] text-amber mt-1">
+                  {dict.dashboard.anomalyTrend(TREND.perDecade.toFixed(2), TREND.years)}
                 </div>
               </div>
               <span className="telemetry hidden sm:inline">{dict.dashboard.window90}</span>
@@ -363,7 +362,7 @@ export default function Dashboard() {
             {/* Composite of live air + modeled water/bio/risk — badged as the
                 weaker of the two claims. */}
             <OriginBadge origin={METRIC_ORIGIN.sustainability} />
-            <p className="text-[14px] text-ink-faint text-center font-light leading-relaxed mt-2 max-w-[220px]">
+            <p className="text-[0.9375rem] text-ink-faint text-center font-light leading-relaxed mt-2 max-w-[220px]">
               {dict.dashboard.gaugeLede(stations.length)}
             </p>
           </GlassCard>
@@ -376,7 +375,7 @@ export default function Dashboard() {
           <GlassCard className="p-6 lg:col-span-1">
             <div className="flex items-center justify-between mb-2">
               <div>
-                <div className="telemetry mb-1 flex items-center gap-2">
+                <div className="telemetry mb-1 flex flex-wrap items-center gap-x-2 gap-y-1">
                   {dict.dashboard.meanAqi}
                   <OriginBadge origin={METRIC_ORIGIN.aqi} />
                 </div>
@@ -404,14 +403,14 @@ export default function Dashboard() {
       {/* AI insights */}
       <div className="mt-12">
         <Reveal>
-          <div className="flex items-center gap-3 mb-5">
-            <span className="grid place-items-center w-7 h-7 rounded-lg bg-emerald/10 border border-emerald/30 text-emerald text-[14px] font-bold">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mb-5">
+            <span className="grid place-items-center w-7 h-7 rounded-lg bg-emerald/10 border border-emerald/30 text-emerald text-[0.9375rem] font-bold">
               Æ
             </span>
             <h2 className="font-[family-name:var(--font-syne)] font-bold text-xl">
               {dict.dashboard.aiInsights}
             </h2>
-            <span className="telemetry ml-auto">{dict.dashboard.aiInsightsMeta}</span>
+            <span className="telemetry ml-auto max-w-full">{dict.dashboard.aiInsightsMeta}</span>
           </div>
         </Reveal>
         <div className="grid md:grid-cols-3 gap-5">
@@ -438,7 +437,7 @@ export default function Dashboard() {
       {/* hotspot registry */}
       <div className="mt-12">
         <Reveal>
-          <h2 className="font-[family-name:var(--font-syne)] font-bold text-xl mb-5 flex items-center gap-3">
+          <h2 className="font-[family-name:var(--font-syne)] font-bold text-xl mb-5 flex flex-wrap items-center gap-x-3 gap-y-1">
             {dict.dashboard.hotspotsTitle}
             <OriginBadge origin="modeled" />
           </h2>
@@ -467,7 +466,7 @@ export default function Dashboard() {
                       >
                         <td className="px-5 py-3.5 text-sm font-medium whitespace-nowrap">{hotspotName(h.id, h.name, locale)}</td>
                         <td className="px-5 py-3.5 text-sm text-ink-dim whitespace-nowrap">{regionShort(h.region, locale)}</td>
-                        <td className="px-5 py-3.5 telemetry !text-[14px] whitespace-nowrap">
+                        <td className="px-5 py-3.5 telemetry !text-[0.9375rem] whitespace-nowrap">
                           {hotspotTypeLabel(h.type, locale)}
                         </td>
                         <td className="px-5 py-3.5">

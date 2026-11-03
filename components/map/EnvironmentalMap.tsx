@@ -148,9 +148,14 @@ const STYLE: maplibregl.StyleSpecification = {
   ],
 };
 
-/** National framing — centred on Kazakhstan. */
+/** National framing — centred on Kazakhstan (used by "reset view"). */
 const KZ_CENTER: [number, number] = [67.5, 48.2];
 const KZ_ZOOM = 4.1;
+
+/** Opening view: Almaty and its surroundings, the area this project works on
+    first. The reviewer advised against claiming the whole country. */
+const START_CENTER: [number, number] = [76.95, 43.25];
+const START_ZOOM = 6.2;
 
 /* ── root ─────────────────────────────────────────────────── */
 
@@ -236,8 +241,8 @@ export default function EnvironmentalMap() {
     const map = new maplibregl.Map({
       container,
       style: STYLE,
-      center: KZ_CENTER,
-      zoom: 4.1,
+      center: START_CENTER,
+      zoom: START_ZOOM,
       minZoom: 3.3,
       maxZoom: 11,
       maxBounds: [
@@ -793,7 +798,7 @@ const LayerRail = memo(function LayerRail({
               onSelect(k);
               if (!isDesktop) onToggle();
             }}
-            className={`relative flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left text-[14px] font-medium transition-colors duration-300 ${
+            className={`relative flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-left text-[0.9375rem] font-medium transition-colors duration-300 ${
               on ? "text-ink" : "text-ink-dim hover:text-ink"
             }`}
           >
@@ -809,7 +814,7 @@ const LayerRail = memo(function LayerRail({
               style={{ background: l.color, boxShadow: on ? `0 0 8px ${l.color}` : "none" }}
             />
             <span className="relative flex-1">{dict.atlas.layers[k].label}</span>
-            <span className="relative telemetry !text-[14px]">{l.unit}</span>
+            <span className="relative telemetry !text-[0.9375rem]">{l.unit}</span>
           </button>
         );
       })}
@@ -830,7 +835,7 @@ const LayerRail = memo(function LayerRail({
             className="w-2 h-2 rounded-full shrink-0"
             style={{ background: active.color, boxShadow: `0 0 8px ${active.color}` }}
           />
-          <span className="flex-1 text-left text-[14px] font-medium text-ink">{activeCopy.label}</span>
+          <span className="flex-1 text-left text-[0.9375rem] font-medium text-ink">{activeCopy.label}</span>
           <svg
             viewBox="0 0 16 16"
             className={`w-3.5 h-3.5 text-ink-dim transition-transform duration-300 ${open ? "rotate-180" : ""}`}
@@ -851,7 +856,7 @@ const LayerRail = memo(function LayerRail({
             >
               <span className="telemetry px-3 pt-1 pb-1.5 block">{dict.map.layersTitle}</span>
               {list}
-              <p className="text-[14px] leading-relaxed text-ink-faint font-light px-3 pt-2 border-t border-line mt-1">
+              <p className="text-[0.9375rem] leading-relaxed text-ink-faint font-light px-3 pt-2 border-t border-line mt-1">
                 {activeCopy.describe}
               </p>
             </motion.div>
@@ -874,7 +879,7 @@ const LayerRail = memo(function LayerRail({
       <span className="telemetry px-3 pt-2 pb-1.5">{dict.map.layersTitle}</span>
       {list}
       <div className="border-t border-line mt-1 px-3 py-2.5">
-        <p className="text-[14px] leading-relaxed text-ink-faint font-light">{activeCopy.describe}</p>
+        <p className="text-[0.9375rem] leading-relaxed text-ink-faint font-light">{activeCopy.describe}</p>
       </div>
     </motion.div>
   );
@@ -901,16 +906,16 @@ function HoverContent({
     <>
       <div className="flex items-center justify-between gap-3 mb-1.5">
         <span className="font-[family-name:var(--font-syne)] font-bold text-sm">{cityName(station.id, station.name, locale)}</span>
-        <span className="telemetry !text-[14px]">{regionShort(station.region, locale)}</span>
+        <span className="telemetry !text-[0.9375rem]">{regionShort(station.region, locale)}</span>
       </div>
       <div className="flex items-baseline justify-between">
-        <span className="text-[14px] text-ink-faint">{dict.atlas.layers[layer].label}</span>
+        <span className="text-[0.9375rem] text-ink-faint">{dict.atlas.layers[layer].label}</span>
         <span className={`readout text-base font-medium ${TONE_TEXT[band.tone]}`}>
           {Math.round(v.value(station))}
-          <span className="text-[14px] ml-1 opacity-70">{bandText}</span>
+          <span className="text-[0.9375rem] ml-1 opacity-70">{bandText}</span>
         </span>
       </div>
-      <span className="telemetry !text-[14px] mt-2 block text-emerald/70">{dict.map.clickToOpen}</span>
+      <span className="telemetry !text-[0.9375rem] mt-2 block text-emerald/70">{dict.map.clickToOpen}</span>
     </>
   );
 }
@@ -933,7 +938,7 @@ const MetricRow = memo(function MetricRow({
   return (
     <div className="flex flex-col gap-1.5">
       <div className="flex items-baseline justify-between gap-2">
-        <span className="text-[14px] text-ink-dim flex items-center gap-1.5 min-w-0">
+        <span className="text-[0.9375rem] text-ink-dim flex items-center gap-1.5 min-w-0">
           <span className="truncate">{label}</span>
           <OriginBadge origin={origin} className="shrink-0" />
         </span>
@@ -1038,7 +1043,7 @@ const StationPanel = memo(function StationPanel({
             {regionShort(s.region, locale)} · {s.lat.toFixed(2)}°N, {s.lon.toFixed(2)}°E
           </div>
           <h2 className="font-[family-name:var(--font-syne)] font-bold text-2xl leading-none">{name}</h2>
-          <div className="telemetry !text-[14px] mt-2 text-ink-faint">
+          <div className="telemetry !text-[0.9375rem] mt-2 text-ink-faint">
             {kindLabel(s.kind, locale)} · {dict.map.residents(s.population.toLocaleString("en-US"))}
           </div>
         </div>
@@ -1071,15 +1076,15 @@ const StationPanel = memo(function StationPanel({
         {/* live conditions */}
         <div className="grid grid-cols-3 divide-x divide-line rounded-xl bg-carbon-2/40 border border-line overflow-hidden">
           <div className="px-3 py-2.5 flex flex-col gap-0.5">
-            <span className="telemetry !text-[14px]">{dict.map.temperature}</span>
+            <span className="telemetry !text-[0.9375rem]">{dict.map.temperature}</span>
             <span className="readout text-sm">{s.temperature}°C</span>
           </div>
           <div className="px-3 py-2.5 flex flex-col gap-0.5">
-            <span className="telemetry !text-[14px]">{dict.map.humidity}</span>
+            <span className="telemetry !text-[0.9375rem]">{dict.map.humidity}</span>
             <span className="readout text-sm">{s.humidity}%</span>
           </div>
           <div className="px-3 py-2.5 flex flex-col gap-0.5">
-            <span className="telemetry !text-[14px] flex items-center gap-1.5">
+            <span className="telemetry !text-[0.9375rem] flex items-center gap-1.5">
               {dict.map.pollutionIdx}
               <OriginBadge origin={METRIC_ORIGIN.pollutionIndex} />
             </span>
@@ -1105,7 +1110,7 @@ const StationPanel = memo(function StationPanel({
           {bio && (
             <div className="flex flex-col gap-1.5 -mt-1.5 pl-3 border-l border-line">
               <div className="flex items-baseline justify-between gap-2">
-                <span className="text-[14px] text-ink-dim flex items-center gap-1.5 min-w-0">
+                <span className="text-[0.9375rem] text-ink-dim flex items-center gap-1.5 min-w-0">
                   <span className="truncate">{dict.map.gbifLegend}</span>
                   <OriginBadge origin="live" className="shrink-0" />
                 </span>
@@ -1114,7 +1119,7 @@ const StationPanel = memo(function StationPanel({
                   {bio.data?.speciesCapped && "+"}
                 </span>
               </div>
-              <span className="telemetry !text-[14px] leading-snug">
+              <span className="telemetry !text-[0.9375rem] leading-snug">
                 {bio.data
                   ? dict.map.gbifRecordsLine(bio.data.records, bio.data.fromYear, bio.data.toYear)
                   : bio.phase === "loading"
@@ -1128,7 +1133,7 @@ const StationPanel = memo(function StationPanel({
 
         <div className="glass rounded-xl p-4">
           <div className="flex items-center gap-2 mb-2">
-            <span className="grid place-items-center w-5 h-5 rounded bg-emerald/10 border border-emerald/30 text-emerald text-[14px] font-bold">Æ</span>
+            <span className="grid place-items-center w-5 h-5 rounded bg-emerald/10 border border-emerald/30 text-emerald text-[0.9375rem] font-bold">Æ</span>
             <span className="telemetry telemetry-bright">{dict.map.aiRead}</span>
           </div>
           <p className="text-base leading-relaxed text-ink-dim font-light">
@@ -1145,7 +1150,7 @@ const StationPanel = memo(function StationPanel({
           </p>
           <a
             href={`${localePath("/assistant", locale)}?q=${encodeURIComponent(dict.map.riskQuery(name))}`}
-            className="inline-flex items-center gap-1.5 mt-3 text-[14px] font-medium text-emerald hover:gap-2.5 transition-all"
+            className="inline-flex items-center gap-1.5 mt-3 text-[0.9375rem] font-medium text-emerald hover:gap-2.5 transition-all"
           >
             {dict.map.fullRisk}
             <svg viewBox="0 0 16 16" className="w-3 h-3" fill="none" aria-hidden>

@@ -213,7 +213,7 @@ export default function AssistantChat() {
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.4 + i * 0.07, duration: 0.6, ease: EASE }}
                   onClick={() => send(p)}
-                  className="glass rounded-full px-4 py-2 text-[14px] text-ink-dim hover:text-emerald hover:border-emerald/30 transition-colors duration-300"
+                  className="glass rounded-full px-4 py-2 text-[0.9375rem] text-ink-dim hover:text-emerald hover:border-emerald/30 transition-colors duration-300"
                 >
                   {p}
                 </motion.button>
@@ -232,7 +232,7 @@ export default function AssistantChat() {
               className={`flex flex-col gap-2 ${m.role === "user" ? "items-end" : "items-start"}`}
             >
               <div
-                className={`max-w-[88%] sm:max-w-[78%] rounded-2xl px-5 py-3.5 text-[14px] leading-relaxed ${
+                className={`max-w-[88%] sm:max-w-[78%] rounded-2xl px-5 py-3.5 text-[0.9375rem] leading-relaxed ${
                   m.role === "user"
                     ? "bg-carbon-3 border border-line-bright"
                     : "glass border-emerald/15 text-ink-dim"
@@ -262,7 +262,7 @@ export default function AssistantChat() {
                     {m.citations.map((c) => (
                       <span
                         key={c}
-                        className="telemetry !text-[14px] !tracking-[0.12em] border border-line rounded-full px-2.5 py-1"
+                        className="telemetry !text-[0.9375rem] !tracking-[0.12em] border border-line rounded-full px-2.5 py-1"
                       >
                         ⌖ {c}
                       </span>
@@ -279,7 +279,7 @@ export default function AssistantChat() {
             animate={{ opacity: 1 }}
             className="flex items-center gap-3 pl-1"
           >
-            <span className="grid place-items-center w-7 h-7 rounded-lg bg-emerald/10 border border-emerald/30 text-emerald text-[14px] font-bold">
+            <span className="grid place-items-center w-7 h-7 rounded-lg bg-emerald/10 border border-emerald/30 text-emerald text-[0.9375rem] font-bold">
               Æ
             </span>
             <span className="flex gap-1.5">
@@ -310,7 +310,7 @@ export default function AssistantChat() {
           onChange={(e) => setInput(e.target.value)}
           placeholder={dict.assistant.placeholder}
           aria-label={dict.assistant.messageAria}
-          className="flex-1 bg-transparent outline-none text-[14px] placeholder:text-ink-faint py-2.5"
+          className="flex-1 bg-transparent outline-none text-[0.9375rem] placeholder:text-ink-faint py-2.5"
         />
         <button
           type="submit"
@@ -329,7 +329,7 @@ export default function AssistantChat() {
           </svg>
         </button>
       </form>
-      <p className="telemetry !text-[14px] text-center mt-3 !tracking-[0.18em]">
+      <p className="telemetry !text-[0.9375rem] text-center mt-3 !tracking-[0.18em]">
         {dict.assistant.disclaimer}
       </p>
     </div>

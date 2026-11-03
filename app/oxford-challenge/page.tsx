@@ -164,7 +164,7 @@ export default function OxfordChallengePage() {
                   <TelemetryTag tone="coral">Critical</TelemetryTag>
                   <OriginBadge
                     origin={LAYER_ORIGIN.water}
-                    className="!text-[14px] !tracking-[0.22em] px-3 py-1.5"
+                    className="!text-[0.9375rem] !tracking-[0.22em] px-3 py-1.5"
                   />
                 </div>
                 <StatReadout
@@ -289,7 +289,7 @@ export default function OxfordChallengePage() {
                   per hour per device. A report moves through five statuses:
                   &ldquo;Отправлен&rdquo; on arrival; &ldquo;AI-контекст
                   добавлен&rdquo; when a live reading is placed beside it;
-                  &ldquo;Corroborated сообществом&rdquo; when two or more
+                  &ldquo;Совпадает с другими сообщениями&rdquo; when two or more
                   different devices report the same category in the same city
                   within 72 hours; and &ldquo;Передано&rdquo; /
                   &ldquo;Ответ организации&rdquo;, both of which only a team

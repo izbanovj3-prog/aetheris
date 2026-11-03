@@ -41,13 +41,13 @@ export function Footer() {
 
   return (
     <footer className="relative border-t border-line mt-32">
-      <div className="max-w-6xl mx-auto px-6 py-16 grid grid-cols-2 md:grid-cols-5 gap-10">
+      <div className="max-w-6xl mx-auto px-6 py-16 grid grid-cols-2 lg:grid-cols-5 gap-10">
         <div className="col-span-2 flex flex-col gap-4">
           <div className="flex items-center gap-3">
             <span className="grid place-items-center w-8 h-8 rounded-lg border border-line-bright bg-carbon-2 font-[family-name:var(--font-syne)] font-bold text-sm">
               Æ
             </span>
-            <span className="font-[family-name:var(--font-syne)] font-bold tracking-[0.28em] text-[14px]">
+            <span className="font-[family-name:var(--font-syne)] font-bold tracking-[0.28em] text-[0.9375rem]">
               AETHERIS
             </span>
           </div>
@@ -88,7 +88,7 @@ export function Footer() {
           from context that no relationship exists. */}
       <div className="border-t border-line">
         <div className="max-w-6xl mx-auto px-6 py-4">
-          <p className="text-[14px] text-ink-faint font-light leading-relaxed">
+          <p className="text-[0.9375rem] text-ink-faint font-light leading-relaxed">
             {dict.footer.independence}
           </p>
         </div>

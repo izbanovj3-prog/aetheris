@@ -139,7 +139,7 @@ export function PinMap({
             which collapses the container to the 300px canvas default. */}
         <div ref={containerRef} style={{ position: "absolute", inset: 0 }} />
       </div>
-      <p className="telemetry !text-[14px] mt-2">{label}</p>
+      <p className="telemetry !text-[0.9375rem] mt-2">{label}</p>
     </div>
   );
 }

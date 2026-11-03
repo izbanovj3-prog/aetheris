@@ -231,7 +231,7 @@ export default function CityDetail({ id }: { id: string }) {
                     .map((k) => (
                       <span
                         key={k}
-                        className="telemetry !text-[14px] border border-line rounded-full px-2 py-0.5"
+                        className="telemetry !text-[0.9375rem] border border-line rounded-full px-2 py-0.5"
                       >
                         {CATEGORIES[k].glyph} {CATEGORIES[k].label} · {sig.signal!.byCategory[k]}
                       </span>

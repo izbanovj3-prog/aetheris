@@ -385,10 +385,10 @@ export function ReportFlow({
                   </div>
                   <div className="flex items-center gap-3">
                     <div className="flex-1 min-w-0">
-                      <div className="text-[14px] text-ink truncate">{photoName}</div>
+                      <div className="text-[0.9375rem] text-ink truncate">{photoName}</div>
                       {photoNote && (
                         <div
-                          className={`telemetry !text-[14px] mt-0.5 ${
+                          className={`telemetry !text-[0.9375rem] mt-0.5 ${
                             photoQuality ? "text-emerald/80" : "text-ink-faint"
                           }`}
                         >
@@ -399,7 +399,7 @@ export function ReportFlow({
                     <button
                       type="button"
                       onClick={() => fileRef.current?.click()}
-                      className="text-[14px] text-ink-dim hover:text-ink px-2 py-1 transition-colors"
+                      className="text-[0.9375rem] text-ink-dim hover:text-ink px-2 py-1 transition-colors"
                     >
                       Replace
                     </button>
@@ -418,15 +418,15 @@ export function ReportFlow({
                       <path d="M3 8.5A1.5 1.5 0 0 1 4.5 7h2.2l1.1-1.8A1.5 1.5 0 0 1 9.1 4.5h5.8a1.5 1.5 0 0 1 1.3.7L17.3 7h2.2A1.5 1.5 0 0 1 21 8.5v9A1.5 1.5 0 0 1 19.5 19h-15A1.5 1.5 0 0 1 3 17.5v-9Z" stroke="currentColor" strokeWidth="1.4" strokeLinejoin="round" />
                       <circle cx="12" cy="12.6" r="3.4" stroke="currentColor" strokeWidth="1.4" />
                     </svg>
-                    <span className="text-[14px] font-medium">
+                    <span className="text-[0.9375rem] font-medium">
                       {photoBusy ? "Processing image…" : "Open camera"}
                     </span>
-                    <span className="telemetry !text-[14px]">or choose an existing photo</span>
+                    <span className="telemetry !text-[0.9375rem]">or choose an existing photo</span>
                   </span>
                 </button>
               )}
               {photoError && <FieldError>{photoError}</FieldError>}
-              <p className="telemetry !text-[14px] mt-3">
+              <p className="telemetry !text-[0.9375rem] mt-3">
                 You can continue without one, but a report with no photo is much harder
                 for anyone to act on.
               </p>
@@ -455,7 +455,7 @@ export function ReportFlow({
                           : "Drag the pin, or tap the map, to correct the location."
                   }
                 />
-                <div className="readout text-[14px] text-ink-faint">
+                <div className="readout text-[0.9375rem] text-ink-faint">
                   {lat.toFixed(5)}, {lon.toFixed(5)}
                 </div>
 
@@ -485,7 +485,7 @@ export function ReportFlow({
                       <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                     </svg>
                   </div>
-                  <p className="telemetry !text-[14px] mt-2">
+                  <p className="telemetry !text-[0.9375rem] mt-2">
                     {derivedCity && !cityOverride
                       ? `Nearest monitored city to the pin. This is the city the report is grouped under.`
                       : `The report is grouped under this city on the map and in the per-city counts.`}
@@ -515,8 +515,8 @@ export function ReportFlow({
                         {c.glyph}
                       </span>
                       <span className="min-w-0">
-                        <span className="block text-[14px] font-medium">{c.label}</span>
-                        <span className="block telemetry !text-[14px] mt-0.5 truncate">
+                        <span className="block text-[0.9375rem] font-medium">{c.label}</span>
+                        <span className="block telemetry !text-[0.9375rem] mt-0.5 truncate">
                           {c.example.replace(/^e\.g\. /, "")}
                         </span>
                       </span>
@@ -542,7 +542,7 @@ export function ReportFlow({
                           type="button"
                           aria-pressed={on}
                           onClick={() => setSeverity(k)}
-                          className={`rounded-lg border px-1 py-2.5 text-[14px] font-semibold transition-colors duration-200 ${
+                          className={`rounded-lg border px-1 py-2.5 text-[0.9375rem] font-semibold transition-colors duration-200 ${
                             on ? TONE_ACTIVE[sv.tone] : "border-line text-ink-faint hover:text-ink hover:border-line-bright"
                           }`}
                         >
@@ -566,7 +566,7 @@ export function ReportFlow({
                     placeholder="What did you see? Smells, colours, how long it has been there, anything affected."
                     className="w-full bg-carbon-2/60 border border-line rounded-xl px-3.5 py-2.5 text-sm outline-none focus:border-emerald/40 placeholder:text-ink-faint transition-colors resize-none leading-relaxed"
                   />
-                  <div className="telemetry !text-[14px] text-right mt-1">
+                  <div className="telemetry !text-[0.9375rem] text-right mt-1">
                     {note.length}/{NOTE_MAX}
                   </div>
                 </div>
@@ -594,7 +594,7 @@ export function ReportFlow({
                         <path d="M4 6l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                       </svg>
                     </div>
-                    <p className="telemetry !text-[14px] mt-2">
+                    <p className="telemetry !text-[0.9375rem] mt-2">
                       An &quot;after&quot; photo following a cleanup or a response is worth
                       +{POINTS.followUp} Eco-Points.
                     </p>
@@ -602,7 +602,7 @@ export function ReportFlow({
                 )}
 
                 {submitError && (
-                  <div role="alert" className="rounded-xl border border-coral/40 bg-coral/[0.08] px-4 py-3 text-[14px] text-coral">
+                  <div role="alert" className="rounded-xl border border-coral/40 bg-coral/[0.08] px-4 py-3 text-[0.9375rem] text-coral">
                     {submitError}
                   </div>
                 )}
@@ -619,7 +619,7 @@ export function ReportFlow({
             <button
               type="button"
               onClick={() => (step === 0 ? onClose() : setStep((s) => s - 1))}
-              className="rounded-xl border border-line text-ink-dim hover:text-ink hover:border-line-bright px-4 py-2.5 text-[14px] font-medium transition-colors"
+              className="rounded-xl border border-line text-ink-dim hover:text-ink hover:border-line-bright px-4 py-2.5 text-[0.9375rem] font-medium transition-colors"
             >
               {step === 0 ? "Cancel" : "Back"}
             </button>
@@ -627,7 +627,7 @@ export function ReportFlow({
               type="button"
               disabled={!canAdvance || submitting}
               onClick={() => (step === 3 ? submit() : setStep((s) => s + 1))}
-              className="ml-auto inline-flex items-center gap-2 rounded-xl bg-emerald text-abyss px-5 py-2.5 text-[14px] font-semibold hover:shadow-[0_0_24px_rgba(45,226,166,0.4)] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
+              className="ml-auto inline-flex items-center gap-2 rounded-xl bg-emerald text-abyss px-5 py-2.5 text-[0.9375rem] font-semibold hover:shadow-[0_0_24px_rgba(45,226,166,0.4)] transition-all disabled:opacity-40 disabled:cursor-not-allowed"
             >
               {submitting ? (
                 <>
@@ -648,7 +648,7 @@ export function ReportFlow({
             <button
               type="button"
               onClick={onClose}
-              className="w-full rounded-xl bg-emerald text-abyss py-3 text-[14px] font-semibold hover:shadow-[0_0_24px_rgba(45,226,166,0.4)] transition-shadow"
+              className="w-full rounded-xl bg-emerald text-abyss py-3 text-[0.9375rem] font-semibold hover:shadow-[0_0_24px_rgba(45,226,166,0.4)] transition-shadow"
             >
               Back to the feed
             </button>
@@ -679,7 +679,7 @@ function Confirmation({ report }: { report: Report }) {
         <div className="font-[family-name:var(--font-syne)] font-bold text-2xl">
           {meta.label}
         </div>
-        <div className="telemetry !text-[14px] mt-1.5">{meta.gloss} · status ①</div>
+        <div className="telemetry !text-[0.9375rem] mt-1.5">{meta.gloss} · status ①</div>
       </div>
 
       {/* Two different things can have happened, and the screen must not
@@ -706,7 +706,7 @@ function Confirmation({ report }: { report: Report }) {
       </p>
 
       <div className="w-full rounded-xl border border-line bg-carbon-2/50 p-4 text-left flex flex-col gap-2.5">
-        <div className="telemetry !text-[14px]">What can happen next</div>
+        <div className="telemetry !text-[0.9375rem]">What can happen next</div>
         <p className="text-base text-ink-dim font-light leading-relaxed">
           {/* Status names are quoted, never case-folded: lowercasing
               «AI-контекст добавлен» to fit a sentence also destroyed the
@@ -718,7 +718,7 @@ function Confirmation({ report }: { report: Report }) {
           which means independent people described the same thing, not that either of
           you is right.
         </p>
-        <p className="telemetry !text-[14px] text-emerald/70">
+        <p className="telemetry !text-[0.9375rem] text-emerald/70">
           +{POINTS.submission} Eco-Points for filing
           {report.photoQuality ? ` · +${POINTS.photoQuality} for the photo` : ""}
           {report.parentId ? ` · +${POINTS.followUp} for the follow-up` : ""}
@@ -753,7 +753,7 @@ function ThirdsGrid() {
 
 function FieldError({ children }: { children: React.ReactNode }) {
   return (
-    <p role="alert" className="text-[14px] text-coral mt-2 flex items-center gap-1.5">
+    <p role="alert" className="text-[0.9375rem] text-coral mt-2 flex items-center gap-1.5">
       <svg viewBox="0 0 16 16" className="w-3 h-3 shrink-0" fill="none" aria-hidden>
         <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.3" />
         <path d="M8 5v3.5M8 10.5v.4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />

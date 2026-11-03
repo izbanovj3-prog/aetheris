@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { LOCALES, localePath, localePrefix, switchPath, type Locale } from "@/lib/i18n";
 import { useDict, useLocale } from "@/lib/useLocale";
+import { ReadingControls } from "./ReadingControls";
 
 const LINKS = [
   { href: "/map", key: "atlas" },
@@ -47,7 +48,7 @@ function UtcClock() {
     return () => clearInterval(id);
   }, []);
   return (
-    <span className="readout text-[14px] text-ink-faint tracking-[0.15em] tabular-nums min-w-[88px] text-right">
+    <span className="readout hidden 2xl:inline text-[0.9375rem] text-ink-faint tracking-[0.15em] tabular-nums min-w-[88px] text-right">
       {now ?? "––:––:–– UTC"}
     </span>
   );
@@ -63,7 +64,7 @@ export function Nav() {
 
   return (
     <header className="fixed top-0 inset-x-0 z-50 flex justify-center px-4 pt-4">
-      <nav className="glass-bright panel-glow w-full max-w-5xl rounded-2xl px-4 sm:px-5 py-3 flex items-center gap-4">
+      <nav className="glass-bright panel-glow w-full max-w-6xl rounded-2xl px-4 sm:px-5 py-3 flex items-center gap-4">
         <Link
           href={localePrefix(locale) || "/"}
           className="flex items-center gap-3 group shrink-0"
@@ -80,12 +81,12 @@ export function Nav() {
               Æ
             </span>
           </span>
-          <span className="font-[family-name:var(--font-syne)] font-bold tracking-[0.28em] text-[14px] text-ink">
+          <span className="font-[family-name:var(--font-syne)] font-bold tracking-[0.28em] text-[0.9375rem] text-ink">
             AETHERIS
           </span>
         </Link>
 
-        <div className="hidden md:flex items-center gap-1 mx-auto">
+        <div className="hidden xl:flex items-center gap-1 mx-auto">
           {LINKS.map((l) => {
             const href = localePath(l.href, locale);
             const active = pathname.startsWith(href);
@@ -93,7 +94,7 @@ export function Nav() {
               <Link
                 key={l.href}
                 href={href}
-                className={`relative px-3.5 py-1.5 rounded-lg text-[14px] font-medium transition-colors duration-300 ${
+                className={`relative px-3.5 py-1.5 rounded-lg text-[0.9375rem] font-medium transition-colors duration-300 ${
                   active
                     ? "text-ink"
                     : "text-ink-dim hover:text-ink"
@@ -112,9 +113,10 @@ export function Nav() {
           })}
         </div>
 
-        <div className="hidden md:flex items-center gap-3 shrink-0">
+        <div className="hidden xl:flex items-center gap-3 shrink-0">
+          <ReadingControls />
           <LangSwitch className="mr-1" />
-          <span className="flex items-center gap-2">
+          <span className="hidden 2xl:flex items-center gap-2">
             <span className="dot-live" />
             <span className="telemetry telemetry-bright">{dict.nav.live}</span>
           </span>
@@ -122,10 +124,10 @@ export function Nav() {
         </div>
 
         <button
-          aria-label="Toggle menu"
+          aria-label={locale === "ru" ? "Меню" : locale === "kk" ? "Мәзір" : "Toggle menu"}
           aria-expanded={open}
           onClick={() => setOpen((v) => !v)}
-          className="md:hidden ml-auto grid place-items-center w-9 h-9 rounded-lg border border-line text-ink-dim"
+          className="xl:hidden ml-auto grid place-items-center w-9 h-9 rounded-lg border border-line text-ink-dim"
         >
           <span className="flex flex-col gap-[5px]">
             <span
@@ -145,7 +147,7 @@ export function Nav() {
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, y: -8 }}
             transition={{ duration: 0.25, ease: [0.22, 1, 0.36, 1] }}
-            className="md:hidden absolute top-[72px] inset-x-4 glass-bright panel-glow rounded-2xl p-3 flex flex-col gap-1"
+            className="xl:hidden absolute top-[72px] inset-x-4 glass-bright panel-glow rounded-2xl p-3 flex flex-col gap-1"
           >
             {LINKS.map((l) => {
               const href = localePath(l.href, locale);
@@ -163,6 +165,7 @@ export function Nav() {
                 </Link>
               );
             })}
+            <ReadingControls className="px-4 pt-2" />
             <div className="flex items-center justify-between gap-2 px-4 pt-2 pb-1 border-t border-line mt-1">
               <span className="flex items-center gap-2">
                 <span className="dot-live" />

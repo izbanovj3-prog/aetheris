@@ -289,7 +289,22 @@ function NetworkPoints() {
 
 /* ── Scene ────────────────────────────────────────────────── */
 
+/** Tracks the reader's light/dark choice (data-theme on <html>). */
+function useLightTheme() {
+  const [light, setLight] = useState(false);
+  useEffect(() => {
+    const d = document.documentElement;
+    const read = () => setLight(d.getAttribute("data-theme") === "light");
+    read();
+    const mo = new MutationObserver(read);
+    mo.observe(d, { attributes: true, attributeFilter: ["data-theme"] });
+    return () => mo.disconnect();
+  }, []);
+  return light;
+}
+
 function Scene({ land, reducedMotion }: { land: LandData; reducedMotion: boolean }) {
+  const light = useLightTheme();
   const group = useRef<THREE.Group>(null);
   const { pointer } = useThree();
 
@@ -309,7 +324,11 @@ function Scene({ land, reducedMotion }: { land: LandData; reducedMotion: boolean
         {/* dark ocean body */}
         <mesh>
           <sphereGeometry args={[0.985, 64, 64]} />
-          <meshBasicMaterial color="#060d12" transparent opacity={0.92} />
+          <meshBasicMaterial
+            color={light ? "#cfe0da" : "#060d12"}
+            transparent
+            opacity={light ? 0.5 : 0.92}
+          />
         </mesh>
         <LandPoints land={land} />
         <Arcs />

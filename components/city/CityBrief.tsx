@@ -28,7 +28,7 @@ function IndicativeBadge() {
       tabIndex={0}
       title={note}
       aria-label={`Indicative — ${note}`}
-      className="telemetry !text-[14px] inline-flex items-center gap-1.5 rounded-full border px-2 py-[3px] cursor-help align-middle whitespace-nowrap text-amber border-amber/30 bg-amber/[0.07]"
+      className="telemetry !text-[0.9375rem] inline-flex items-center gap-1.5 rounded-full border px-2 py-[3px] cursor-help align-middle whitespace-nowrap text-amber border-amber/30 bg-amber/[0.07]"
     >
       <span className="w-1.5 h-1.5 rounded-full border border-current opacity-70" />
       Indicative
@@ -47,7 +47,7 @@ export default function CityBrief({ id }: { id: string }) {
       <div className="flex flex-wrap items-center gap-3 mb-5">
         <span className="telemetry telemetry-bright">City action brief</span>
         <span
-          className={`telemetry !text-[14px] inline-flex items-center gap-1.5 rounded-full border px-2 py-[3px] capitalize ${STATUS_TONE[status]}`}
+          className={`telemetry !text-[0.9375rem] inline-flex items-center gap-1.5 rounded-full border px-2 py-[3px] capitalize ${STATUS_TONE[status]}`}
         >
           {status}
         </span>
@@ -113,7 +113,7 @@ export default function CityBrief({ id }: { id: string }) {
             </div>
 
             <p className="text-ink-dim font-light leading-relaxed text-base">{iv.action}</p>
-            <p className="text-ink-faint font-light leading-relaxed text-[14px]">
+            <p className="text-ink-faint font-light leading-relaxed text-[0.9375rem]">
               <span className="text-ink-dim">Why: </span>
               {iv.rationale}
             </p>
@@ -124,17 +124,17 @@ export default function CityBrief({ id }: { id: string }) {
                   Expected effect
                   <IndicativeBadge />
                 </span>
-                <span className="text-[14px] text-ink font-light">{iv.impact}</span>
+                <span className="text-[0.9375rem] text-ink font-light">{iv.impact}</span>
               </div>
               <div className="flex flex-col gap-1.5">
                 <span className="telemetry">First effect</span>
-                <span className="text-[14px] text-ink font-light">{iv.horizon}</span>
+                <span className="text-[0.9375rem] text-ink font-light">{iv.horizon}</span>
               </div>
             </div>
 
             <div className="flex flex-col gap-1.5">
               <span className="telemetry">Owner</span>
-              <span className="text-[14px] text-ink-dim font-light">{iv.owner}</span>
+              <span className="text-[0.9375rem] text-ink-dim font-light">{iv.owner}</span>
             </div>
           </li>
         ))}

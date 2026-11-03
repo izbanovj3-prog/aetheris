@@ -123,8 +123,18 @@ export default function RootLayout({
     <html
       lang="en"
       data-scroll-behavior="smooth"
+      suppressHydrationWarning
       className={`${syne.variable} ${albert.variable} ${plexMono.variable} h-full antialiased`}
     >
+      <head>
+        {/* Applies the reader's saved text size / theme before first paint so
+            the page does not flash dark or small. Guarded: storage can throw. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var d=document.documentElement,t=localStorage.getItem('aeth-text'),h=localStorage.getItem('aeth-theme');if(t==='2'||t==='3')d.setAttribute('data-text',t);if(h==='light')d.setAttribute('data-theme','light')}catch(e){}`,
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col grain">
         {/* Framer-motion ships its `initial` state as an inline style and
             animates it away on mount. With JS off that never happens, so the
