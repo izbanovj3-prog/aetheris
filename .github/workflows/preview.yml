@@ -64,8 +64,12 @@ jobs:
           protected=false
           case "$code" in 401|403) protected=true ;; esac
           case "$where" in https://vercel.com/*) protected=true ;; esac
+          if $protected && [ -z "$VERCEL_AUTOMATION_BYPASS_SECRET" ]; then
+            echo "::error::The deployment is behind Vercel Deployment Protection and VERCEL_AUTOMATION_BYPASS_SECRET is empty in this run. It must be a repository secret: Settings → Secrets and variables → Actions → Secrets tab → Repository secrets, with exactly that name (not a Variable, not an Environment, Dependabot or Codespaces secret)."
+            exit 1
+          fi
           if $protected; then
-            echo "::error::The deployment is behind Vercel Deployment Protection. Add the project's Protection Bypass for Automation secret as the repository secret VERCEL_AUTOMATION_BYPASS_SECRET, or check that it is current."
+            echo "::error::The deployment is behind Vercel Deployment Protection and rejected the bypass secret that was sent. Check that VERCEL_AUTOMATION_BYPASS_SECRET matches the current Protection Bypass for Automation secret of this Vercel project."
             exit 1
           fi
           [ "$code" = "200" ] || { echo "::error::Expected 200 from /, got $code"; exit 1; }
