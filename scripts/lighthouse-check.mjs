@@ -16,8 +16,8 @@ const TARGET = { performance: 80, accessibility: 95, "best-practices": 95, seo: 
 const EXCEPTIONS = {
   // MapLibre GL renders the whole map in WebGL. Lighthouse's mobile run has
   // no GPU (software WebGL) and a 4× CPU slowdown, so initialising the map
-  // is one 1–1.5 s main-thread task. Desktop profile: 94. Pending the
-  // owner's decision on a lighter phone view (README → Performance).
+  // is one 1–1.5 s main-thread task. Desktop profile: 94. Accepted by the
+  // owner on 2026-11-03 (README → Performance).
   "/map/": { performance: 60 },
 };
 const RUNS = Number(process.env.LH_RUNS ?? 3);
