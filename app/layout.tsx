@@ -100,7 +100,7 @@ const jsonLd = {
       name: SITE.name,
       url: SITE.url,
       description: SITE.description,
-      inLanguage: "en-US",
+      inLanguage: ["en", "ru", "kk"],
       publisher: { "@id": `${SITE.url}/#organization` },
     },
     {
@@ -132,7 +132,10 @@ export default function RootLayout({
             the page does not flash dark or small. Guarded: storage can throw. */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `try{var d=document.documentElement,t=localStorage.getItem('aeth-text'),h=localStorage.getItem('aeth-theme');if(t==='2'||t==='3')d.setAttribute('data-text',t);if(h==='light')d.setAttribute('data-theme','light')}catch(e){}`,
+            // Language first, from the URL: the single root layout prerenders
+            // lang="en" for every tree, and a screen reader must not read a
+            // Russian or Kazakh page with English pronunciation.
+            __html: `(function(){var d=document.documentElement,s=location.pathname.split('/')[1];if(s==='ru'||s==='kk')d.lang=s;try{var t=localStorage.getItem('aeth-text'),h=localStorage.getItem('aeth-theme');if(t==='2'||t==='3')d.setAttribute('data-text',t);if(h==='light')d.setAttribute('data-theme','light')}catch(e){}})()`,
           }}
         />
       </head>

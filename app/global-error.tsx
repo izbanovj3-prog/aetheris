@@ -1,8 +1,17 @@
 "use client";
 
+import { getDict, localeFromPathname } from "@/lib/i18n";
+
 /* Catches errors thrown by the root layout itself. It replaces the entire
    document, so it must render its own <html>/<body> and can't rely on the
    app's stylesheet — styles are inlined. Next 16 passes `unstable_retry`. */
+/** No providers or router here — read the language straight off the URL. */
+function pick() {
+  const path = typeof window === "undefined" ? "/" : window.location.pathname;
+  const d = getDict(localeFromPathname(path));
+  return { d, lang: d === getDict("ru") ? "ru" : d === getDict("kk") ? "kk" : "en" };
+}
+
 export default function GlobalError({
   unstable_retry,
 }: {
@@ -10,7 +19,7 @@ export default function GlobalError({
   unstable_retry: () => void;
 }) {
   return (
-    <html lang="en">
+    <html lang={pick().lang}>
       <body
         style={{
           margin: 0,
@@ -33,14 +42,13 @@ export default function GlobalError({
               marginBottom: 16,
             }}
           >
-            Critical fault
+            {pick().d.errors.errKicker}
           </div>
           <h1 style={{ fontSize: 30, fontWeight: 700, margin: "0 0 12px" }}>
-            Aetheris went offline
+            {pick().d.errors.fatalTitle}
           </h1>
           <p style={{ color: "#93a8b0", lineHeight: 1.6, margin: "0 0 28px" }}>
-            The core failed to initialise. Reload to bring the planetary network
-            back up.
+            {pick().d.errors.fatalBody}
           </p>
           <button
             type="button"
@@ -56,7 +64,7 @@ export default function GlobalError({
               borderRadius: 12,
             }}
           >
-            Reload Aetheris
+            {pick().d.errors.reload}
           </button>
         </div>
       </body>

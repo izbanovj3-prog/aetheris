@@ -258,6 +258,20 @@ export interface Dict {
   /** Provenance badge shown next to every displayed measurement. */
   sourceNote: { source: string; asOf: string; noBuild: string };
   skipLink: string;
+  errors: {
+    nfKicker: string;
+    nfTitle: string;
+    nfBody: string;
+    home: string;
+    atlas: string;
+    errKicker: string;
+    errTitle: string;
+    errBody: string;
+    retry: string;
+    fatalTitle: string;
+    fatalBody: string;
+    reload: string;
+  };
   dataOrigin: {
     live: string;
     modeled: string;
@@ -506,6 +520,20 @@ const en: Dict = {
   ticker: {
     networkMean: "MEAN AQI · ALL CITIES",
     critical: "CRITICAL",
+  },
+  errors: {
+    nfKicker: "Error 404",
+    nfTitle: "Page not found",
+    nfBody: "There is no page at this address. It may have moved, or the link may be mistyped.",
+    home: "Go to the home page",
+    atlas: "Open the Atlas",
+    errKicker: "Error",
+    errTitle: "Something went wrong",
+    errBody: "An unexpected error interrupted this page. Nothing you entered was sent because of it. Try again — if it keeps happening, write to izbanovj3@gmail.com.",
+    retry: "Try again",
+    fatalTitle: "Aetheris could not load",
+    fatalBody: "The page failed to start. Reload to try again.",
+    reload: "Reload",
   },
   skipLink: "Skip to main content",
   sourceNote: { source: "Source", asOf: "as of", noBuild: "build time unavailable" },
@@ -839,6 +867,20 @@ const ru: Dict = {
     networkMean: "СРЕДНИЙ AQI · ВСЕ ГОРОДА",
     critical: "КРИТИЧНО",
   },
+  errors: {
+    nfKicker: "Ошибка 404",
+    nfTitle: "Страница не найдена",
+    nfBody: "По этому адресу страницы нет. Возможно, она переехала или в ссылке опечатка.",
+    home: "На главную",
+    atlas: "Открыть Атлас",
+    errKicker: "Ошибка",
+    errTitle: "Что-то пошло не так",
+    errBody: "Непредвиденная ошибка прервала работу страницы. Из-за неё ничего из введённого вами не отправлено. Попробуйте ещё раз — если ошибка повторяется, напишите на izbanovj3@gmail.com.",
+    retry: "Попробовать снова",
+    fatalTitle: "Aetheris не загрузился",
+    fatalBody: "Страница не смогла запуститься. Обновите её, чтобы попробовать снова.",
+    reload: "Обновить",
+  },
   skipLink: "Перейти к основному содержанию",
   sourceNote: { source: "Источник", asOf: "на", noBuild: "время сборки неизвестно" },
   dataOrigin: {
@@ -1170,6 +1212,20 @@ const kk: Dict = {
   ticker: {
     networkMean: "ОРТАША AQI · БАРЛЫҚ ҚАЛАЛАР",
     critical: "КРИТИКАЛЫҚ",
+  },
+  errors: {
+    nfKicker: "404 қатесі",
+    nfTitle: "Бет табылмады",
+    nfBody: "Бұл мекенжайда бет жоқ. Мүмкін, ол көшірілген немесе сілтемеде қате бар.",
+    home: "Басты бетке",
+    atlas: "Атласты ашу",
+    errKicker: "Қате",
+    errTitle: "Бірдеңе дұрыс болмады",
+    errBody: "Күтпеген қате беттің жұмысын үзді. Соның салдарынан сіз енгізген ештеңе жіберілген жоқ. Қайталап көріңіз — қате қайталанса, izbanovj3@gmail.com мекенжайына жазыңыз.",
+    retry: "Қайталау",
+    fatalTitle: "Aetheris жүктелмеді",
+    fatalBody: "Бет іске қосыла алмады. Қайталау үшін жаңартыңыз.",
+    reload: "Жаңарту",
   },
   skipLink: "Негізгі мазмұнға өту",
   sourceNote: { source: "Дереккөз", asOf: "уақыты", noBuild: "құрастыру уақыты белгісіз" },
