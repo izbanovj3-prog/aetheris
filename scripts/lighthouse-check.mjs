@@ -41,20 +41,33 @@ for (const page of PAGES) {
   const scores = [];
   for (let attempt = 0; scores.length < RUNS && attempt < MAX_ATTEMPTS; attempt++) {
     const file = join(OUT, `${page.replace(/\//g, "_") || "_"}-${attempt}.json`);
-    execFileSync(
-      "npx",
-      [
-        "lighthouse",
-        `${BASE}${page}`,
-        "--quiet",
-        "--output=json",
-        `--output-path=${file}`,
-        "--only-categories=performance,accessibility,best-practices,seo",
-        "--chrome-flags=--headless=new --no-sandbox",
-      ],
-      { stdio: "inherit", env: { ...process.env, ...(chrome ? { CHROME_PATH: chrome } : {}) } },
-    );
-    const report = JSON.parse(readFileSync(file, "utf8"));
+    // Lighthouse itself sometimes fails to record the page load (e.g.
+    // NO_NAVSTART: "Please run Lighthouse again"). That run measured
+    // nothing, so it is dropped and retried like an unrepresentative one.
+    let report;
+    try {
+      execFileSync(
+        "npx",
+        [
+          "lighthouse",
+          `${BASE}${page}`,
+          "--quiet",
+          "--output=json",
+          `--output-path=${file}`,
+          "--only-categories=performance,accessibility,best-practices,seo",
+          "--chrome-flags=--headless=new --no-sandbox",
+        ],
+        { stdio: "inherit", env: { ...process.env, ...(chrome ? { CHROME_PATH: chrome } : {}) } },
+      );
+      report = JSON.parse(readFileSync(file, "utf8"));
+    } catch {
+      console.log(`skip ${page.padEnd(13)} attempt ${attempt + 1}: Lighthouse did not complete the run`);
+      continue;
+    }
+    if (report.runtimeError) {
+      console.log(`skip ${page.padEnd(13)} attempt ${attempt + 1}: Lighthouse runtime error ${report.runtimeError.code}`);
+      continue;
+    }
     const bench = Math.round(report.environment?.benchmarkIndex ?? 0);
     if (bench <= SLOW_HOST_INDEX) {
       console.log(`skip ${page.padEnd(13)} attempt ${attempt + 1}: host benchmark index ${bench} ≤ ${SLOW_HOST_INDEX}, not representative`);
@@ -65,7 +78,7 @@ for (const page of PAGES) {
     console.log(`run  ${page.padEnd(13)} attempt ${attempt + 1}: benchmark index ${bench}, performance ${scores.at(-1).performance}`);
   }
   if (scores.length < RUNS) {
-    console.log(`FAIL ${page.padEnd(13)} only ${scores.length} of ${RUNS} runs on a host fast enough for Lighthouse — re-run on another machine`);
+    console.log(`FAIL ${page.padEnd(13)} only ${scores.length} of ${RUNS} valid runs in ${MAX_ATTEMPTS} attempts (slow host or Lighthouse errors, listed above)`);
     failed = true;
     results[page] = null;
     continue;
