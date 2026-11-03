@@ -203,9 +203,11 @@ function CityBars({
       </div>
       <div className="flex flex-col gap-3">
         {items.map((it, i) => {
+          // Theme variables, not hex: the light theme redefines them with
+          // enough contrast for text on a white card.
           const color = invert
-            ? i < 2 ? "#f57362" : "#f5b352"
-            : i < 2 ? "#2de2a6" : "#4fd8f7";
+            ? i < 2 ? "var(--coral)" : "var(--amber)"
+            : i < 2 ? "var(--emerald)" : "var(--cyan)";
           return (
             <div key={it.name} className="grid grid-cols-[124px_1fr_44px] items-center gap-3">
               <span className="text-[0.9375rem] text-ink-dim truncate">{it.name}</span>
@@ -217,7 +219,7 @@ function CityBars({
                   className="h-full rounded-full"
                   style={{
                     width: `${(it.v / max) * 100}%`,
-                    background: `linear-gradient(90deg, ${color}77, ${color})`,
+                    background: `linear-gradient(90deg, color-mix(in srgb, ${color} 47%, transparent), ${color})`,
                   }}
                 />
               </div>

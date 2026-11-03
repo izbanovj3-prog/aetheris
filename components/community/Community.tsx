@@ -320,7 +320,7 @@ function ReportCard({
       {/* ④ / ⑤ — only ever present when an operator recorded them. */}
       {r.forwardedAt && (
         <div className="rounded-xl border border-amber/25 bg-amber/[0.04] px-3.5 py-2.5 mb-4">
-          <div className="telemetry !text-[0.9375rem] text-amber/80 mb-1">{t.card.transferTitle}</div>
+          <div className="telemetry !text-[0.9375rem] text-amber mb-1">{t.card.transferTitle}</div>
           <p className="text-base text-ink-dim font-light leading-relaxed">
             {t.card.transferBody(r.forwardedTo ?? "", new Date(r.forwardedAt).toISOString().slice(0, 10))}
           </p>
@@ -328,7 +328,7 @@ function ReportCard({
       )}
       {r.orgResponse && (
         <div className="rounded-xl border border-coral/25 bg-coral/[0.04] px-3.5 py-2.5 mb-4">
-          <div className="telemetry !text-[0.9375rem] text-coral/80 mb-1">
+          <div className="telemetry !text-[0.9375rem] text-coral mb-1">
             {r.orgResponseOrg}
           </div>
           <p className="text-base text-ink-dim font-light leading-relaxed">
@@ -382,7 +382,7 @@ function ReportCard({
           </button>
         )}
 
-        <span className="ml-auto telemetry !text-[0.9375rem] text-emerald/60">
+        <span className="ml-auto telemetry !text-[0.9375rem] text-emerald">
           {t.card.corroborationPoints(POINTS.corroboration)}
         </span>
       </div>
@@ -403,8 +403,8 @@ function MissionCard({ m, index }: { m: Mission; index: number }) {
   return (
     <Reveal index={index}>
       <div className="glass rounded-xl p-5">
-        <div className="flex items-start justify-between gap-3 mb-1.5">
-          <h4 className="font-[family-name:var(--font-syne)] font-bold text-[15px]">{text.title}</h4>
+        <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1 mb-1.5">
+          <h4 className="font-[family-name:var(--font-syne)] font-bold text-[15px] min-w-0 break-words">{text.title}</h4>
           <span className="readout text-sm text-emerald whitespace-nowrap">
             +{m.reward} Eco-Points
           </span>

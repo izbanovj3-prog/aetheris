@@ -33,10 +33,10 @@ export function StatusChip({ status }: { status: ReportStatus }) {
   return (
     <span
       title={`${text.label} — ${text.gloss}. ${text.note}`}
-      className={`telemetry !text-[0.9375rem] !tracking-[0.12em] border rounded-full px-2.5 py-1 inline-flex items-center gap-1.5 cursor-help ${TONE_CHIP[meta.tone]}`}
+      className={`telemetry !text-[0.9375rem] !tracking-[0.12em] border rounded-2xl px-2.5 py-1 inline-flex items-start gap-1.5 cursor-help max-w-full whitespace-normal break-words text-left ${TONE_CHIP[meta.tone]}`}
     >
       <span aria-hidden>{NUMERALS[meta.step - 1]}</span>
-      <span>{text.label}</span>
+      <span className="min-w-0 break-words">{text.label}</span>
       <span className="sr-only"> — {text.gloss}. {text.note}</span>
     </span>
   );

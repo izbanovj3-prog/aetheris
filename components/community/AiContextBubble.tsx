@@ -94,7 +94,7 @@ export function AiContextBubble({
           Æ
         </span>
         <span className="min-w-0 flex-1">
-          <span className={`telemetry !text-[0.9375rem] ${noSource ? "" : "text-emerald/80"}`}>
+          <span className={`telemetry !text-[0.9375rem] ${noSource ? "" : "text-emerald"}`}>
             {t.title}
           </span>
           <span className="block text-[0.9375rem] text-ink-faint font-light mt-0.5">

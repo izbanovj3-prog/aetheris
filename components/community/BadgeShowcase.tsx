@@ -54,8 +54,8 @@ export function BadgeShowcase({ reports }: { reports: Report[] }) {
 
       {next && (
         <div>
-          <div className="flex justify-between mb-1.5">
-            <span className="telemetry !text-[0.9375rem]">{t.next(rankName(next.name))}</span>
+          <div className="flex flex-wrap justify-between gap-x-3 gap-y-0.5 mb-1.5">
+            <span className="telemetry !text-[0.9375rem] min-w-0 break-words">{t.next(rankName(next.name))}</span>
             <span className="readout text-[0.9375rem] text-cyan">{t.toGo(toNext)}</span>
           </div>
           <div className="h-1 rounded-full bg-carbon-3 overflow-hidden">

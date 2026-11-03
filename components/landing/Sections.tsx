@@ -293,7 +293,7 @@ export function AssistantPreview() {
                 <span className="grid place-items-center w-8 h-8 rounded-lg bg-emerald/10 border border-emerald/30 text-emerald text-sm font-bold shrink-0">
                   Æ
                 </span>
-                <span className="telemetry telemetry-bright">{dict.assistant.analyst}</span>
+                <span className="telemetry telemetry-bright min-w-0 break-words">{dict.assistant.analyst}</span>
               </div>
               <span className="flex items-center gap-2 shrink-0">
                 <span className="dot-live" />
@@ -416,7 +416,7 @@ export function CommunityStrip() {
                 <Reveal key={s.l} index={i}>
                   <div className="flex items-baseline gap-4 border-b border-line pb-4">
                     <span className="readout text-2xl sm:text-3xl text-emerald">{s.v}</span>
-                    <span className="telemetry">{s.l}</span>
+                    <span className="telemetry min-w-0 break-words">{s.l}</span>
                   </div>
                 </Reveal>
               ))}

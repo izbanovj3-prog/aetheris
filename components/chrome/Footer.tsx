@@ -69,13 +69,13 @@ export function Footer() {
         </div>
 
         {columns.map((col) => (
-          <div key={col.title} className="flex flex-col gap-3">
+          <div key={col.title} className="flex flex-col gap-3 min-w-0">
             <span className="telemetry telemetry-bright mb-1">{col.title}</span>
             {col.links.map((l) => (
               <Link
                 key={l.href}
                 href={localePath(l.href, locale)}
-                className="text-sm text-ink-dim hover:text-emerald transition-colors duration-300 w-fit link-sweep"
+                className="text-sm text-ink-dim hover:text-emerald transition-colors duration-300 w-fit max-w-full break-words link-sweep"
               >
                 {l.label}
               </Link>

@@ -140,7 +140,7 @@ export const GlobalPulse = memo(function GlobalPulse({
       <div className="p-3">
         <div className="telemetry mb-2 flex items-center justify-between">
           <span>{dict.map.feedTitle}</span>
-          <span className="text-emerald/60">{dict.map.streaming}</span>
+          <span className="text-emerald">{dict.map.streaming}</span>
         </div>
         <Feed visible={visible} head={head} />
       </div>

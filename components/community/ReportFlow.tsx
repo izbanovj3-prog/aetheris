@@ -399,7 +399,7 @@ export function ReportFlow({
                       {photoNote && (
                         <div
                           className={`telemetry !text-[0.9375rem] mt-0.5 ${
-                            photoQuality ? "text-emerald/80" : "text-ink-faint"
+                            photoQuality ? "text-emerald" : "text-ink-faint"
                           }`}
                         >
                           {photoNote}
@@ -747,7 +747,7 @@ function Confirmation({ report }: { report: Report }) {
             t.statuses.corroborated.label,
           )}
         </p>
-        <p className="telemetry !text-[0.9375rem] text-emerald/70">
+        <p className="telemetry !text-[0.9375rem] text-emerald">
           {c.points(POINTS.submission)}
           {report.photoQuality ? c.photoPoints(POINTS.photoQuality) : ""}
           {report.parentId ? c.followPoints(POINTS.followUp) : ""}
