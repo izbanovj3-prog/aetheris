@@ -70,8 +70,10 @@ variables it runs only the offline key check and reports the rest as
 skipped — a skip is not a pass, which is why CI fails when they are
 missing.
 
-E2E tests never write to a database: every spec stubs Supabase writes
-with `page.route`. With `E2E_BASE_URL` set they run against a deployed
+E2E tests never write to the production database. Every spec stubs
+Supabase with `page.route`, except `tests/e2e/live-report.spec.ts`, which
+writes to — and deletes from — the separate test project, runs only when
+its variables are set, and blocks any other Supabase host. With `E2E_BASE_URL` set they run against a deployed
 site instead of `out/` (see "Checking a deployment").
 
 Not covered: concurrency. PGlite is a single connection, so the advisory

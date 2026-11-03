@@ -53,3 +53,34 @@ after deploy.
 | `vitest` 3 → `tinypool`, `@vitest/mocker` | critical / moderate | dev-only test runner, never shipped; fix is vitest 5 (major). Separate task. |
 
 `npm audit --omit=dev` lists only `maplibre-gl`.
+
+## Known limits (independent review, 2026-11-03)
+
+Fixed on the branch: device ids published before migration 7 are burned;
+RSVPs and check-ins have a network limit and RSVPs refuse cancelled or past
+events; deleting a report recounts ③; a declined insert is reported as
+refused instead of being kept on the device. The rest, stated plainly:
+
+- **Status ③ counts devices, not people.** Clearing site data gives a new
+  device id, so one person can bring a city/category to "Matches other
+  reports". The copy says "two devices — not necessarily two people".
+  Counting network hashes as well would need storing a hash per report
+  for 72 hours — a privacy decision for the owner.
+- **Where the network limit takes the address from.** `cf-connecting-ip`,
+  else the first entry of `x-forwarded-for`, which a client may be able to
+  set. IPv6 addresses are hashed whole, so one /64 can rotate. Without
+  either header the limit is skipped (SQL editor, scripts). Whether
+  Supabase's edge lets a client forge these is checked by the opt-in probe
+  (CI → Run workflow → `probe_network`); change the source only on that
+  evidence, because picking the wrong entry could put every visitor in
+  one bucket.
+- **The daily salt changes at 00:00 UTC**, so a sender's hourly/daily
+  count restarts then.
+- **Corroboration takes no lock.** Two first reports at the same moment
+  may each see one device and leave both at ①. That understates, never
+  overstates.
+- **The Deployment check runs the deployed commit's code with the bypass
+  secret.** Vercel must keep fork protection on (a fork's pull request is
+  not built until a member approves it); otherwise a fork could ship its
+  own workflow and read the secret. For a stricter setup, keep the secret
+  in a GitHub Environment with required reviewers.
