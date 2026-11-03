@@ -1,0 +1,83 @@
+# Checks every deployment Vercel reports as ready — each preview, and
+# production after a merge — with the full Playwright suite run against the
+# deployed site: Vercel's real headers and CSP, routing, 404s, three
+# languages, the report flow. Can also be run by hand with a URL.
+#
+# The database is never written to: every spec stubs Supabase writes, and
+# the deployment's own requests go out unchanged only in the read-only
+# header/console check.
+#
+# If Vercel Deployment Protection is on, add the project's "Protection
+# Bypass for Automation" secret as the repository secret
+# VERCEL_AUTOMATION_BYPASS_SECRET (see tests/e2e/vercel-bypass.setup.ts).
+
+name: Deployment check
+
+on:
+  deployment_status:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "Deployment URL, e.g. https://aetheris-git-….vercel.app"
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deployment-check-${{ github.event.deployment_status.environment_url || inputs.url }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: Playwright against ${{ github.event.deployment.environment || 'deployment' }}
+    if: github.event_name == 'workflow_dispatch' || github.event.deployment_status.state == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # From Vercel's deployment status or the manual input — checked below
+      # before anything uses it.
+      DEPLOY_URL: ${{ github.event.deployment_status.environment_url || inputs.url }}
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+    steps:
+      - name: Check the deployment URL
+        run: |
+          DEPLOY_URL="${DEPLOY_URL%/}"
+          if ! printf '%s' "$DEPLOY_URL" | grep -Eq '^https://([a-z0-9-]+\.vercel\.app|(www\.)?aetherisearth\.live)$'; then
+            echo "::error::Not a Vercel or aetherisearth.live URL: $DEPLOY_URL"
+            exit 1
+          fi
+          echo "E2E_BASE_URL=$DEPLOY_URL" >> "$GITHUB_ENV"
+          echo "Checking $DEPLOY_URL"
+      - name: Reach the deployment
+        run: |
+          args=(-s -o /dev/null -w '%{http_code}' --max-time 30)
+          if [ -n "$VERCEL_AUTOMATION_BYPASS_SECRET" ]; then
+            args+=(-H "x-vercel-protection-bypass: $VERCEL_AUTOMATION_BYPASS_SECRET")
+          fi
+          code=$(curl "${args[@]}" "$E2E_BASE_URL/")
+          echo "GET / → $code"
+          if [ "$code" = "401" ] || [ "$code" = "403" ]; then
+            echo "::error::The deployment is protected ($code). Add Vercel's Protection Bypass for Automation secret as VERCEL_AUTOMATION_BYPASS_SECRET, or check that it is current."
+            exit 1
+          fi
+          [ "$code" = "200" ] || { echo "::error::Expected 200 from /, got $code"; exit 1; }
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - name: Install Chromium for Playwright
+        run: npx playwright install --with-deps chromium
+      - name: End-to-end tests against the deployment
+        run: npx playwright test
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report-deployment
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
