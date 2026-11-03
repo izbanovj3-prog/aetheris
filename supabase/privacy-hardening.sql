@@ -56,9 +56,14 @@ create table if not exists private.daily_salt (
 
 create table if not exists private.network_hits (
   ip_hash    text        not null,
-  kind       text        not null check (kind in ('report', 'event')),
+  kind       text        not null check (kind in ('report', 'event', 'attend')),
   created_at timestamptz not null default now()
 );
+-- 'attend' (RSVPs and check-ins) was added after this table first shipped;
+-- rebuild the check so re-running the file brings an existing table along.
+alter table private.network_hits drop constraint if exists network_hits_kind_check;
+alter table private.network_hits
+  add constraint network_hits_kind_check check (kind in ('report', 'event', 'attend'));
 create index if not exists network_hits_lookup_idx
   on private.network_hits (ip_hash, kind, created_at desc);
 
@@ -504,6 +509,15 @@ begin
   if not private.is_private_device_id(p_anon_id) then
     raise exception 'device_id_invalid: reload the page and try again' using errcode = 'P0001';
   end if;
+  -- Only upcoming, not cancelled events take RSVPs; and one network cannot
+  -- fill an event's places by rotating device ids.
+  if exists (select 1 from public.events e where e.id = p_event_id and e.cancelled) then
+    raise exception 'checkin_cancelled: this event was cancelled' using errcode = 'P0001';
+  end if;
+  if not exists (select 1 from public.events e where e.id = p_event_id and e.starts_at > now()) then
+    raise exception 'event_in_past: this event has already started or does not exist' using errcode = 'P0001';
+  end if;
+  perform private.enforce_network_limit('attend', 60, 300, 'rate_limit_events', 'rate_limit_events');
   insert into public.event_rsvps (event_id, anon_id)
   values (p_event_id, p_anon_id)
   on conflict (event_id, anon_id) do nothing;
@@ -536,6 +550,9 @@ begin
   if not private.is_private_device_id(p_anon_id) then
     raise exception 'device_id_invalid: reload the page and try again' using errcode = 'P0001';
   end if;
+  -- The geo-fence and time window are the trigger's; this caps how many
+  -- check-ins one network can add by rotating device ids.
+  perform private.enforce_network_limit('attend', 60, 300, 'rate_limit_events', 'rate_limit_events');
   insert into public.event_checkins (event_id, anon_id, lat, lon, distance_m)
   values (p_event_id, p_anon_id, p_lat, p_lon, 0)
   on conflict (event_id, anon_id) do nothing;

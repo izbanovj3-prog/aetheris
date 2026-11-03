@@ -598,6 +598,54 @@ describe("the network rate limit", () => {
     });
   });
 
+  it("caps RSVPs from one network at 60 an hour, apart from the report count", async () => {
+    await db.exec(`
+      insert into public.events (anon_id,title,description,place,lat,lon,starts_at,capacity)
+      values ('organiser-device-net','a network-limit event','a valid description','Almaty',
+              43.238,76.889, now() + interval '5 days', null);
+    `);
+    const ev = (
+      await db.query<{ id: string }>(`select id from public.events where anon_id='organiser-device-net'`)
+    ).rows[0].id;
+    // Same network that just used up its report allowance: RSVPs are counted separately.
+    await withIp("203.0.113.7", async () => {
+      for (let i = 0; i < 60; i++) {
+        const r = await asRole("anon", `select public.rsvp_event($1,$2)`, [ev, dev(2000 + i)]);
+        expect(r.allowed, `rsvp ${i}: ${r.error}`).toBe(true);
+      }
+      const over = await asRole("anon", `select public.rsvp_event($1,$2)`, [ev, dev(2060)]);
+      expect(over.allowed).toBe(false);
+      expect(over.error).toMatch(/rate_limit_events_network/);
+    });
+  });
+
+  it("refuses RSVPs to cancelled and past events", async () => {
+    await db.exec(`
+      insert into public.events (anon_id,title,description,place,lat,lon,starts_at,capacity,cancelled)
+      values ('organiser-device-cx','a cancelled event','a valid description','Almaty',
+              43.238,76.889, now() + interval '5 days', null, true);
+    `);
+    const cancelled = (
+      await db.query<{ id: string }>(`select id from public.events where anon_id='organiser-device-cx'`)
+    ).rows[0].id;
+    const c = await asRole("anon", `select public.rsvp_event($1,$2)`, [cancelled, dev(2100)]);
+    expect(c.allowed).toBe(false);
+    expect(c.error).toMatch(/checkin_cancelled/);
+
+    await db.exec(`
+      insert into public.events (anon_id,title,description,place,lat,lon,starts_at,capacity)
+      values ('organiser-device-px','an event about to start','a valid description','Almaty',
+              43.238,76.889, now() + interval '1 hour', null);
+      update public.events set starts_at = now() - interval '1 hour' where anon_id = 'organiser-device-px';
+    `);
+    const past = (
+      await db.query<{ id: string }>(`select id from public.events where anon_id='organiser-device-px'`)
+    ).rows[0].id;
+    const p = await asRole("anon", `select public.rsvp_event($1,$2)`, [past, dev(2101)]);
+    expect(p.allowed).toBe(false);
+    expect(p.error).toMatch(/event_in_past/);
+  });
+
   it("does not hold a different network to that count", async () => {
     await withIp("198.51.100.9", async () => {
       const r = await file(31);
