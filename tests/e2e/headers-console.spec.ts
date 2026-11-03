@@ -62,6 +62,18 @@ for (const route of ROUTES) {
       problems.push(text);
     });
     page.on("pageerror", (e) => problems.push(`pageerror: ${e.message}`));
+    if (!LOCAL) {
+      // The browser's console line for a failed load names no URL. Against a
+      // deployment, say which host and path it was (never the query string).
+      const where = (u: string) => {
+        const url = new URL(u);
+        return `${url.host}${url.pathname}`;
+      };
+      page.on("requestfailed", (r) => problems.push(`request failed: ${where(r.url())} — ${r.failure()?.errorText ?? "?"}`));
+      page.on("response", (r) => {
+        if (r.status() >= 400) problems.push(`HTTP ${r.status()}: ${where(r.url())}`);
+      });
+    }
 
     if (LOCAL) {
       await page.route(offsite, (r) => {
