@@ -71,9 +71,13 @@ refused instead of being kept on the device. The rest, stated plainly:
   set. IPv6 addresses are hashed whole, so one /64 can rotate. Without
   either header the limit is skipped (SQL editor, scripts). Whether
   Supabase's edge lets a client forge these is checked by the opt-in probe
-  (CI → Run workflow → `probe_network`); change the source only on that
-  evidence, because picking the wrong entry could put every visitor in
-  one bucket.
+  (CI → Run workflow → `probe_network`). Result on the test project,
+  2026-11-03 (CI run 41704978984): a client-set `CF-Connecting-IP` is
+  refused by the edge with an HTML 403; with a different forged
+  `X-Forwarded-For` on every request the limit still stopped the sender
+  at 30 an hour ("accepted 26, refused at 26", after 4 earlier inserts
+  from the same run). So header forgery does not move the limit; IPv6
+  /64 rotation was not probed.
 - **The daily salt changes at 00:00 UTC**, so a sender's hourly/daily
   count restarts then.
 - **Corroboration takes no lock.** Two first reports at the same moment
