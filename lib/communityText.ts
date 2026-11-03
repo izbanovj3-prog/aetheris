@@ -300,7 +300,7 @@ const en: CommunityText = {
     deleteConfirm:
       "Delete this report? It will be removed from the shared feed and from this device. This cannot be undone.",
     deleteRefused:
-      "This report has already been passed to an organisation, so it can't be deleted from here. Write to izbanovj3@gmail.com with a link to it and the team will remove it.",
+      "This report can't be deleted from here — usually because it has already been passed to an organisation, or because it was filed before this version of the site. Write to izbanovj3@gmail.com with a link to it and the team will remove it.",
     deleteUnsupported:
       "Deleting from the device isn't available yet. Write to izbanovj3@gmail.com with a link to the report and the team will remove it.",
     deleteFailed: "Couldn't reach the database. Nothing was deleted — try again in a moment.",
@@ -610,7 +610,7 @@ const ru: CommunityText = {
     deleteConfirm:
       "Удалить сообщение? Оно исчезнет из общей ленты и с этого устройства. Отменить это нельзя.",
     deleteRefused:
-      "Это сообщение уже передано в организацию, поэтому удалить его отсюда нельзя. Напишите на izbanovj3@gmail.com со ссылкой на него, и команда его удалит.",
+      "Удалить это сообщение отсюда нельзя — обычно потому, что оно уже передано в организацию или отправлено до этой версии сайта. Напишите на izbanovj3@gmail.com со ссылкой на него, и команда его удалит.",
     deleteUnsupported:
       "Удаление с устройства пока недоступно. Напишите на izbanovj3@gmail.com со ссылкой на сообщение, и команда его удалит.",
     deleteFailed: "Не удалось связаться с базой. Ничего не удалено — попробуйте ещё раз чуть позже.",
