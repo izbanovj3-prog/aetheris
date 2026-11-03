@@ -256,12 +256,21 @@ describe.skipIf(!LIVE || !SERVICE_KEY)("service role · the other half of the cl
 /* ── Can the network limit be dodged by forging forwarding headers? ──
    Opt-in: it uses up this network's hourly allowance on the test project.
    It files 31 reports from 31 device ids, each with a different forged
-   X-Forwarded-For and CF-Connecting-IP. If all 31 are accepted, the edge
-   passes client-supplied headers through and the network limit is not a
-   defence — the result is printed either way. */
+   X-Forwarded-For (a client cannot set CF-Connecting-IP at all — see the
+   first test). If all 31 are accepted, the limit is not a defence; the
+   result is printed either way. */
 describe.skipIf(!LIVE || process.env.SECURITY_PROBE_NETWORK !== "1")(
   "network limit · forged forwarding headers",
   () => {
+    // First run (CI 41704533156): a client-set CF-Connecting-IP is refused
+    // by the edge in front of Supabase with an HTML 403, before the
+    // database sees it. Pinned here, because the limit relies on it.
+    it("cannot set CF-Connecting-IP itself: the edge refuses the request", async () => {
+      const r = await insertReport({ anon_id: device() }, { "CF-Connecting-IP": "198.18.0.250" });
+      expect(r.status).toBe(403);
+      expect(r.body).not.toMatch(/^\s*[[{]/); // not a PostgREST answer
+    });
+
     it("still stops one sender at 30 reports an hour", async () => {
       let accepted = 0;
       let refusedAt = -1;
@@ -270,7 +279,7 @@ describe.skipIf(!LIVE || process.env.SECURITY_PROBE_NETWORK !== "1")(
         const forged = `198.18.${Math.floor(i / 250)}.${(i % 250) + 1}`;
         const r = await insertReport(
           { anon_id: device() },
-          { "X-Forwarded-For": forged, "CF-Connecting-IP": forged },
+          { "X-Forwarded-For": forged },
         );
         if (r.status === 201) accepted += 1;
         else if (r.body.includes("rate_limit_hourly")) {
