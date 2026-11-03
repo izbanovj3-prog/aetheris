@@ -14,7 +14,7 @@ import { BASE_URL, BYPASS_STATE } from "./site";
    only ever reach the deployment itself. */
 
 export default async function globalSetup() {
-  const secret = process.env.VERCEL_AUTOMATION_BYPASS_SECRET;
+  const secret = process.env.VERCEL_AUTOMATION_BYPASS_SECRET?.trim();
   if (!secret || !process.env.E2E_BASE_URL) return;
 
   const ctx = await request.newContext();

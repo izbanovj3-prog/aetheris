@@ -51,9 +51,15 @@ jobs:
           echo "Checking $DEPLOY_URL"
       - name: Reach the deployment
         run: |
+          # Pasted secrets often carry a trailing newline or space; Vercel
+          # compares exactly, so send it trimmed (the test setup does too).
+          secret="$(printf '%s' "$VERCEL_AUTOMATION_BYPASS_SECRET" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+          if [ "$secret" != "$VERCEL_AUTOMATION_BYPASS_SECRET" ]; then
+            echo "::warning::VERCEL_AUTOMATION_BYPASS_SECRET has leading or trailing whitespace; it is sent trimmed."
+          fi
           args=(-s -o /dev/null -w '%{http_code} %{redirect_url}' --max-time 30)
-          if [ -n "$VERCEL_AUTOMATION_BYPASS_SECRET" ]; then
-            args+=(-H "x-vercel-protection-bypass: $VERCEL_AUTOMATION_BYPASS_SECRET")
+          if [ -n "$secret" ]; then
+            args+=(-H "x-vercel-protection-bypass: $secret")
           fi
           out=$(curl "${args[@]}" "$E2E_BASE_URL/")
           code="${out%% *}"
@@ -69,7 +75,10 @@ jobs:
             exit 1
           fi
           if $protected; then
-            echo "::error::The deployment is behind Vercel Deployment Protection and rejected the bypass secret that was sent. Check that VERCEL_AUTOMATION_BYPASS_SECRET matches the current Protection Bypass for Automation secret of this Vercel project."
+            # A fingerprint, never the value: lets the owner compare without
+            # anyone printing the secret.
+            fp="$(printf '%s' "$secret" | sha256sum | cut -c1-8)"
+            echo "::error::The deployment is behind Vercel Deployment Protection and rejected the bypass secret that was sent (${#secret} characters, sha256 starts with $fp). Compare with the secret in Vercel → Settings → Deployment Protection → Protection Bypass for Automation: printf %s '<secret>' | sha256sum | cut -c1-8"
             exit 1
           fi
           [ "$code" = "200" ] || { echo "::error::Expected 200 from /, got $code"; exit 1; }
