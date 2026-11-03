@@ -1,0 +1,13 @@
+# Normalise line endings in the repository to LF, whatever the OS of
+# the checkout. Without this a Windows clone with core.autocrlf shows
+# whole files as modified.
+* text=auto eol=lf
+
+# Binary assets: never touch their bytes.
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.ico binary
+*.pbf binary
+*.woff binary
+*.woff2 binary
