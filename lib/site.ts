@@ -10,26 +10,26 @@ export const SITE = {
   title: "AETHERIS — Kazakhstan Environmental Intelligence",
   tagline: "The operating system for Kazakhstan's environment.",
   description:
-    "National environmental intelligence for Kazakhstan — real-time air quality plus modeled water, industrial emissions and ecological risk across every region and major city, in one living model.",
+    "Kazakhstan's environment on one map — air quality from open data (Open-Meteo / CAMS) plus clearly marked modelled estimates for water, industrial pollution and ecological risk, across every region.",
   // `.trim()` also strips a leading BOM (U+FEFF) — some shells prepend one when
   // setting env vars — so `new URL(SITE.url)` never throws at build time.
   url: (process.env.NEXT_PUBLIC_SITE_URL ?? "https://aetherisearth.live")
     .trim()
     .replace(/\/$/, ""),
   locale: "en_US",
-  creator: "Aetheris Systems",
+  creator: "Aetheris",
   keywords: [
-    "Kazakhstan environmental monitoring",
+    "Kazakhstan environment map",
     "Kazakhstan air quality",
     "Almaty air quality",
     "Astana air quality",
     "AQI Kazakhstan",
-    "industrial emissions",
+    "industrial pollution",
     "Aral Sea",
     "Lake Balkhash",
     "climate risk",
     "environmental intelligence",
-    "ecological monitoring",
+    "state of the environment Kazakhstan",
     "environmental data visualization",
   ],
 } as const;

@@ -131,7 +131,7 @@ const en: PageContent = {
     sources: [
       {
         name: "Open-Meteo Air Quality API",
-        provides: "US AQI, PM2.5, PM10, NO₂ for all 28 monitored cities (CAMS global model)",
+        provides: "US AQI, PM2.5, PM10, NO₂ for all 28 cities — output of the CAMS global model, not ground-station measurements",
         status: "Live — fetched client-side on each visit",
       },
       {
@@ -169,28 +169,28 @@ const en: PageContent = {
         status: "Modeled — deterministic regional baseline, refreshed per build",
       },
       {
-        name: "Aetheris station registry",
+        name: "Aetheris city list",
         provides:
-          "Headline network figures — live readings per day (cities × metrics × hourly upstream updates), station, region and hotspot counts",
-        status: "Computed from the network registry at build time",
+          "Headline figures — open-data values per day (cities × metrics × hourly upstream updates), and city, region and hotspot counts",
+        status: "Computed from the city list at build time",
       },
     ],
   },
   sensorNetwork: {
-    metaTitle: "Sensor network",
+    metaTitle: "Coverage",
     metaDescription:
-      "Coverage of the Aetheris monitoring network across Kazakhstan — cities, regions, hotspots and refresh cadence.",
-    title: "Sensor network",
-    lede: "Aetheris fuses satellite passes, public monitoring APIs and community reports into one national picture. Live air and weather readings refresh on every visit; modeled layers update with each platform build.",
+      "Which cities and places Aetheris covers across Kazakhstan, and how often each kind of figure is refreshed. Aetheris runs no sensors of its own.",
+    title: "Coverage",
+    lede: "Aetheris operates no sensors. Air quality and weather come from Open-Meteo (the CAMS model and a weather forecast) and refresh on every visit; water, industrial pollution, biodiversity and risk are modelled and change with each build; residents' reports are shown separately.",
     facts: [
-      { value: "28", label: "Cities monitored — every oblast represented" },
+      { value: "28", label: "Cities covered — every oblast represented" },
       { value: "17", label: "Regions covered" },
-      { value: "14", label: "Named environmental hotspots under continuous watch, from the Aral Sea to the Semipalatinsk Polygon" },
-      { value: "5", label: "Layers per station: air, industrial pollution, water, biodiversity, risk" },
+      { value: "14", label: "Named environmental hotspots on the map, from the Aral Sea to the Semipalatinsk Polygon — their severities are modelled" },
+      { value: "5", label: "Layers per city: air, industrial pollution, water, biodiversity, risk" },
     ],
-    citiesTitle: "Monitored cities",
-    citiesLede: "Every city links to its live profile — current AQI, pollutant breakdown and health guidance.",
-    inPrep: "A public, per-station inventory with hardware details and uptime history is in preparation.",
+    citiesTitle: "Cities covered",
+    citiesLede: "Every city links to its profile — air quality from open data with pollutant breakdown and health guidance, plus the modelled layers, each marked.",
+    inPrep: "Aetheris has no instruments of its own. If that changes, a per-instrument inventory will be published here.",
   },
   mission: {
     metaTitle: "Mission",
@@ -200,7 +200,7 @@ const en: PageContent = {
     lede: "The operating system for Kazakhstan's environment.",
     paragraphs: [
       "Kazakhstan carries some of the world's most consequential environmental stories — the Aral Sea, the Semipalatinsk Polygon, industrial corridors like Temirtau and Ekibastuz — yet the data describing them has lived scattered across agencies, formats and paywalls. Aetheris exists to close that gap: one living model of the country's air, water, industrial pollution and biodiversity that anyone can open.",
-      "We build for three audiences at once. Scientists get traceable indices and honest uncertainty. Cities get decision-grade risk signals. Citizens get a map that tells them, plainly, what they are breathing today — and a way to report what the sensors can't see.",
+      "We build for three audiences at once. Scientists get traceable indices and honest uncertainty. Cities get a shared picture of where problems may be, marked as modelled where it is. Citizens get a map that tells them plainly what open data says about the air today — and a way to report what they see.",
       "Everything we publish aims to be verifiable: measured where a source exists, clearly labeled as modeled where one doesn't yet.",
       "Scope. We do not try to describe the whole country. Detailed work — the map view, resident reports and comparison with official data — starts with Almaty and its surroundings. For other cities we show only open air-quality data and modeled values, each with its mark.",
     ],
@@ -220,9 +220,9 @@ const en: PageContent = {
     lede: "Covering Aetheris? Use the boilerplate and assets below verbatim.",
     boilerplateTitle: "Boilerplate",
     boilerplate:
-      "National environmental intelligence for Kazakhstan — real-time air quality plus modeled water, industrial emissions and ecological risk across every region and major city, in one living model.",
+      "Aetheris is an independent student project that puts Kazakhstan's environment on one map: air quality from open data (Open-Meteo / CAMS), and clearly marked modelled estimates for water, industrial pollution, biodiversity and ecological risk.",
     nameNote:
-      "The product name is written AETHERIS (all caps) or Aetheris in running text; the company is Aetheris Systems.",
+      "The name is written AETHERIS (all caps) or Aetheris in running text. Aetheris is an independent student project, not a company.",
     assetsTitle: "Assets",
     assetLogo: "Logo mark (SVG)",
     assetSocial: "Social card (PNG, 1200×630)",
@@ -316,7 +316,7 @@ const ru: PageContent = {
     sources: [
       {
         name: "Open-Meteo Air Quality API",
-        provides: "US AQI, PM2.5, PM10, NO₂ для всех 28 городов под наблюдением (глобальная модель CAMS)",
+        provides: "US AQI, PM2.5, PM10, NO₂ для всех 28 городов — результат глобальной модели CAMS, а не измерения наземных станций",
         status: "Живой — запрашивается на клиенте при каждом заходе",
       },
       {
@@ -354,28 +354,28 @@ const ru: PageContent = {
         status: "Модельный — детерминированная региональная база, обновляется при каждой сборке",
       },
       {
-        name: "Реестр станций Aetheris",
+        name: "Список городов Aetheris",
         provides:
-          "Ключевые цифры сети — живых замеров в сутки (города × метрики × почасовые обновления), число станций, регионов и горячих точек",
-        status: "Вычисляется из реестра сети при сборке",
+          "Ключевые цифры — значений открытых данных в сутки (города × метрики × почасовые обновления у источника), число городов, регионов и горячих точек",
+        status: "Вычисляется из списка городов при сборке",
       },
     ],
   },
   sensorNetwork: {
-    metaTitle: "Сеть станций",
+    metaTitle: "Охват",
     metaDescription:
-      "Покрытие сети мониторинга Aetheris по Казахстану — города, регионы, горячие точки и частота обновления.",
-    title: "Сеть станций",
-    lede: "Aetheris объединяет спутниковые пролёты, публичные API мониторинга и отчёты сообщества в единую национальную картину. Живые данные по воздуху и погоде обновляются при каждом заходе; модельные слои — при каждой сборке платформы.",
+      "Какие города и места Казахстана охватывает Aetheris и как часто обновляется каждый вид данных. Собственных датчиков у Aetheris нет.",
+    title: "Охват",
+    lede: "У Aetheris нет собственных датчиков. Качество воздуха и погода берутся из Open-Meteo (модель CAMS и прогноз погоды) и обновляются при каждом заходе; вода, промышленное загрязнение, биоразнообразие и риск — модельные и меняются с каждой сборкой; сообщения жителей показываются отдельно.",
     facts: [
-      { value: "28", label: "Городов под наблюдением — представлена каждая область" },
+      { value: "28", label: "Городов охвачено — представлена каждая область" },
       { value: "17", label: "Регионов покрыто" },
-      { value: "14", label: "Именованных экологических горячих точек под постоянным контролем — от Аральского моря до Семипалатинского полигона" },
-      { value: "5", label: "Слоёв на станцию: воздух, промышленное загрязнение, вода, биоразнообразие, риск" },
+      { value: "14", label: "Именованных экологических горячих точек на карте — от Аральского моря до Семипалатинского полигона; их оценки модельные" },
+      { value: "5", label: "Слоёв на город: воздух, промышленное загрязнение, вода, биоразнообразие, риск" },
     ],
-    citiesTitle: "Города под наблюдением",
-    citiesLede: "Каждый город ведёт на свой живой профиль — текущий AQI, разбивка по загрязнителям и рекомендации для здоровья.",
-    inPrep: "Публичный постанционный реестр с характеристиками оборудования и историей аптайма готовится.",
+    citiesTitle: "Охваченные города",
+    citiesLede: "Каждый город ведёт на свой профиль — качество воздуха по открытым данным с разбивкой по загрязнителям и рекомендациями для здоровья, плюс модельные слои, каждый с пометкой.",
+    inPrep: "Собственных приборов у Aetheris нет. Если они появятся, здесь будет опубликован их перечень.",
   },
   mission: {
     metaTitle: "Миссия",
@@ -385,7 +385,7 @@ const ru: PageContent = {
     lede: "Операционная система для окружающей среды Казахстана.",
     paragraphs: [
       "Казахстан хранит одни из самых значимых экологических историй в мире — Аральское море, Семипалатинский полигон, промышленные коридоры вроде Темиртау и Экибастуза — но данные о них жили разрозненно: по разным ведомствам, форматам и платным доступам. Aetheris существует, чтобы закрыть этот разрыв: одна живая модель воздуха, воды, промышленного загрязнения и биоразнообразия страны, которую может открыть каждый.",
-      "Мы строим сразу для трёх аудиторий. Учёные получают прослеживаемые индексы и честную неопределённость. Города — сигналы риска уровня принятия решений. Граждане — карту, которая прямо говорит, чем они дышат сегодня, и способ сообщить о том, чего не видят сенсоры.",
+      "Мы строим сразу для трёх аудиторий. Учёные получают прослеживаемые индексы и честную неопределённость. Города — общую картину того, где могут быть проблемы, с пометкой «модель» там, где это модель. Граждане — карту, которая прямо говорит, что открытые данные показывают о воздухе сегодня, и способ сообщить о том, что они видят.",
       "Всё, что мы публикуем, стремится быть проверяемым: измерено там, где источник есть, и явно помечено как модельное там, где источника пока нет.",
       "Охват. Мы не берёмся описывать всю страну сразу. Подробную работу — карту, сообщения жителей и сопоставление с официальными данными — начинаем с Алматы и её окрестностей. По остальным городам показываем только открытые данные о качестве воздуха и модельные значения, каждое со своей пометкой.",
     ],
@@ -405,9 +405,9 @@ const ru: PageContent = {
     lede: "Пишете об Aetheris? Используйте текст и материалы ниже дословно.",
     boilerplateTitle: "Официальный текст",
     boilerplate:
-      "Национальная экологическая аналитика Казахстана — качество воздуха в реальном времени плюс модельные вода, промышленные выбросы и экологические риски по всем регионам и крупным городам в одной живой модели.",
+      "Aetheris — независимый студенческий проект, который собирает состояние окружающей среды Казахстана на одной карте: качество воздуха по открытым данным (Open-Meteo / CAMS) и явно помеченные модельные оценки воды, промышленного загрязнения, биоразнообразия и экологического риска.",
     nameNote:
-      "Название продукта пишется AETHERIS (заглавными) или Aetheris в тексте; компания — Aetheris Systems.",
+      "Название пишется AETHERIS (заглавными) или Aetheris в тексте. Aetheris — независимый студенческий проект, а не компания.",
     assetsTitle: "Материалы",
     assetLogo: "Логотип (SVG)",
     assetSocial: "Соцкарточка (PNG, 1200×630)",
@@ -501,7 +501,7 @@ const kk: PageContent = {
     sources: [
       {
         name: "Open-Meteo Air Quality API",
-        provides: "Бақылаудағы барлық 28 қала үшін US AQI, PM2.5, PM10, NO₂ (жаһандық CAMS моделі)",
+        provides: "Барлық 28 қала үшін US AQI, PM2.5, PM10, NO₂ — жер үсті станцияларының өлшеуі емес, жаһандық CAMS моделінің нәтижесі",
         status: "Тірі — әр кіргенде клиент жағында сұралады",
       },
       {
@@ -539,28 +539,28 @@ const kk: PageContent = {
         status: "Модельдік — детерминирленген өңірлік база, әр құрастыруда жаңарады",
       },
       {
-        name: "Aetheris станциялар тізілімі",
+        name: "Aetheris қалалар тізімі",
         provides:
-          "Желінің негізгі көрсеткіштері — тәулігіне тірі өлшем (қалалар × метрикалар × сағаттық жаңартулар), станция, өңір және ошақ саны",
-        status: "Құрастыру кезінде желі тізілімінен есептеледі",
+          "Негізгі көрсеткіштер — тәулігіне ашық дерек мәндері (қалалар × метрикалар × дереккөздегі сағаттық жаңартулар), қала, өңір және ошақ саны",
+        status: "Құрастыру кезінде қалалар тізімінен есептеледі",
       },
     ],
   },
   sensorNetwork: {
-    metaTitle: "Станциялар желісі",
+    metaTitle: "Қамту",
     metaDescription:
-      "Aetheris мониторинг желісінің Қазақстан бойынша қамтуы — қалалар, өңірлер, ошақтар және жаңару жиілігі.",
-    title: "Станциялар желісі",
-    lede: "Aetheris спутниктік өтулерді, көпшілік мониторинг API-лерін және қауымдастық есептерін бірыңғай ұлттық суретке біріктіреді. Ауа мен ауа райы бойынша тірі деректер әр кіргенде жаңарады; модельдік қабаттар платформаның әр құрастыруымен.",
+      "Aetheris Қазақстанның қай қалалары мен жерлерін қамтиды және әр дерек түрі қаншалықты жиі жаңарады. Aetheris-тің өз сенсорлары жоқ.",
+    title: "Қамту",
+    lede: "Aetheris-тің өз сенсорлары жоқ. Ауа сапасы мен ауа райы Open-Meteo-дан (CAMS моделі және ауа райы болжамы) алынады және әр кіргенде жаңарады; су, өнеркәсіптік ластану, биоалуантүрлілік және тәуекел — модельдік, әр құрастыруда өзгереді; тұрғындар хабарламалары бөлек көрсетіледі.",
     facts: [
-      { value: "28", label: "Бақылаудағы қалалар — әр облыс ұсынылған" },
+      { value: "28", label: "Қамтылған қалалар — әр облыс ұсынылған" },
       { value: "17", label: "Қамтылған өңірлер" },
-      { value: "14", label: "Тұрақты бақылаудағы аталған экологиялық ошақтар — Арал теңізінен Семей полигонына дейін" },
-      { value: "5", label: "Станцияға шаққандағы қабаттар: ауа, өнеркәсіптік ластану, су, биоалуантүрлілік, тәуекел" },
+      { value: "14", label: "Картадағы аталған экологиялық ошақтар — Арал теңізінен Семей полигонына дейін; олардың бағалары модельдік" },
+      { value: "5", label: "Қалаға шаққандағы қабаттар: ауа, өнеркәсіптік ластану, су, биоалуантүрлілік, тәуекел" },
     ],
-    citiesTitle: "Бақылаудағы қалалар",
-    citiesLede: "Әр қала өзінің тірі профиліне бағыттайды — ағымдағы AQI, ластағыштар бөлінісі және денсаулық ұсыныстары.",
-    inPrep: "Жабдық сипаттамалары мен аптайм тарихы бар көпшілік станциялық тізілім дайындалуда.",
+    citiesTitle: "Қамтылған қалалар",
+    citiesLede: "Әр қала өз профиліне бағыттайды — ашық деректер бойынша ауа сапасы, ластағыштар бөлінісі және денсаулық ұсыныстары, қоса әрқайсысы белгіленген модельдік қабаттар.",
+    inPrep: "Aetheris-тің өз аспаптары жоқ. Олар пайда болса, тізімі осында жарияланады.",
   },
   mission: {
     metaTitle: "Миссия",
@@ -570,7 +570,7 @@ const kk: PageContent = {
     lede: "Қазақстанның қоршаған ортасына арналған операциялық жүйе.",
     paragraphs: [
       "Қазақстан әлемдегі ең маңызды экологиялық оқиғалардың бірін сақтайды — Арал теңізі, Семей полигоны, Теміртау мен Екібастұз секілді өнеркәсіп дәліздері — бірақ ол туралы деректер ведомстволар, форматтар мен ақылы қолжетімділік арасында шашырап жатты. Aetheris осы алшақтықты жою үшін бар: елдің ауасының, суының, өнеркәсіптік ластануы мен биоалуантүрлілігінің кез келген адам аша алатын бір тірі моделі.",
-      "Біз бірден үш аудиторияға құрамыз. Ғалымдар бақыланатын индекстер мен адал белгісіздік алады. Қалалар — шешім қабылдау деңгейіндегі тәуекел сигналдарын. Азаматтар — бүгін немен тыныс алатынын анық айтатын картаны және сенсорлар көрмейтінін хабарлау мүмкіндігін.",
+      "Біз бірден үш аудиторияға құрамыз. Ғалымдар бақыланатын индекстер мен адал белгісіздік алады. Қалалар — проблемалар қай жерде болуы мүмкін екенінің ортақ көрінісін, модель болған жерде «модель» белгісімен. Азаматтар — ашық деректердің бүгінгі ауа туралы не көрсететінін анық айтатын картаны және көргенін хабарлау мүмкіндігін.",
       "Біз жариялайтын барлық нәрсе тексерілетін болуға тырысады: дереккөз бар жерде өлшенген, әлі жоқ жерде анық модельдік деп белгіленген.",
       "Қамту. Біз бүкіл елді бірден сипаттауға тырыспаймыз. Егжей-тегжейлі жұмысты — картаны, тұрғындардың хабарламаларын және ресми деректермен салыстыруды — Алматы мен оның төңірегінен бастаймыз. Қалған қалалар бойынша тек ауа сапасының ашық деректерін және модельдік мәндерді көрсетеміз, әрқайсысы өз белгісімен.",
     ],
@@ -590,9 +590,9 @@ const kk: PageContent = {
     lede: "Aetheris туралы жазып жатырсыз ба? Төмендегі мәтін мен материалдарды сөзбе-сөз пайдаланыңыз.",
     boilerplateTitle: "Ресми мәтін",
     boilerplate:
-      "Қазақстанның ұлттық экологиялық аналитикасы — нақты уақыттағы ауа сапасы, сондай-ақ модельдік су, өнеркәсіптік шығарындылар және экологиялық тәуекелдер, барлық өңірлер мен ірі қалалар бір тірі модельде.",
+      "Aetheris — Қазақстанның қоршаған ортасын бір картаға жинайтын тәуелсіз студенттік жоба: ашық деректер бойынша ауа сапасы (Open-Meteo / CAMS) және су, өнеркәсіптік ластану, биоалуантүрлілік пен экологиялық тәуекелдің анық белгіленген модельдік бағалаулары.",
     nameNote:
-      "Өнім атауы AETHERIS (бас әріппен) немесе мәтінде Aetheris деп жазылады; компания — Aetheris Systems.",
+      "Атауы AETHERIS (бас әріппен) немесе мәтінде Aetheris деп жазылады. Aetheris — компания емес, тәуелсіз студенттік жоба.",
     assetsTitle: "Материалдар",
     assetLogo: "Логотип (SVG)",
     assetSocial: "Әлеуметтік карточка (PNG, 1200×630)",
