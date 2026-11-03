@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { EASE, Reveal, SourceNote, TelemetryTag } from "@/components/ui/primitives";
 import { getStations } from "@/lib/data";
+import { isConfigured } from "@/lib/supabase";
 import {
   CHECKIN_RADIUS_M,
   EventError,
@@ -186,7 +187,7 @@ export function Events() {
         {loaded && !available && (
           <div className="glass rounded-xl p-4">
             <p className="text-base text-ink-dim font-light leading-relaxed">
-              {e9.unreachable}
+              {isConfigured() ? e9.unreachable : e9.noBackend}
             </p>
           </div>
         )}

@@ -20,7 +20,7 @@ import {
   type Tone,
 } from "@/lib/reports";
 import { PinMap } from "./PinMap";
-import { coarsen } from "@/lib/supabase";
+import { coarsen, isConfigured } from "@/lib/supabase";
 import { localePath } from "@/lib/i18n";
 import { placeName } from "@/lib/communityText";
 import { useCommunityText, useLocale } from "@/lib/useLocale";
@@ -734,7 +734,7 @@ function Confirmation({ report }: { report: Report }) {
           back to this browser's storage, and telling that person their
           report is "visible to everyone" would be a straight untruth. */}
       <p className="text-base text-ink-dim font-light leading-relaxed max-w-sm">
-        {report.remote ? c.stored : c.local} {c.nothingElse}
+        {report.remote ? c.stored : isConfigured() ? c.local : c.localNoBackend} {c.nothingElse}
       </p>
 
       <div className="w-full rounded-xl border border-line bg-carbon-2/50 p-4 text-left flex flex-col gap-2.5">

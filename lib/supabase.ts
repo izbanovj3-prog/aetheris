@@ -5,26 +5,31 @@
    site already talks to Open-Meteo and GBIF this way, the whole surface
    used here is two HTTP calls, and it keeps ~50 KB out of the bundle.
 
-   The key below is Supabase's *publishable* key. It is designed to ship
-   in client code — every protection lives in the row-level security
-   policies in supabase/reports.sql, not in key secrecy. A `sb_secret_`
-   key must never appear here.
+   The project comes from the build environment only —
+   NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY — so a build
+   is never pointed at a project by accident. The key is the publishable
+   (anon) key: it ships in the bundle by design, and every protection
+   lives in the row-level security in supabase/*.sql. A `sb_secret_` key
+   must never be put in either variable.
 
-   Everything degrades: if the project is unreachable or the table is
-   missing, the caller falls back to localStorage and the app behaves
-   exactly as it did before. A write the database declines (RLS, a
-   constraint, a trigger) is not an outage: it is reported as refused and
-   nothing is kept, because a local copy would never sync. That
-   fallback is why the "no backend" copy stays until persistence is
-   actually verified.
+   Without both variables the site runs with no backend: nothing is sent
+   anywhere, reports stay in this browser, and the community page says
+   the shared database is not connected. If the project is unreachable or
+   the table is missing, the caller falls back to localStorage too. A
+   write the database declines (RLS, a constraint, a trigger) is not an
+   outage: it is reported as refused and nothing is kept, because a local
+   copy would never sync.
    ───────────────────────────────────────────────────────────── */
 
-export const SUPABASE_URL =
-  process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://effxsftaolpjjlpuqwax.supabase.co";
+/** Only an https origin counts; anything else leaves the backend off. */
+function projectUrl(v: string | undefined): string {
+  const url = (v ?? "").trim().replace(/\/+$/, "");
+  return /^https:\/\/[^/\s]+$/.test(url) ? url : "";
+}
 
-export const SUPABASE_KEY =
-  process.env.NEXT_PUBLIC_SUPABASE_KEY ??
-  "sb_publishable_YERf0Mpcy2YhOFyvIz5H1w_rQ9-H6go";
+export const SUPABASE_URL = projectUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
+
+export const SUPABASE_KEY = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "").trim();
 
 export const REPORTS_TABLE = "reports";
 
@@ -75,6 +80,9 @@ export async function callRpc(
   body: Record<string, unknown>,
   signal?: AbortSignal,
 ): Promise<Response | null> {
+  // No backend: answer as a failure, never as "function missing" (null),
+  // which would send the caller down a fallback path to the same nowhere.
+  if (!isConfigured()) return new Response(null, { status: 503 });
   const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
     method: "POST",
     headers: headers(),

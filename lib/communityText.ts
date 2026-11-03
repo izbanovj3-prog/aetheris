@@ -37,6 +37,8 @@ export interface CommunityText {
     sampleCount: Fn;
     sampleNoteLive: Fn;
     sampleNoteOffline: Fn<[number, number]>;
+    /** Shown when this build has no Supabase project configured at all. */
+    noBackend: string;
     missionsTitle: string;
     missionsNote: string;
     achievementsTitle: string;
@@ -158,6 +160,7 @@ export interface CommunityText {
     statusLine: Fn<[string]>;
     stored: string;
     local: string;
+    localNoBackend: string;
     nothingElse: string;
     nextTitle: string;
     next: Fn<[string, string, string]>;
@@ -190,6 +193,7 @@ export interface CommunityText {
     create: string;
     none: string;
     unreachable: string;
+    noBackend: string;
     sampleNote: string;
     sampleTitle: string;
     attendingSample: Fn;
@@ -262,6 +266,8 @@ const en: CommunityText = {
     sampleCount: (n) => `${n} seeded examples`,
     sampleNoteLive: (n) =>
       `The ${n} entries marked "Sample" are illustrative, written to demonstrate the feed. Anything without that mark is a real submission stored in the shared database and visible to every visitor.`,
+    noBackend:
+      "The shared database is not connected to this version of the site. Reports you file stay in this browser only — nobody else can see them — and the examples below are not real submissions.",
     sampleNoteOffline: (n, c) =>
       `Seeded sample data — ${n} illustrative reports from ${c} example contributors, written to demonstrate the feed. Not real submissions. Reports you file yourself are real but persist only to this browser; the shared datastore is unreachable right now.`,
     missionsTitle: "Active missions",
@@ -450,6 +456,8 @@ const en: CommunityText = {
     statusLine: (gloss) => `${gloss} · status ①`,
     stored:
       "Your report is stored and is now visible to everyone on the map and in the feed, with its position rounded to about 1 km. Any photo stayed on this device.",
+    localNoBackend:
+      "This version of the site has no shared database connected, so your report is saved in this browser only — you can see it, nobody else can. It has not been filed to the network.",
     local:
       "The shared database could not be reached, so your report is saved in this browser only — you can see it, nobody else can. It is not lost, but it has not been filed to the network either.",
     nothingElse:
@@ -487,6 +495,8 @@ const en: CommunityText = {
     scheduled: (n) => `${n} scheduled`,
     create: "Create",
     none: "No events have been created yet. Anyone can add one — a cleanup, a survey, a mapping walk — and people can RSVP and check in when they arrive.",
+    noBackend:
+      "No events database is connected to this version of the site, so real events cannot be listed or created here. The examples below are the illustrative ones that have always been on this page.",
     unreachable:
       "The events datastore isn't reachable from here, so no real events can be listed or created right now. The examples below are the illustrative ones that have always been on this page.",
     sampleNote:
@@ -572,6 +582,8 @@ const ru: CommunityText = {
     sampleCount: (n) => `${n} примеров`,
     sampleNoteLive: (n) =>
       `${n} записей с пометкой «Пример» написаны для демонстрации ленты. Всё без этой пометки — настоящие сообщения, сохранённые в общей базе и видимые всем посетителям.`,
+    noBackend:
+      "К этой версии сайта общая база не подключена. Сообщения, которые вы отправите, сохранятся только в этом браузере — их никто больше не увидит, — а примеры ниже не настоящие сообщения.",
     sampleNoteOffline: (n, c) =>
       `Демонстрационные данные — ${n} примеров от ${c} вымышленных авторов, написанных, чтобы показать ленту. Это не настоящие сообщения. Ваши собственные сообщения настоящие, но сейчас сохраняются только в этом браузере: общая база недоступна.`,
     missionsTitle: "Активные миссии",
@@ -759,6 +771,8 @@ const ru: CommunityText = {
     statusLine: (gloss) => `${gloss} · статус ①`,
     stored:
       "Сообщение сохранено и теперь видно всем на карте и в ленте; место округлено примерно до 1 км. Фото, если было, осталось на этом устройстве.",
+    localNoBackend:
+      "К этой версии сайта общая база не подключена, поэтому сообщение сохранено только в этом браузере — его видите вы, другие не видят. В общую ленту оно не отправлено.",
     local:
       "Общая база недоступна, поэтому сообщение сохранено только в этом браузере — его видите вы, но не другие. Оно не потеряно, но и в общую ленту не попало.",
     nothingElse:
@@ -813,6 +827,8 @@ const ru: CommunityText = {
     scheduled: (n) => `запланировано: ${n}`,
     create: "Создать",
     none: "Событий пока нет. Добавить может любой — уборку, обследование, картографическую прогулку, — а другие смогут записаться и отметиться на месте.",
+    noBackend:
+      "К этой версии сайта база событий не подключена, поэтому настоящие события здесь нельзя ни показать, ни создать. Ниже — примеры, которые всегда были на этой странице.",
     unreachable:
       "База событий отсюда недоступна, поэтому сейчас нельзя ни показать, ни создать настоящие события. Ниже — примеры, которые всегда были на этой странице.",
     sampleNote:
@@ -952,6 +968,8 @@ const kk: CommunityText = {
     sampleCount: (n) => `${n} мысал`,
     sampleNoteLive: (n) =>
       `«Мысал» белгісі бар ${n} жазба лентаны көрсету үшін жазылған. Бұл белгісіз жазбалардың бәрі — ортақ дерекқорда сақталған және барлық келушілерге көрінетін нақты хабарламалар.`,
+    noBackend:
+      "Сайттың бұл нұсқасына ортақ дерекқор қосылмаған. Сіз жіберген хабарламалар тек осы браузерде сақталады — оларды басқа ешкім көрмейді, — ал төмендегі мысалдар нақты хабарламалар емес.",
     sampleNoteOffline: (n, c) =>
       `Көрсетілім деректері — лентаны көрсету үшін ${c} ойдан шығарылған автордың ${n} мысалы. Бұлар нақты хабарламалар емес. Өзіңіз жіберген хабарламалар нақты, бірақ қазір тек осы браузерде сақталады: ортақ дерекқор қолжетімсіз.`,
     missionsTitle: "Белсенді миссиялар",
@@ -1138,6 +1156,8 @@ const kk: CommunityText = {
     statusLine: (gloss) => `${gloss} · ① мәртебе`,
     stored:
       "Хабарлама сақталды және енді картада әрі лентада бәріне көрінеді; орны шамамен 1 км-ге дейін дөңгелектенді. Фото болса, осы құрылғыда қалды.",
+    localNoBackend:
+      "Сайттың бұл нұсқасына ортақ дерекқор қосылмаған, сондықтан хабарламаңыз тек осы браузерде сақталды — оны сіз көресіз, басқалар көрмейді. Ол ортақ таспаға жіберілген жоқ.",
     local:
       "Ортақ дерекқор қолжетімсіз, сондықтан хабарлама тек осы браузерде сақталды — оны сіз көресіз, басқалар көрмейді. Ол жоғалған жоқ, бірақ ортақ лентаға да түскен жоқ.",
     nothingElse:
@@ -1192,6 +1212,8 @@ const kk: CommunityText = {
     scheduled: (n) => `жоспарланған: ${n}`,
     create: "Құру",
     none: "Әзірге іс-шаралар жоқ. Кез келген адам қоса алады — тазалау, зерттеу, картаға түсіру серуені, — ал басқалар жазылып, орнында белгілене алады.",
+    noBackend:
+      "Сайттың бұл нұсқасына іс-шаралар дерекқоры қосылмаған, сондықтан мұнда нақты іс-шараларды көрсету де, құру да мүмкін емес. Төменде — осы бетте бұрыннан тұрған мысалдар.",
     unreachable:
       "Іс-шаралар дерекқоры бұл жерден қолжетімсіз, сондықтан қазір нақты іс-шараларды көрсету де, құру да мүмкін емес. Төменде — осы бетте бұрыннан тұрған мысалдар.",
     sampleNote:

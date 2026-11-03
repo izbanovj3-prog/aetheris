@@ -11,6 +11,7 @@ import {
   TelemetryTag,
 } from "@/components/ui/primitives";
 import { useLiveStations } from "@/lib/useLiveStations";
+import { isConfigured } from "@/lib/supabase";
 import { assistantPrompt, buildAiContext, type AiContext } from "@/lib/aiContext";
 import { POINTS } from "@/lib/points";
 import { getStations } from "@/lib/data";
@@ -584,6 +585,13 @@ export default function Community() {
       <div className="grid lg:grid-cols-[1.6fr_1fr] gap-8 items-start">
         {/* feed */}
         <div className="flex flex-col gap-5">
+          {/* A build with no Supabase project configured says so up front:
+              nothing is shared, and nothing is sent anywhere. */}
+          {!isConfigured() && (
+            <p role="status" className="glass rounded-xl p-4 text-base text-ink-dim font-light leading-relaxed">
+              {t.page.noBackend}
+            </p>
+          )}
           <Reveal>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-3">
