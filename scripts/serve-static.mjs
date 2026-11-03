@@ -34,10 +34,10 @@ function loadHeaderRules() {
     const re = new RegExp(
       "^" +
         rule.source
-          .replace(/[.+?^${}()|[\]\\]/g, "\\$&")
-          .replace(/\\\(\.\*\\\)/g, ".*")
-          .replace(/:\w+\*/g, ".*")
-          .replace(/:\w+/g, "[^/]+") +
+          .replace(/\(\.\*\)/g, "\u0000")
+          .replace(/:\w+\*/g, "\u0000")
+          .replace(/[.+?^${}()|[\]\\*]/g, "\\$&")
+          .replace(/\u0000/g, ".*") +
         "$",
     );
     return { re, headers: rule.headers };
@@ -60,6 +60,19 @@ createServer((req, res) => {
 
   for (const r of RULES) {
     if (r.re.test(path)) for (const h of r.headers) res.setHeader(h.key, h.value);
+  }
+
+  // Vercel serves its analytics scripts and beacons under /_vercel; there
+  // is nothing to measure locally, so answer with an empty script.
+  if (path.startsWith("/_vercel/")) {
+    if (path.endsWith(".js")) {
+      res.writeHead(200, { "Content-Type": TYPES[".js"] });
+      res.end("");
+    } else {
+      res.writeHead(204);
+      res.end();
+    }
+    return;
   }
 
   // trailingSlash: true — directory-style pages redirect to the slashed form.
