@@ -33,12 +33,19 @@ const MIGRATIONS = [
   "community-2.sql",
   "rate-limit-concurrency.sql",
   "bounds-and-capacity.sql",
+  "privacy-hardening.sql",
 ];
+
+/** Applied after the Supabase-style blanket grant, as in production. */
+const HARDENING = "privacy-hardening.sql";
 
 const DIR = join(process.cwd(), "supabase");
 const VALID = `'a valid probe title','a valid probe body long enough to pass'`;
 
 let db: PGlite;
+
+/** A device id in the private v2 format the hardened functions accept. */
+const dev = (n: number) => `v2-00000000-0000-4000-8000-${String(n).padStart(12, "0")}`;
 let reportId: string;
 
 /** Run `sql` as `role`, and say whether it was allowed. */
@@ -64,10 +71,14 @@ beforeAll(async () => {
     alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
     alter default privileges in schema public grant all on functions to anon, authenticated, service_role;
   `);
-  for (const f of MIGRATIONS) {
+  for (const f of MIGRATIONS.filter((m) => m !== HARDENING)) {
     await db.exec(readFileSync(join(DIR, f), "utf8"));
   }
+  // Supabase grants every table to the API roles when it is created. That
+  // has to happen BEFORE the hardening file, as it does in production —
+  // re-granting afterwards would quietly undo what is under test.
   await db.exec(`grant all on all tables in schema public to anon, authenticated, service_role;`);
+  await db.exec(readFileSync(join(DIR, HARDENING), "utf8"));
 
   await db.exec(`
     insert into public.reports (anon_id, author, city, lat, lon, category, severity, title, body)
@@ -132,11 +143,12 @@ describe.each(["anon", "authenticated"])("role %s cannot reach statuses 4 or 5",
   it("cannot file a report already at a status it did not earn", async () => {
     const r = await asRole(
       role,
-      `insert into public.reports (anon_id,author,city,category,severity,title,body,status)
-       values ('probe-device-esc','x','Almaty','air','low',${VALID},'forwarded')`,
+      `insert into public.reports (anon_id,city,category,severity,title,body,status)
+       values ('probe-device-esc','Almaty','air','low',${VALID},'forwarded')`,
     );
     expect(r.allowed).toBe(false);
-    expect(r.error).toMatch(/row-level security/);
+    // Denied by the column grant now, before RLS is even consulted.
+    expect(r.error).toMatch(/permission denied|row-level security/);
   });
 
   /* Values long enough to clear their own length CHECKs, so the denial can
@@ -151,7 +163,7 @@ describe.each(["anon", "authenticated"])("role %s cannot reach statuses 4 or 5",
       [reportId],
     );
     expect(r.allowed).toBe(false);
-    expect(r.error).toMatch(/row-level security/);
+    expect(r.error).toMatch(/permission denied|row-level security/);
   });
 
   /* RLS denial on UPDATE is silent — zero rows touched, no error — so this
@@ -173,8 +185,8 @@ describe("coverage bounds", () => {
   it("accepts a report from inside the coverage area", async () => {
     const r = await asRole(
       "anon",
-      `insert into public.reports (anon_id,author,city,lat,lon,category,severity,title,body)
-       values ('probe-inside','x','Almaty',43.238,76.889,'air','low',${VALID})`,
+      `insert into public.reports (anon_id,city,lat,lon,category,severity,title,body)
+       values ('probe-inside','Almaty',43.238,76.889,'air','low',${VALID})`,
     );
     expect(r.allowed, r.error).toBe(true);
   });
@@ -182,8 +194,8 @@ describe("coverage bounds", () => {
   it("rejects a report from outside it", async () => {
     const r = await asRole(
       "anon",
-      `insert into public.reports (anon_id,author,city,lat,lon,category,severity,title,body)
-       values ('probe-outside','x','Nowhere',0,0,'air','low',${VALID})`,
+      `insert into public.reports (anon_id,city,lat,lon,category,severity,title,body)
+       values ('probe-outside','Nowhere',0,0,'air','low',${VALID})`,
     );
     expect(r.allowed).toBe(false);
     expect(r.error).toMatch(/reports_within_coverage/);
@@ -258,22 +270,14 @@ describe("the participant cap", () => {
   });
 
   it("accepts RSVPs up to the cap", async () => {
-    for (const who of ["attendee-device-01", "attendee-device-02"]) {
-      const r = await asRole(
-        "anon",
-        `insert into public.event_rsvps (event_id, anon_id) values ($1,$2)`,
-        [eventId, who],
-      );
+    for (const who of [dev(1), dev(2)]) {
+      const r = await asRole("anon", `select public.rsvp_event($1,$2)`, [eventId, who]);
       expect(r.allowed, `${who}: ${r.error}`).toBe(true);
     }
   });
 
   it("refuses the one past it", async () => {
-    const r = await asRole(
-      "anon",
-      `insert into public.event_rsvps (event_id, anon_id) values ($1,'attendee-device-03')`,
-      [eventId],
-    );
+    const r = await asRole("anon", `select public.rsvp_event($1,$2)`, [eventId, dev(3)]);
     expect(r.allowed).toBe(false);
     expect(r.error).toMatch(/event_full/);
   });
@@ -281,12 +285,7 @@ describe("the participant cap", () => {
   /* Someone re-confirming a place they already hold is not taking a
      second one, and must not be turned away by a full event. */
   it("still lets an existing attendee re-confirm a full event", async () => {
-    const r = await asRole(
-      "anon",
-      `insert into public.event_rsvps (event_id, anon_id) values ($1,'attendee-device-01')
-       on conflict do nothing`,
-      [eventId],
-    );
+    const r = await asRole("anon", `select public.rsvp_event($1,$2)`, [eventId, dev(1)]);
     expect(r.allowed, r.error).toBe(true);
   });
 
@@ -301,12 +300,8 @@ describe("the participant cap", () => {
         `select id from public.events where anon_id='organiser-device-02'`,
       )
     ).rows[0].id;
-    for (const who of ["a-01", "a-02", "a-03", "a-04", "a-05"]) {
-      const r = await asRole(
-        "anon",
-        `insert into public.event_rsvps (event_id, anon_id) values ($1,$2)`,
-        [open, `uncapped-device-${who}`],
-      );
+    for (const n of [11, 12, 13, 14, 15]) {
+      const r = await asRole("anon", `select public.rsvp_event($1,$2)`, [open, dev(n)]);
       expect(r.allowed, r.error).toBe(true);
     }
   });
@@ -341,5 +336,356 @@ describe("service_role, the other half of the claim", () => {
       [target],
     );
     expect(log.rows[0].n).toBe(1);
+  });
+});
+
+/* ─────────────────────────────────────────────────────────────
+   privacy-hardening.sql — what a visitor can and cannot reach now.
+   Every probe below is run as a browser role; the assertion is on what
+   the database did, not on what the client would have sent.
+   ───────────────────────────────────────────────────────────── */
+
+const PUBLIC_REPORT_COLS =
+  "id, created_at, author, city, lat, lon, category, severity, title, body, status, upvotes";
+
+describe.each(["anon", "authenticated"])("role %s · personal data is not readable", (role) => {
+  it("cannot read anon_id on reports", async () => {
+    const r = await asRole(role, `select anon_id from public.reports limit 1`);
+    expect(r.allowed).toBe(false);
+    expect(r.error).toMatch(/permission denied/);
+  });
+
+  it("cannot filter reports by anon_id either", async () => {
+    const r = await asRole(role, `select id from public.reports where anon_id = 'probe-device-0001'`);
+    expect(r.allowed).toBe(false);
+  });
+
+  it("can read the public column list", async () => {
+    const r = await asRole(role, `select ${PUBLIC_REPORT_COLS} from public.reports limit 1`);
+    expect(r.allowed, r.error).toBe(true);
+  });
+
+  it("cannot read anon_id on events", async () => {
+    const r = await asRole(role, `select anon_id from public.events limit 1`);
+    expect(r.allowed).toBe(false);
+  });
+
+  it.each(["event_rsvps", "event_checkins"])("cannot read %s at all", async (t) => {
+    const r = await asRole(role, `select event_id from public.${t} limit 1`);
+    expect(r.allowed).toBe(false);
+  });
+
+  it("cannot touch the private schema", async () => {
+    for (const sql of [
+      `select * from private.network_hits`,
+      `select * from private.daily_salt`,
+      `select private.client_ip_hash()`,
+    ]) {
+      const r = await asRole(role, sql);
+      expect(r.allowed, sql).toBe(false);
+    }
+  });
+});
+
+describe.each(["anon", "authenticated"])("role %s · writes only what a submission needs", (role) => {
+  it.each([
+    ["status", "'submitted'"],
+    ["upvotes", "0"],
+    ["author", "'Somebody Real'"],
+    ["forwarded_to", "'Akimat'"],
+    ["org_response", "'We fixed it'"],
+    ["org_response_org", "'Ministry'"],
+  ])("cannot set %s on insert", async (col, val) => {
+    const r = await asRole(
+      role,
+      `insert into public.reports (anon_id,city,category,severity,title,body,${col})
+       values ('probe-cols-0001','Almaty','air','low',${VALID},${val})`,
+    );
+    expect(r.allowed).toBe(false);
+    expect(r.error).toMatch(/permission denied/);
+  });
+
+  it("cannot delete RSVPs directly — the old open policy is gone", async () => {
+    await db.exec(`
+      insert into public.events (anon_id,title,description,place,lat,lon,starts_at)
+      values ('organiser-del-01','an event to attack','a valid description','Almaty',
+              43.238,76.889, now() + interval '5 days');`);
+    const ev = (
+      await db.query<{ id: string }>(`select id from public.events where anon_id='organiser-del-01' limit 1`)
+    ).rows[0].id;
+    await db.query(`select public.rsvp_event($1,$2)`, [ev, dev(900)]);
+    await asRole(role, `delete from public.event_rsvps where event_id = $1`, [ev]);
+    const left = await db.query<{ n: number }>(
+      `select count(*)::int n from public.event_rsvps where event_id=$1`, [ev]);
+    expect(left.rows[0].n).toBe(1);
+    await db.exec(`delete from public.events where anon_id='organiser-del-01'`);
+  });
+});
+
+describe("location precision", () => {
+  it("stores report coordinates rounded to ~1 km, whatever the client sends", async () => {
+    await asRole(
+      "anon",
+      `insert into public.reports (anon_id,city,lat,lon,category,severity,title,body)
+       values ('probe-precise-01','Almaty',43.238123,76.889456,'air','low',${VALID})`,
+    );
+    const row = (
+      await db.query<{ lat: number; lon: number }>(
+        `select lat, lon from public.reports where anon_id='probe-precise-01'`)
+    ).rows[0];
+    expect(row.lat).toBe(43.24);
+    expect(row.lon).toBe(76.89);
+  });
+
+  it("keeps no coordinates for a check-in, only the distance", async () => {
+    await db.exec(`
+      insert into public.events (anon_id,title,description,place,lat,lon,starts_at)
+      values ('organiser-ci-01','a check-in event','a valid description','Almaty',
+              43.238,76.889, now());`);
+    const ev = (
+      await db.query<{ id: string }>(`select id from public.events where anon_id='organiser-ci-01'`)
+    ).rows[0].id;
+    const ok = await asRole("anon", `select public.check_in_event($1,$2,43.2385,76.8895)`, [ev, dev(500)]);
+    expect(ok.allowed, ok.error).toBe(true);
+    const row = (
+      await db.query<{ lat: number | null; lon: number | null; distance_m: number }>(
+        `select lat, lon, distance_m from public.event_checkins where event_id=$1`, [ev])
+    ).rows[0];
+    expect(row.lat).toBeNull();
+    expect(row.lon).toBeNull();
+    expect(row.distance_m).toBeGreaterThan(0);
+    expect(row.distance_m).toBeLessThan(500);
+
+    const far = await asRole("anon", `select public.check_in_event($1,$2,43.30,76.95)`, [ev, dev(501)]);
+    expect(far.allowed).toBe(false);
+    expect(far.error).toMatch(/checkin_too_far/);
+  });
+});
+
+describe("acting as a device", () => {
+  let ev: string;
+  beforeAll(async () => {
+    await db.exec(`
+      insert into public.events (anon_id,title,description,place,lat,lon,starts_at)
+      values ('${dev(700)}','an rsvp event','a valid description','Astana',
+              51.169,71.449, now() + interval '1 day');`);
+    ev = (
+      await db.query<{ id: string }>(`select id from public.events where anon_id=$1`, [dev(700)])
+    ).rows[0].id;
+  });
+
+  it("refuses a pre-hardening (once public) device id", async () => {
+    const r = await asRole("anon", `select public.rsvp_event($1,'probe-device-0001')`, [ev]);
+    expect(r.allowed).toBe(false);
+    expect(r.error).toMatch(/device_id_invalid/);
+  });
+
+  it("withdraws only the caller's own RSVP", async () => {
+    await asRole("anon", `select public.rsvp_event($1,$2)`, [ev, dev(701)]);
+    await asRole("anon", `select public.rsvp_event($1,$2)`, [ev, dev(702)]);
+    await asRole("anon", `select public.withdraw_rsvp($1,$2)`, [ev, dev(701)]);
+    const left = await db.query<{ anon_id: string }>(
+      `select anon_id from public.event_rsvps where event_id=$1`, [ev]);
+    expect(left.rows.map((x) => x.anon_id)).toEqual([dev(702)]);
+  });
+
+  it("reports counts and the caller's own state, never other device ids", async () => {
+    await db.exec(`set role anon`);
+    try {
+      const att = await db.query<{ event_id: string; going: number }>(
+        `select * from public.event_attendance() where event_id=$1`, [ev]);
+      expect(att.rows[0].going).toBe(1);
+      const mine = await db.query<{ organiser: boolean; rsvp: boolean }>(
+        `select * from public.my_event_state($1) where event_id=$2`, [dev(702), ev]);
+      expect(mine.rows[0]).toMatchObject({ organiser: false, rsvp: true });
+      const organiser = await db.query<{ organiser: boolean }>(
+        `select * from public.my_event_state($1) where event_id=$2`, [dev(700), ev]);
+      expect(organiser.rows[0].organiser).toBe(true);
+      const legacy = await db.query(`select * from public.my_event_state('probe-device-0001')`);
+      expect(legacy.rows).toHaveLength(0);
+    } finally {
+      await db.exec(`reset role`);
+    }
+  });
+
+  it("deletes the caller's own report, and nobody else's", async () => {
+    await db.exec(`
+      insert into public.reports (anon_id,city,category,severity,title,body)
+      values ('${dev(800)}','Shymkent','air','low',${VALID});`);
+    const id = (
+      await db.query<{ id: string }>(`select id from public.reports where anon_id=$1`, [dev(800)])
+    ).rows[0].id;
+
+    await db.exec(`set role anon`);
+    try {
+      const other = await db.query<{ ok: boolean }>(`select public.delete_my_report($1,$2) ok`, [id, dev(801)]);
+      expect(other.rows[0].ok).toBe(false);
+      const own = await db.query<{ ok: boolean }>(`select public.delete_my_report($1,$2) ok`, [id, dev(800)]);
+      expect(own.rows[0].ok).toBe(true);
+    } finally {
+      await db.exec(`reset role`);
+    }
+    const gone = await db.query(`select 1 from public.reports where id=$1`, [id]);
+    expect(gone.rows).toHaveLength(0);
+  });
+
+  it("keeps a forwarded report (and its transfer log) out of self-deletion", async () => {
+    await db.exec(`
+      insert into public.reports (anon_id,city,category,severity,title,body)
+      values ('${dev(810)}','Taraz','water','low',${VALID});`);
+    const id = (
+      await db.query<{ id: string }>(`select id from public.reports where anon_id=$1`, [dev(810)])
+    ).rows[0].id;
+    await db.query(`select public.mark_report_forwarded($1,'Akimat','audit',null)`, [id]);
+    await db.exec(`set role anon`);
+    try {
+      const r = await db.query<{ ok: boolean }>(`select public.delete_my_report($1,$2) ok`, [id, dev(810)]);
+      expect(r.rows[0].ok).toBe(false);
+    } finally {
+      await db.exec(`reset role`);
+    }
+  });
+
+  it("refuses a follow-up that points at someone else's report", async () => {
+    const r = await asRole(
+      "anon",
+      `insert into public.reports (anon_id,city,category,severity,title,body,parent_id)
+       values ('probe-follow-01','Almaty','air','low',${VALID},$1)`,
+      [reportId],
+    );
+    expect(r.allowed).toBe(false);
+    expect(r.error).toMatch(/parent_not_yours/);
+  });
+
+  it("exposes community signals as counts only", async () => {
+    await db.exec(`set role anon`);
+    try {
+      const r = await db.query<Record<string, unknown>>(`select * from public.community_city_signals(30)`);
+      expect(r.rows.length).toBeGreaterThan(0);
+      for (const row of r.rows) expect(Object.keys(row)).not.toContain("anon_id");
+    } finally {
+      await db.exec(`reset role`);
+    }
+  });
+});
+
+describe("the network rate limit", () => {
+  const withIp = async (ip: string, fn: () => Promise<void>) => {
+    await db.exec(`set request.headers = '${JSON.stringify({ "cf-connecting-ip": ip })}'`);
+    try {
+      await fn();
+    } finally {
+      await db.exec(`reset request.headers`);
+    }
+  };
+  const file = (n: number) =>
+    asRole(
+      "anon",
+      `insert into public.reports (anon_id,city,category,severity,title,body)
+       values ($1,'Pavlodar','biodiversity','low',${VALID})`,
+      [`net-device-${String(n).padStart(4, "0")}`],
+    );
+
+  it("stops one network rotating device ids after 30 reports an hour", async () => {
+    await withIp("203.0.113.7", async () => {
+      for (let i = 0; i < 30; i++) {
+        const r = await file(i);
+        expect(r.allowed, `report ${i}: ${r.error}`).toBe(true);
+      }
+      const over = await file(30);
+      expect(over.allowed).toBe(false);
+      expect(over.error).toMatch(/rate_limit_hourly_network/);
+    });
+  });
+
+  it("does not hold a different network to that count", async () => {
+    await withIp("198.51.100.9", async () => {
+      const r = await file(31);
+      expect(r.allowed, r.error).toBe(true);
+    });
+  });
+
+  it("stores no raw IP, and drops expired salts and hashes", async () => {
+    const raw = await db.query(
+      `select 1 from private.network_hits where ip_hash like '%203.0.113.7%' or ip_hash like '%198.51.100.9%'`);
+    expect(raw.rows).toHaveLength(0);
+
+    await db.exec(`
+      insert into private.daily_salt (day, salt) values (current_date - 2, 'stale-salt')
+        on conflict do nothing;
+      insert into private.network_hits (ip_hash, kind, created_at)
+        values ('stale-hash', 'report', now() - interval '25 hours');`);
+    await withIp("192.0.2.1", async () => {
+      await file(32);
+    });
+    const salts = await db.query(`select 1 from private.daily_salt where day < (now() at time zone 'utc')::date`);
+    expect(salts.rows).toHaveLength(0);
+    const stale = await db.query(`select 1 from private.network_hits where ip_hash = 'stale-hash'`);
+    expect(stale.rows).toHaveLength(0);
+  });
+});
+
+describe("function grants", () => {
+  /* Supabase grants EXECUTE on every new public function to anon. This
+     list is the whole of what a visitor may call; anything else that
+     turns up callable is a leak to look at, not to add here by reflex. */
+  const CALLABLE = [
+    "check_in_event",
+    "community_city_signals",
+    "delete_my_report",
+    "event_attendance",
+    "my_event_state",
+    "rsvp_event",
+    "withdraw_rsvp",
+  ];
+
+  it("lets anon execute exactly the intended non-trigger functions", async () => {
+    const r = await db.query<{ proname: string }>(`
+      select p.proname from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+       where n.nspname = 'public'
+         and p.prorettype <> 'trigger'::regtype
+         and has_function_privilege('anon', p.oid, 'execute')
+       order by 1`);
+    expect(r.rows.map((x) => x.proname)).toEqual(CALLABLE);
+  });
+});
+
+describe("rollback of privacy-hardening.sql", () => {
+  /* A fresh database, so the main suite above is untouched: apply all,
+     roll back, and check the pre-hardening model is what is left — then
+     re-apply, since a rollback that cannot be rolled forward again is a
+     trap. */
+  it("applies, restores the old access model, and can be re-applied", async () => {
+    const fresh = new PGlite();
+    await fresh.exec(`
+      create role anon nologin noinherit;
+      create role authenticated nologin noinherit;
+      create role service_role nologin noinherit bypassrls;
+      grant usage on schema public to anon, authenticated, service_role;
+      alter default privileges in schema public grant all on tables to anon, authenticated, service_role;
+      alter default privileges in schema public grant all on functions to anon, authenticated, service_role;
+    `);
+    for (const f of MIGRATIONS) await fresh.exec(readFileSync(join(DIR, f), "utf8"));
+    await fresh.exec(readFileSync(join(DIR, "rollback", "privacy-hardening.down.sql"), "utf8"));
+
+    await fresh.exec(`set role anon`);
+    await fresh.query(`select anon_id from public.reports limit 1`); // readable again
+    await fresh.exec(`reset role`);
+    const fns = await fresh.query(`select 1 from pg_proc where proname = 'delete_my_report'`);
+    expect(fns.rows).toHaveLength(0);
+    const schema = await fresh.query(`select 1 from pg_namespace where nspname = 'private'`);
+    expect(schema.rows).toHaveLength(0);
+
+    await fresh.exec(readFileSync(join(DIR, HARDENING), "utf8"));
+    await fresh.exec(`set role anon`);
+    await expect(fresh.query(`select anon_id from public.reports limit 1`)).rejects.toThrow(/permission denied/);
+    await fresh.exec(`reset role`);
+    await fresh.close();
+  }, 60_000);
+
+  it("re-running the hardening on a hardened database is a no-op", async () => {
+    await db.exec(readFileSync(join(DIR, HARDENING), "utf8"));
+    const r = await asRole("anon", `select anon_id from public.reports limit 1`);
+    expect(r.allowed).toBe(false);
   });
 });

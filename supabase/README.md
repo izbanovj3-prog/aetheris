@@ -12,6 +12,7 @@ the earlier ones create. Apply them top to bottom:
 | 4 | `community-2.sql` | five-status vocabulary, ④/⑤ columns and operator-only functions, forwarding log, events + RSVPs + geo-fenced check-ins |
 | 5 | `rate-limit-concurrency.sql` | closes the read-committed race in both rate limiters |
 | 6 | `bounds-and-capacity.sql` | coverage-area coordinate bounds; enforces the participant cap |
+| 7 | `privacy-hardening.sql` | ~1 km coordinates, anon_id unreadable, column-level write grants, RSVP/check-in/delete through functions, salted-IP network limit |
 
 Every file is idempotent — `create or replace`, `if not exists`,
 `drop … if exists` — so re-running one is safe and re-running the whole
@@ -20,9 +21,36 @@ rebuilds.
 
 ## Applied state
 
-Files 1–5 are applied to the production project. **File 6 is not.**
+Files 1–5 are applied to the production project. **Files 6 and 7 are not.**
 Nothing here tracks that automatically; this line is the record, and it
 has to be updated by whoever runs one.
+
+## Applying 6 and 7 to production
+
+Only with the owner's explicit go-ahead, and in this order:
+
+1. **Front-end first.** Deploy the build that reads explicit columns and
+   calls the new functions. It works against the database both before and
+   after file 7 — the previous front-end does not work after it.
+2. **Test project.** Apply 1–7 to the separate test project and run
+   `npm run test:security` against it (see the header of
+   `tests/security.rls.test.ts`). Green there before production.
+3. **Backup.** Dashboard → Database → Backups, or
+   `pg_dump --data-only -t public.reports -t public.event_checkins`.
+   File 7 rounds stored coordinates and erases check-in positions; that
+   part cannot be undone without this backup.
+4. Run `bounds-and-capacity.sql`, then `privacy-hardening.sql`, in the
+   SQL editor. Optionally enable `pg_cron` first (Database → Extensions)
+   so retention also runs when nobody is submitting.
+5. Update "Applied state" above.
+
+## Rollback
+
+`rollback/privacy-hardening.down.sql` restores the pre-file-7 access
+model (and with it the holes file 7 closed). It cannot bring back precise
+coordinates — only the backup from step 3 has them. `tests/schema.test.ts`
+checks that the rollback applies, restores the old model, and that file 7
+can be applied again afterwards.
 
 ## Checking them without a server
 
@@ -57,8 +85,10 @@ development environment these were written in.
 
 ## Access control
 
-`tests/security.rls.test.ts` (`npm run test:security`) checks that the
-anonymous role cannot set statuses ④/⑤ by any route. The positive case —
-that the service role can — is in the same file but only runs when
-`SUPABASE_SERVICE_KEY` is set in the environment. Never commit that key
-or paste it into a chat.
+`tests/security.rls.test.ts` (`npm run test:security`) checks, against a
+**separate test project** (`SUPABASE_TEST_URL`, `SUPABASE_TEST_KEY`), that
+the anonymous role cannot set statuses ④/⑤, cannot read device ids or
+precise positions, and cannot write columns a submission does not need.
+It refuses to run against the production URL. The positive case — that
+the service role can — runs only when `SUPABASE_TEST_SERVICE_KEY` is set.
+Never commit those keys or paste them into a chat.
