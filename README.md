@@ -69,7 +69,7 @@ connected. For `npx playwright test`, build with any
 | `npx tsc --noEmit` | types | — |
 | `npm test` | unit tests over the pure logic (points, statuses, sitemap, copy rules, honesty) and `schema.test.ts`, which replays every migration on PGlite and probes what each database role can do | nothing; offline, ~10 s |
 | `npx playwright test` | end to end against `out/`: the report flow in three languages, headers and CSP, layout and axe contrast at 5 widths × 3 modes, SEO, 404s, no-JS reading | `npm run build` first; Chromium |
-| `npm run lighthouse` | mobile profile, median of 3, against the targets in `scripts/lighthouse-check.mjs` | a server on :4321 (`npm run serve:static`) |
+| `npm run lighthouse` | mobile profile, median of 3, against the targets in `scripts/lighthouse-check.mjs`; with `LH_FIXTURE=1` the community feed is 60 fixed reports from `scripts/supabase-fixture.mjs` | a server on :4321 (`npm run serve:static`); for `LH_FIXTURE=1`, a build with `NEXT_PUBLIC_SUPABASE_URL=https://aetheris-lighthouse-fixture.supabase.co` and `openssl` |
 | `npm run test:security` | access control on a **separate test** Supabase project, over the REST API with the publishable key | `SUPABASE_TEST_URL`, `SUPABASE_TEST_KEY`; optional `SUPABASE_TEST_SERVICE_KEY`, `SECURITY_PROBE_NETWORK=1` |
 
 `test:security` refuses to run against the production URL. Without its
@@ -96,6 +96,19 @@ whole map in one WebGL task and Lighthouse's mobile run has no GPU. The
 exception and its reason are in `scripts/lighthouse-check.mjs`; nothing
 else may be lowered without a reason written next to it.
 
+`/community/` is measured with a filled feed that is the same on every
+run: CI builds the site against `https://aetheris-lighthouse-fixture.supabase.co`
+and `lighthouse-check.mjs` (with `LH_FIXTURE=1`) answers that host from
+`scripts/supabase-fixture.mjs` — 60 fixed reports, HTTPS with a throwaway
+certificate, Chrome pointed at it by `--host-resolver-rules`. The bundle,
+the CSP and the requests are the ones a visitor gets; no real database is
+read. A run whose feed did not come from the fixture fails. Behind an
+HTTP proxy add `LH_CHROME_FLAGS=--no-proxy-server`.
+
+The feed shows 20 reports and a "Show more" button that reads the next 20
+(`limit`/`offset`, one row extra to know whether more exist). MapLibre
+loads only when a form shows the pin map, not with the page.
+
 ## CI (GitHub Actions)
 
 `.github/workflows/ci.yml` — on every pull request into `main`, every push
@@ -103,7 +116,8 @@ to `main`, and by hand:
 
 1. **Typecheck, unit tests, build** — `out/` is kept as an artifact.
 2. **Playwright + axe** against that `out/`.
-3. **Lighthouse (mobile)** against that `out/`.
+3. **Lighthouse (mobile)** against its own build of the same code, with
+   the community feed from a local fixture (see "Performance").
 4. **Access control (test Supabase)** — fails if the test project secrets
    are missing.
 5. **Live report flow (test Supabase)** — a build pointed at the test

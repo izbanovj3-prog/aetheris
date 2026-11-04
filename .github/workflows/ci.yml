@@ -2,7 +2,8 @@
 #
 #   build     npm ci → tsc → unit tests → static build (out/ kept as an artifact)
 #   e2e       Playwright + axe against that same out/, served with vercel.json headers
-#   lighthouse mobile profile, median of 3, targets and exceptions in scripts/lighthouse-check.mjs
+#   lighthouse mobile profile, median of 3, targets and exceptions in scripts/lighthouse-check.mjs;
+#              its own build, with the community feed from scripts/supabase-fixture.mjs
 #   security  access-control audit against the separate TEST Supabase project
 #
 # The production database is never used here: the security suite refuses the
@@ -58,8 +59,8 @@ jobs:
             nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
       - name: Build static export
         # lib/supabase.ts has no built-in project. The e2e specs stub every
-        # Supabase request, and Lighthouse reads from the TEST project — never
-        # production. This build is kept 3 days as a CI artifact only.
+        # Supabase request; Lighthouse makes its own build against a fixture.
+        # Never production. This build is kept 3 days as a CI artifact only.
         run: npm run build
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_TEST_URL }}
@@ -113,10 +114,22 @@ jobs:
           node-version: ${{ env.NODE_VERSION }}
           cache: npm
       - run: npm ci
-      - uses: actions/download-artifact@v8
+      - name: Restore Next.js build cache
+        uses: actions/cache@v6
         with:
-          name: out
-          path: out/
+          path: .next/cache
+          key: nextjs-lh-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('app/**', 'components/**', 'lib/**') }}
+          restore-keys: |
+            nextjs-lh-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+      - name: Build against the fixed community feed
+        # Same code as the build job; only the Supabase project differs. It
+        # points at scripts/supabase-fixture.mjs (60 fixed reports), which
+        # lighthouse-check.mjs starts with LH_FIXTURE=1, so the /community/
+        # score does not depend on what the shared test project holds.
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://aetheris-lighthouse-fixture.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: fixture-anon-key
       - name: Serve out/ with vercel.json headers
         run: |
           node scripts/serve-static.mjs 4321 > serve.log 2>&1 &
@@ -128,6 +141,8 @@ jobs:
           exit 1
       - name: Lighthouse against targets
         run: npm run lighthouse -- http://localhost:4321
+        env:
+          LH_FIXTURE: "1"
       - name: Upload Lighthouse results
         if: always()
         uses: actions/upload-artifact@v7

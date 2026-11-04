@@ -6,9 +6,18 @@
 // SEO ≥ 95. An exception is allowed only when it is listed below with its
 // reason — a lowered number with no reason next to it is not allowed.
 // Writes a JSON summary to lighthouse-summary.json.
-import { execFileSync } from "node:child_process";
+//
+// With LH_FIXTURE=1 the community feed comes from scripts/supabase-fixture.mjs
+// — the same FIXTURE_ROWS reports every run — instead of a real project, so
+// the score on /community/ does not move with whatever a shared test
+// database holds that day. The site must then be built with
+// NEXT_PUBLIC_SUPABASE_URL set to FIXTURE_URL (CI does; see ci.yml). Chrome
+// is pointed at the fixture by --host-resolver-rules, so the bundle, CSP and
+// request path are the ones a visitor gets; only the answer is fixed.
+import { spawn } from "node:child_process";
 import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { FIXTURE_HOST, startFixture } from "./supabase-fixture.mjs";
 
 const BASE = (process.argv[2] ?? "http://localhost:4321").replace(/\/$/, "");
 const PAGES = ["/", "/map/", "/dashboard/", "/community/"];
@@ -34,6 +43,33 @@ const OUT = join(process.cwd(), "lighthouse-reports");
 mkdirSync(OUT, { recursive: true });
 
 const chrome = process.env.CHROME_PATH;
+
+/** Run a command to completion without blocking this process — the
+ *  fixture server below lives here and has to keep answering. */
+function run(cmd, args, env) {
+  return new Promise((resolve, reject) => {
+    const child = spawn(cmd, args, { stdio: "inherit", env });
+    child.on("error", reject);
+    child.on("close", (code) => (code === 0 ? resolve() : reject(new Error(`${cmd} exited ${code}`))));
+  });
+}
+
+// Three pages of the feed (20 each): the first page is full and "Show more"
+// is on screen, as it is for a visitor once the feed is in use.
+const FIXTURE_ROWS = 60;
+const FIXTURE_PORT = 4443;
+const fixture = process.env.LH_FIXTURE === "1" ? await startFixture(FIXTURE_PORT, FIXTURE_ROWS) : null;
+const chromeFlags = [
+  "--headless=new",
+  "--no-sandbox",
+  ...(fixture
+    ? [`--host-resolver-rules="MAP ${FIXTURE_HOST} 127.0.0.1:${FIXTURE_PORT}"`, "--ignore-certificate-errors"]
+    : []),
+  // Extra flags for this machine only, e.g. --no-proxy-server behind an
+  // HTTP proxy, which would otherwise resolve the fixture host itself.
+  ...(process.env.LH_CHROME_FLAGS ? [process.env.LH_CHROME_FLAGS] : []),
+].join(" ");
+if (fixture) console.log(`community feed: ${FIXTURE_ROWS} fixed reports from scripts/supabase-fixture.mjs`);
 const results = {};
 let failed = false;
 
@@ -46,7 +82,7 @@ for (const page of PAGES) {
     // nothing, so it is dropped and retried like an unrepresentative one.
     let report;
     try {
-      execFileSync(
+      await run(
         "npx",
         [
           "lighthouse",
@@ -55,9 +91,9 @@ for (const page of PAGES) {
           "--output=json",
           `--output-path=${file}`,
           "--only-categories=performance,accessibility,best-practices,seo",
-          "--chrome-flags=--headless=new --no-sandbox",
+          `--chrome-flags=${chromeFlags}`,
         ],
-        { stdio: "inherit", env: { ...process.env, ...(chrome ? { CHROME_PATH: chrome } : {}) } },
+        { ...process.env, ...(chrome ? { CHROME_PATH: chrome } : {}) },
       );
       report = JSON.parse(readFileSync(file, "utf8"));
     } catch {
@@ -67,6 +103,18 @@ for (const page of PAGES) {
     if (report.runtimeError) {
       console.log(`skip ${page.padEnd(13)} attempt ${attempt + 1}: Lighthouse runtime error ${report.runtimeError.code}`);
       continue;
+    }
+    // A fixture run whose build points elsewhere would measure some other
+    // feed and still look fine, so it is a failure, not a pass.
+    if (fixture && page === "/community/") {
+      const fed = (report.audits["network-requests"]?.details?.items ?? []).some(
+        (i) => i.url.startsWith(`https://${FIXTURE_HOST}/rest/v1/reports`) && i.statusCode === 200,
+      );
+      if (!fed) {
+        console.log(`FAIL ${page.padEnd(13)} the feed did not come from the fixture — build with NEXT_PUBLIC_SUPABASE_URL=https://${FIXTURE_HOST}`);
+        failed = true;
+        break;
+      }
     }
     const bench = Math.round(report.environment?.benchmarkIndex ?? 0);
     if (bench <= SLOW_HOST_INDEX) {
@@ -98,4 +146,5 @@ for (const page of PAGES) {
 }
 
 writeFileSync("lighthouse-summary.json", JSON.stringify(results, null, 2));
+fixture?.close();
 process.exit(failed ? 1 : 0);
