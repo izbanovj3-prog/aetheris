@@ -5,21 +5,21 @@ import { AnimatePresence, motion } from "framer-motion";
 import {
   basePulse,
   buildEvents,
-  drift,
   planetNarrative,
   severityColor,
   type AtlasEvent,
 } from "@/lib/atlas";
+import { OriginBadge } from "@/components/ui/primitives";
 import { useDict, useLocale } from "@/lib/useLocale";
 
 const TONE = (h: number) =>
   h >= 70 ? "#2de2a6" : h >= 50 ? "#4fd8f7" : h >= 35 ? "#f5b352" : "#f57362";
 
-const AGES = ["live", "2m", "5m", "9m", "14m"];
-
-/* Live planetary HUD. A single interval drives bounded drift + a rotating
-   feed; the component is memoised and isolated, so updates never touch the
-   map or the rest of the page. */
+/* Model overview. Every number here comes from the simulation, so it is
+   labelled as a model, holds still (no "live" drift), and carries no
+   timestamps — a value that moves on a timer and says "2m ago" reads as
+   a measurement, which none of these is. The list rotates slowly through
+   notable modelled values; that is the only thing that changes. */
 export const GlobalPulse = memo(function GlobalPulse({
   isDesktop,
 }: {
@@ -29,22 +29,17 @@ export const GlobalPulse = memo(function GlobalPulse({
   const locale = useLocale();
   const base = useMemo(() => basePulse(), []);
   const events = useMemo(() => buildEvents(locale), [locale]);
-  const [tick, setTick] = useState(0);
   const [head, setHead] = useState(0);
   const [open, setOpen] = useState(false); // mobile expand
 
   useEffect(() => {
-    const drifts = setInterval(() => setTick((t) => t + 1), 2600);
-    const feed = setInterval(() => setHead((h) => (h + 1) % events.length), 3800);
-    return () => {
-      clearInterval(drifts);
-      clearInterval(feed);
-    };
+    const feed = setInterval(() => setHead((h) => (h + 1) % events.length), 6000);
+    return () => clearInterval(feed);
   }, [events.length]);
 
-  const health = Math.round(drift(base.health, 1.4, tick));
-  const meanAqi = Math.round(drift(base.meanAqi, 3, tick, 1.1));
-  const anomaly = drift(base.anomaly, 0.04, tick, 2.2);
+  const health = Math.round(base.health);
+  const meanAqi = Math.round(base.meanAqi);
+  const anomaly = base.anomaly;
   const color = TONE(health);
 
   const visible: AtlasEvent[] = Array.from({ length: isDesktop ? 4 : 3 }, (_, i) => events[(head + i) % events.length]);
@@ -89,7 +84,7 @@ export const GlobalPulse = memo(function GlobalPulse({
             </span>
           </span>
           <span className="flex flex-col items-start leading-tight">
-            <span className="telemetry !text-[0.9375rem]">{dict.map.planet}</span>
+            <span className="telemetry !text-[0.9375rem]">{dict.map.planet} · {dict.dataOrigin.modeled}</span>
             <span className="text-[0.9375rem] font-semibold text-ink">{dict.map.health}</span>
           </span>
         </button>
@@ -128,9 +123,8 @@ export const GlobalPulse = memo(function GlobalPulse({
           </div>
         </div>
         <div className="flex flex-col gap-1">
-          <span className="telemetry flex items-center gap-1.5">
-            <span className="dot-live" /> {dict.map.planetaryPulse}
-          </span>
+          <span className="telemetry">{dict.map.planetaryPulse}</span>
+          <OriginBadge origin="modeled" className="self-start" />
           <p className="text-[0.9375rem] leading-snug text-ink-dim font-light">
             {planetNarrative({ ...base, health }, locale)}
           </p>
@@ -146,7 +140,7 @@ export const GlobalPulse = memo(function GlobalPulse({
       <div className="p-3">
         <div className="telemetry mb-2 flex items-center justify-between">
           <span>{dict.map.feedTitle}</span>
-          <span className="text-emerald/60">{dict.map.streaming}</span>
+          <span className="text-emerald">{dict.map.streaming}</span>
         </div>
         <Feed visible={visible} head={head} />
       </div>
@@ -188,7 +182,6 @@ function Feed({ visible, head }: { visible: AtlasEvent[]; head: number }) {
             <div className="flex-1 min-w-0">
               <div className="flex items-center justify-between gap-2">
                 <span className="text-[0.9375rem] font-semibold text-ink truncate">{e.place}</span>
-                <span className="telemetry !text-[0.9375rem] shrink-0">{AGES[i] ?? "—"}</span>
               </div>
               <p className="text-[0.9375rem] leading-snug text-ink-faint font-light">
                 {e.text}

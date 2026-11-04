@@ -1,0 +1,244 @@
+# CI: every pull request into main, every push to main, and on demand.
+#
+#   build     npm ci → tsc → unit tests → static build (out/ kept as an artifact)
+#   e2e       Playwright + axe against that same out/, served with vercel.json headers
+#   lighthouse mobile profile, median of 3, targets and exceptions in scripts/lighthouse-check.mjs;
+#              its own build, with the community feed from scripts/supabase-fixture.mjs
+#   security  access-control audit against the separate TEST Supabase project
+#
+# The production database is never used here: the security suite refuses the
+# production URL, and e2e stubs Supabase with page.route.
+
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      probe_network:
+        description: "Also run the forged-header network-limit probe (uses up this runner's hourly report allowance on the test project)"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  NODE_VERSION: "22"
+  NEXT_TELEMETRY_DISABLED: "1"
+
+jobs:
+  build:
+    name: Typecheck, unit tests, build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Unit tests
+        run: npm test
+      - name: Restore Next.js build cache
+        uses: actions/cache@v6
+        with:
+          path: .next/cache
+          key: nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('app/**', 'components/**', 'lib/**') }}
+          restore-keys: |
+            nextjs-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+      - name: Build static export
+        # lib/supabase.ts has no built-in project. The e2e specs stub every
+        # Supabase request; Lighthouse makes its own build against a fixture.
+        # Never production. This build is kept 3 days as a CI artifact only.
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_TEST_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_TEST_KEY }}
+      - uses: actions/upload-artifact@v7
+        with:
+          name: out
+          path: out/
+          if-no-files-found: error
+          retention-days: 3
+
+  e2e:
+    name: Playwright + axe
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - uses: actions/download-artifact@v8
+        with:
+          name: out
+          path: out/
+      - name: Install Chromium for Playwright
+        run: npx playwright install --with-deps chromium
+      - name: End-to-end tests
+        run: npx playwright test
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+
+  lighthouse:
+    name: Lighthouse (mobile)
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - name: Restore Next.js build cache
+        uses: actions/cache@v6
+        with:
+          path: .next/cache
+          key: nextjs-lh-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-${{ hashFiles('app/**', 'components/**', 'lib/**') }}
+          restore-keys: |
+            nextjs-lh-${{ runner.os }}-${{ hashFiles('package-lock.json') }}-
+      - name: Build against the fixed community feed
+        # Same code as the build job; only the Supabase project differs. It
+        # points at scripts/supabase-fixture.mjs (60 fixed reports), which
+        # lighthouse-check.mjs starts with LH_FIXTURE=1, so the /community/
+        # score does not depend on what the shared test project holds.
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: https://aetheris-lighthouse-fixture.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: fixture-anon-key
+      - name: Serve out/ with vercel.json headers
+        run: |
+          node scripts/serve-static.mjs 4321 > serve.log 2>&1 &
+          for i in $(seq 1 30); do
+            curl -sf -o /dev/null http://localhost:4321/ && exit 0
+            sleep 1
+          done
+          cat serve.log
+          exit 1
+      - name: Lighthouse against targets
+        run: npm run lighthouse -- http://localhost:4321
+        env:
+          LH_FIXTURE: "1"
+      - name: Upload Lighthouse results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: lighthouse
+          path: |
+            lighthouse-summary.json
+            lighthouse-reports/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  live-flow:
+    name: Live report flow (test Supabase)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      E2E_LIVE_SUPABASE_URL: ${{ secrets.SUPABASE_TEST_URL }}
+      E2E_LIVE_SUPABASE_KEY: ${{ secrets.SUPABASE_TEST_KEY }}
+    steps:
+      - name: Require the test project secrets
+        run: |
+          if [ -z "$E2E_LIVE_SUPABASE_URL" ] || [ -z "$E2E_LIVE_SUPABASE_KEY" ]; then
+            echo "::error::SUPABASE_TEST_URL / SUPABASE_TEST_KEY are not available to this run."
+            exit 1
+          fi
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - name: Build against the TEST Supabase project
+        # This build is never uploaded or deployed.
+        run: npm run build
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_TEST_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_TEST_KEY }}
+      - name: Install Chromium for Playwright
+        run: npx playwright install --with-deps chromium
+      - name: Submit and delete a report on the test database
+        run: npx playwright test tests/e2e/live-report.spec.ts
+
+  no-backend:
+    name: No-backend build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - name: Build with no Supabase variables
+        run: npm run build
+      - name: The bundle names no Supabase host
+        run: |
+          if grep -rl "supabase\.co" out/_next/static/; then
+            echo "::error::A build without NEXT_PUBLIC_SUPABASE_URL contains a Supabase host"; exit 1
+          fi
+      - name: Install Chromium for Playwright
+        run: npx playwright install --with-deps chromium
+      - name: Community page says so, keeps reports local, calls nothing
+        run: npx playwright test tests/e2e/no-backend.spec.ts
+        env:
+          E2E_NO_BACKEND: "1"
+
+  security:
+    name: Access control (test Supabase)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # One run at a time: the suite writes probe rows to the shared test project.
+    concurrency:
+      group: supabase-test-project
+      cancel-in-progress: false
+    env:
+      SUPABASE_TEST_URL: ${{ secrets.SUPABASE_TEST_URL }}
+      SUPABASE_TEST_KEY: ${{ secrets.SUPABASE_TEST_KEY }}
+      SUPABASE_TEST_SERVICE_KEY: ${{ secrets.SUPABASE_TEST_SERVICE_KEY }}
+      SECURITY_PROBE_NETWORK: ${{ inputs.probe_network && '1' || '' }}
+    steps:
+      - name: Require the test project secrets
+        # A skipped live suite is not a pass, so missing secrets fail the job.
+        run: |
+          if [ -z "$SUPABASE_TEST_URL" ] || [ -z "$SUPABASE_TEST_KEY" ]; then
+            echo "::error::SUPABASE_TEST_URL / SUPABASE_TEST_KEY are not available to this run."
+            exit 1
+          fi
+          if [ -z "$SUPABASE_TEST_SERVICE_KEY" ]; then
+            echo "::warning::SUPABASE_TEST_SERVICE_KEY not set — the service-role checks will be skipped."
+          fi
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+      - run: npm ci
+      - name: Access-control audit
+        run: npm run test:security

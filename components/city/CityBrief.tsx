@@ -133,8 +133,10 @@ export default function CityBrief({ id }: { id: string }) {
             </div>
 
             <div className="flex flex-col gap-1.5">
-              <span className="telemetry">Owner</span>
-              <span className="text-[0.9375rem] text-ink-dim font-light">{iv.owner}</span>
+              <span className="telemetry">Who would usually act (Aetheris&apos;s suggestion)</span>
+              <span className="text-[0.9375rem] text-ink-dim font-light">
+                {iv.owner}. Not discussed with or endorsed by these bodies.
+              </span>
             </div>
           </li>
         ))}

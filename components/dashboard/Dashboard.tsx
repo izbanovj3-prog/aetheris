@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useReducedMotion } from "framer-motion";
 import { nearestCityForHotspot } from "@/lib/brief";
 import {
   GlassCard,
@@ -16,6 +15,7 @@ import {
   HOTSPOTS,
   METRIC_ORIGIN,
   anomalyTrend,
+  originOf,
   type Station,
   aqiBand,
   genSeries,
@@ -203,9 +203,11 @@ function CityBars({
       </div>
       <div className="flex flex-col gap-3">
         {items.map((it, i) => {
+          // Theme variables, not hex: the light theme redefines them with
+          // enough contrast for text on a white card.
           const color = invert
-            ? i < 2 ? "#f57362" : "#f5b352"
-            : i < 2 ? "#2de2a6" : "#4fd8f7";
+            ? i < 2 ? "var(--coral)" : "var(--amber)"
+            : i < 2 ? "var(--emerald)" : "var(--cyan)";
           return (
             <div key={it.name} className="grid grid-cols-[124px_1fr_44px] items-center gap-3">
               <span className="text-[0.9375rem] text-ink-dim truncate">{it.name}</span>
@@ -217,7 +219,7 @@ function CityBars({
                   className="h-full rounded-full"
                   style={{
                     width: `${(it.v / max) * 100}%`,
-                    background: `linear-gradient(90deg, ${color}77, ${color})`,
+                    background: `linear-gradient(90deg, color-mix(in srgb, ${color} 47%, transparent), ${color})`,
                   }}
                 />
               </div>
@@ -243,21 +245,6 @@ const STATUS_TONE: Record<string, string> = {
   monitored: "text-cyan",
   recovering: "text-emerald",
 };
-
-/* ── Live pulse hook — gentle drift so the page feels alive ── */
-
-function useLivePulse(base: number, amp: number, period = 3200) {
-  const reduce = useReducedMotion();
-  const [v, setV] = useState(base);
-  useEffect(() => {
-    if (reduce) return;
-    const id = setInterval(() => {
-      setV(base + (Math.random() - 0.5) * amp);
-    }, period);
-    return () => clearInterval(id);
-  }, [base, amp, period, reduce]);
-  return v;
-}
 
 /* ── Dashboard ────────────────────────────────────────────── */
 
@@ -293,8 +280,9 @@ export default function Dashboard() {
     [stations, locale],
   );
 
-  const liveIngest = useLivePulse(164.2, 6);
-  const liveLatency = useLivePulse(312, 40);
+  // Live only when every city's air reading actually arrived; a mean that
+  // mixes in modelled cities is labelled modelled, the weaker claim.
+  const aqiOrigin = originOf("aqi", live && stations.every((s) => s.liveAir));
 
   return (
     <div className="max-w-7xl mx-auto px-6 pt-28 pb-20">
@@ -313,18 +301,6 @@ export default function Dashboard() {
             </h1>
           </Reveal>
         </div>
-        <Reveal index={2}>
-          <div className="flex gap-6">
-            <div>
-              <div className="telemetry mb-1">{dict.dashboard.ingestRate}</div>
-              <div className="readout text-lg text-cyan">{liveIngest.toFixed(1)} k/s</div>
-            </div>
-            <div>
-              <div className="telemetry mb-1">{dict.dashboard.modelLatency}</div>
-              <div className="readout text-lg text-emerald">{Math.round(liveLatency)} ms</div>
-            </div>
-          </div>
-        </Reveal>
       </div>
 
       {/* top grid */}
@@ -377,7 +353,7 @@ export default function Dashboard() {
               <div>
                 <div className="telemetry mb-1 flex flex-wrap items-center gap-x-2 gap-y-1">
                   {dict.dashboard.meanAqi}
-                  <OriginBadge origin={METRIC_ORIGIN.aqi} />
+                  <OriginBadge origin={aqiOrigin} />
                 </div>
                 <div className={`readout text-2xl ${TONE[aqiBand(sum.meanAqi).tone]}`}>
                   {sum.meanAqi}
@@ -386,6 +362,10 @@ export default function Dashboard() {
               </div>
             </div>
             <AreaChart series={aqiSeries} color="#4fd8f7" unit="AQI" height={140} />
+            <p className="telemetry !text-[0.9375rem] mt-2 flex flex-wrap items-center gap-2">
+              <OriginBadge origin="modeled" />
+              {dict.dashboard.aqiCurveNote}
+            </p>
           </GlassCard>
         </Reveal>
         <Reveal index={1}>

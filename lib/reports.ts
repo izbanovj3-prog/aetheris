@@ -9,6 +9,8 @@
    ───────────────────────────────────────────────────────────── */
 
 import {
+  coarsen,
+  deleteRemoteReport,
   existingReportIds,
   insertRemoteReport,
   listRemoteReports,
@@ -157,14 +159,14 @@ export const STATUS_META: Record<
     label: "AI-контекст добавлен",
     gloss: "AI context attached",
     tone: "cyan",
-    note: "Aetheris Analyst attached comparable data from a live feed — the nearest air-quality station, or the species-occurrence record for this area. It is context placed beside the report, not a judgement about whether the report is right.",
+    note: "Aetheris Analyst attached comparable open data — the nearest air-quality value from Open-Meteo (CAMS model), or the species-occurrence record for this area. It is context placed beside the report, not a judgement about whether the report is right.",
   },
   corroborated: {
     step: 3,
     label: "Совпадает с другими сообщениями",
     gloss: "Corroborated by the community",
     tone: "emerald",
-    note: "At least two different devices reported this category in this city within 72 hours. That is corroboration, not verification: independent people described the same kind of problem in the same place. It does not mean the reports are accurate, and no instrument has checked them.",
+    note: "At least two different devices reported this category in this city within 72 hours. That is corroboration, not verification: two devices — not necessarily two people — described the same kind of problem in the same place. It does not mean the reports are accurate, and no instrument has checked them.",
   },
   forwarded: {
     step: 4,
@@ -427,7 +429,11 @@ export const SEED_REPORTS: Report[] = [
    and nothing marked remote is ever labelled sample data. */
 
 const STORAGE_KEY = "aetheris.community.reports.v1";
-const ANON_KEY = "aetheris.community.anon.v1";
+/* v1 ids were publicly readable until privacy-hardening.sql, so they can
+   no longer prove anything. v2 ids are new, never exposed, and the only
+   format the database accepts for acting on a device's own rows. */
+const ANON_KEY = "aetheris.community.anon.v2";
+const LEGACY_ANON_KEY = "aetheris.community.anon.v1";
 const MAX_STORED = 40;
 
 /**
@@ -438,16 +444,47 @@ export function anonId(): string {
   if (typeof window === "undefined") return "server";
   try {
     const existing = window.localStorage.getItem(ANON_KEY);
-    if (existing) return existing;
-    const id =
-      typeof crypto !== "undefined" && crypto.randomUUID
-        ? crypto.randomUUID()
-        : `a-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+    if (existing && isV2Id(existing)) return existing;
+    const id = newV2Id();
     window.localStorage.setItem(ANON_KEY, id);
+    // The old id was public; keeping it on the device serves no purpose.
+    window.localStorage.removeItem(LEGACY_ANON_KEY);
     return id;
   } catch {
-    return `a-${Math.random().toString(36).slice(2, 10)}`;
+    return newV2Id();
   }
+}
+
+/**
+ * Replace this device's id with a fresh one. Called when the database
+ * says the id can no longer act for the device — it was written while ids
+ * were still public, and privacy-hardening.sql burned it. Rows filed under
+ * the old id stay where they are; only the team can remove them.
+ */
+export function rotateAnonId(): string {
+  const id = newV2Id();
+  try {
+    window.localStorage.setItem(ANON_KEY, id);
+  } catch {
+    /* storage unavailable: anonId() already returns a fresh id each call */
+  }
+  return id;
+}
+
+const V2_RE = /^v2-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+export const isV2Id = (s: string) => V2_RE.test(s);
+
+function newV2Id(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return `v2-${crypto.randomUUID()}`;
+  }
+  // RFC 4122 v4 from getRandomValues, for browsers without randomUUID.
+  const b = new Uint8Array(16);
+  crypto.getRandomValues(b);
+  b[6] = (b[6] & 0x0f) | 0x40;
+  b[8] = (b[8] & 0x3f) | 0x80;
+  const h = Array.from(b, (x) => x.toString(16).padStart(2, "0")).join("");
+  return `v2-${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
 }
 
 const initials = (name: string) =>
@@ -472,15 +509,31 @@ export class RateLimitError extends Error {
   }
 }
 
+/**
+ * The database declined this report (a constraint, a trigger, a follow-up
+ * to a report that is not this device's). Nothing was saved — not there
+ * and not on this device — and the user is told it did not go through.
+ */
+export class ReportRefusedError extends Error {
+  readonly code: string;
+  constructor(code: string) {
+    super(`report refused by the database (${code})`);
+    this.name = "ReportRefusedError";
+    this.code = code;
+  }
+}
+
 const ms = (s: string | null | undefined): number | null =>
   s ? new Date(s).getTime() : null;
 
-/** Map a Postgres row onto the Report shape the feed already renders. */
-function fromRemote(r: RemoteReport): Report {
+/** Map a Postgres row onto the Report shape the feed already renders.
+ *  `mine` comes from this device's own list of filed ids: the database no
+ *  longer tells a visitor whose row is whose. */
+function fromRemote(r: RemoteReport, mine: ReadonlySet<string> = new Set()): Report {
   return {
     id: r.id,
-    author: r.author,
-    initials: initials(r.author),
+    author: r.author ?? "Anonymous",
+    initials: initials(r.author ?? "Anonymous"),
     city: r.city,
     lat: r.lat,
     lon: r.lon,
@@ -492,7 +545,7 @@ function fromRemote(r: RemoteReport): Report {
     status: statusFromRemote(r.status),
     upvotes: r.upvotes,
     comments: 0,
-    userCreated: r.anon_id === anonId(),
+    userCreated: mine.has(r.id),
     remote: true,
     forwardedAt: ms(r.forwarded_at),
     forwardedTo: r.forwarded_to ?? null,
@@ -507,7 +560,28 @@ function fromRemote(r: RemoteReport): Report {
 /** Every real submission, newest first. Null when the backend is down. */
 export async function getRemoteReports(signal?: AbortSignal): Promise<Report[] | null> {
   const rows = await listRemoteReports(50, signal);
-  return rows ? rows.map(fromRemote) : null;
+  if (!rows) return null;
+  const mine = new Set(getUserReports().filter((r) => r.remote).map((r) => r.id));
+  return rows.map((r) => fromRemote(r, mine));
+}
+
+/** Reports per page of the community feed. */
+export const FEED_PAGE = 20;
+
+/**
+ * One page of real submissions, newest first, starting at `offset`. Asks
+ * for one row more than it shows, so `hasMore` is known without counting
+ * the table. Null when the backend is down.
+ */
+export async function getRemoteReportsPage(
+  offset: number,
+  limit = FEED_PAGE,
+  signal?: AbortSignal,
+): Promise<{ reports: Report[]; hasMore: boolean } | null> {
+  const rows = await listRemoteReports(limit + 1, signal, offset);
+  if (!rows) return null;
+  const mine = new Set(getUserReports().filter((r) => r.remote).map((r) => r.id));
+  return { reports: rows.slice(0, limit).map((r) => fromRemote(r, mine)), hasMore: rows.length > limit };
 }
 
 /** Whether the datastore is actually reachable right now. */
@@ -587,6 +661,30 @@ export async function reconcileLocalMirrors(
   return { kept, removed };
 }
 
+/**
+ * Delete one of this device's reports: from the shared database when it is
+ * there, and always from this device. Returns what happened remotely so the
+ * UI can say it plainly — a report already forwarded (④/⑤) is refused by
+ * the database and has to be removed by the team on request.
+ */
+export async function deleteMyReport(
+  id: string,
+): Promise<"deleted" | "local-only" | "refused" | "unsupported" | "unavailable"> {
+  const stored = getUserReports();
+  const target = stored.find((r) => r.id === id);
+  let remote: "deleted" | "refused" | "unsupported" | "unavailable" | null = null;
+  if (target?.remote) {
+    remote = await deleteRemoteReport(id, anonId());
+    if (remote !== "deleted") return remote;
+  }
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(stored.filter((r) => r.id !== id)));
+  } catch {
+    /* nothing more to do: the remote copy, if any, is already gone */
+  }
+  return remote ?? "local-only";
+}
+
 export interface NewReportInput {
   category: ReportCategory;
   severity: Severity;
@@ -614,8 +712,8 @@ export async function createReport(input: NewReportInput): Promise<Report> {
     author: "You",
     initials: "YOU",
     city: input.city,
-    lat: input.lat ?? null,
-    lon: input.lon ?? null,
+    lat: coarsen(input.lat),
+    lon: coarsen(input.lon),
     createdAt: Date.now(),
     category: input.category,
     severity: input.severity,
@@ -638,10 +736,11 @@ export async function createReport(input: NewReportInput): Promise<Report> {
   // survives this browser; the row's own id and timestamp win.
   const result = await insertRemoteReport({
     anon_id: anonId(),
-    author: "Anonymous",
     city: input.city,
-    lat: input.lat ?? null,
-    lon: input.lon ?? null,
+    // ~1 km. The database rounds too; doing it here as well means the
+    // precise point never leaves the device at all.
+    lat: coarsen(input.lat),
+    lon: coarsen(input.lon),
     category: input.category,
     severity: input.severity,
     title: report.title,
@@ -654,6 +753,9 @@ export async function createReport(input: NewReportInput): Promise<Report> {
   // would show the user a success toast for a report the database declined.
   if (!result.ok && result.reason === "rate-limited") {
     throw new RateLimitError(result.scope);
+  }
+  if (!result.ok && result.reason === "refused") {
+    throw new ReportRefusedError(result.code);
   }
 
   if (result.ok) {

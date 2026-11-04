@@ -314,7 +314,7 @@ export default function OxfordChallengePage() {
                 </>,
                 <>
                   <span className="text-ink">Shipped vs roadmap.</span> Live now:{" "}
-                  {NET.cities} city stations across {NET.regions} regions, the Atlas,
+                  {NET.cities} cities across {NET.regions} regions (open air-quality data plus modelled layers; no sensors of our own), the Atlas,
                   dashboard and assistant, plus community reports, events with
                   geo-fenced check-in, and Eco-Points. Not yet built: real-time
                   water sensor ingestion, the SMS/USSD alerting described above,

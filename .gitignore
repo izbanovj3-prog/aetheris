@@ -41,3 +41,13 @@ yarn-error.log*
 next-env.d.ts
 
 .vercel
+
+# allow the template, never real env files
+!.env.example
+
+# playwright
+/test-results/
+/playwright-report/
+/.e2e-state/
+/lighthouse-reports/
+/lighthouse-summary.json

@@ -1,8 +1,10 @@
 /* ─────────────────────────────────────────────────────────────
-   AETHERIS · Atlas live intelligence (Kazakhstan)
-   Derives a believable national event stream + a country health
-   index from the same simulation the map renders — so the "live
-   feed" is grounded in real station + hotspot data, not noise.
+   AETHERIS · Atlas model overview (Kazakhstan)
+   A list of notable values and a composite index, derived from the same
+   simulation the map renders. Everything here is MODELLED: it is shown
+   under a "model" label, never with live timestamps, and never animated
+   to look like a feed. Statements that no data behind the site supports
+   (the former Aral-dust and Balkhash-inflow percentages) were removed.
    ───────────────────────────────────────────────────────────── */
 
 import {
@@ -28,8 +30,6 @@ const FEED = {
     improving: (v: number) => `Sustainability ▲ ${v}/100 — improving`,
     water: (v: number) => `Water quality ${v}/100 — treatment pressure`,
     bio: (v: number) => `Biodiversity intactness ${v}/100 — recovering steppe`,
-    aral: "Aral seabed dust index +18% — salt-storm season intensifying",
-    balkhash: "Lake Balkhash inflow −9% vs decadal mean",
   },
   ru: {
     aqi: (v: number, haz: boolean) => `AQI ${v} ▲ — ${haz ? "опасный воздух" : "повышенные частицы"}`,
@@ -37,8 +37,6 @@ const FEED = {
     improving: (v: number) => `Устойчивость ▲ ${v}/100 — улучшается`,
     water: (v: number) => `Качество воды ${v}/100 — нагрузка на очистку`,
     bio: (v: number) => `Сохранность биоразнообразия ${v}/100 — степь восстанавливается`,
-    aral: "Индекс аральской пыли +18% — сезон солевых бурь усиливается",
-    balkhash: "Приток в озеро Балхаш −9% к десятилетней норме",
   },
   kk: {
     aqi: (v: number, haz: boolean) => `AQI ${v} ▲ — ${haz ? "қауіпті ауа" : "жоғары бөлшектер"}`,
@@ -46,13 +44,9 @@ const FEED = {
     improving: (v: number) => `Тұрақтылық ▲ ${v}/100 — жақсаруда`,
     water: (v: number) => `Су сапасы ${v}/100 — тазарту жүктемесі`,
     bio: (v: number) => `Биоалуантүрлілік сақталуы ${v}/100 — дала қалпына келуде`,
-    aral: "Арал түбі шаңы индексі +18% — тұзды дауыл маусымы күшеюде",
-    balkhash: "Балқаш көліне құйылу −9% онжылдық нормаға қатысты",
   },
 } as const;
 
-const ARAL_PLACE = { en: "Kyzylorda", ru: "Кызылорда", kk: "Қызылорда" };
-const BALKHASH_PLACE = { en: "Karaganda", ru: "Караганда", kk: "Қарағанды" };
 
 export type EventSeverity = "alert" | "watch" | "positive" | "info";
 
@@ -129,22 +123,8 @@ export function buildEvents(locale: Locale = "en"): AtlasEvent[] {
       place: cityName(s.id, s.name, locale),
     });
   }
-  ev.push({
-    id: "aral",
-    severity: "alert",
-    glyph: "◷",
-    text: f.aral,
-    place: ARAL_PLACE[locale],
-  });
-  ev.push({
-    id: "balkhash",
-    severity: "watch",
-    glyph: "≈",
-    text: f.balkhash,
-    place: BALKHASH_PLACE[locale],
-  });
 
-  // deterministic shuffle so the stream order is stable across reloads
+  // deterministic shuffle so the order is stable across reloads
   const r = mulberry32(424242);
   for (let i = ev.length - 1; i > 0; i--) {
     const j = Math.floor(r() * (i + 1));
@@ -183,10 +163,6 @@ export function basePulse(): PlanetPulse {
   };
 }
 
-/** Small bounded live drift around a base value (deterministic per tick). */
-export function drift(base: number, amp: number, tick: number, phase = 0): number {
-  return base + Math.sin(tick * 0.6 + phase) * amp * 0.6 + Math.sin(tick * 1.7 + phase) * amp * 0.4;
-}
 
 const SEVERITY_TONE: Record<EventSeverity, string> = {
   alert: "#f57362",
@@ -205,19 +181,19 @@ function clamp(v: number, lo: number, hi: number) {
 /** A short, rotating national narrative line for the HUD headline. */
 const NARRATIVE: Record<Locale, [string, string, string]> = {
   en: [
-    "National vitals stable — northern air improving, industrial zones holding within limits.",
-    "Mixed signals — winter inversions building over Almaty and the Karaganda steel belt.",
-    "Stress elevated — Aral dust, smelter plumes and heat exposure compounding across regions.",
+    "Model: national index steady — northern air improving, industrial load unchanged.",
+    "Model: mixed — winter inversions expected over Almaty and the Karaganda steel belt.",
+    "Model: elevated — dust, smelter emissions and heat exposure add up across regions.",
   ],
   ru: [
-    "Национальные показатели стабильны — воздух на севере улучшается, промзоны в пределах нормы.",
-    "Смешанные сигналы — зимние инверсии нарастают над Алматы и карагандинским стальным поясом.",
-    "Нагрузка повышена — аральская пыль, плюмы заводов и жара накладываются по регионам.",
+    "Модель: национальный индекс стабилен — воздух на севере улучшается, промышленная нагрузка без изменений.",
+    "Модель: смешанная картина — над Алматы и карагандинским промышленным поясом ожидаются зимние инверсии.",
+    "Модель: нагрузка повышена — пыль, выбросы заводов и жара накладываются по регионам.",
   ],
   kk: [
-    "Ұлттық көрсеткіштер тұрақты — солтүстікте ауа жақсаруда, өнеркәсіп аймақтары шек ішінде.",
-    "Аралас сигналдар — Алматы мен Қарағанды болат белдеуі үстінде қысқы инверсиялар күшеюде.",
-    "Жүктеме жоғары — Арал шаңы, зауыт түтіні мен ыстық өңірлер бойынша жинақталуда.",
+    "Модель: ұлттық индекс тұрақты — солтүстікте ауа жақсаруда, өнеркәсіптік жүктеме өзгеріссіз.",
+    "Модель: аралас көрініс — Алматы мен Қарағанды өнеркәсіп белдеуі үстінде қысқы инверсиялар күтіледі.",
+    "Модель: жүктеме жоғары — шаң, зауыт шығарындылары мен ыстық өңірлер бойынша жинақталуда.",
   ],
 };
 export function planetNarrative(p: PlanetPulse, locale: Locale = "en"): string {

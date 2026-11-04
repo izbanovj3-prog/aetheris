@@ -34,15 +34,18 @@ function safeReveal(text: string, n: number): string {
   return slice;
 }
 
-/* minimal markdown: **bold**, lists, line breaks */
+/* minimal markdown: **bold**, lists, line breaks, and "> " notice lines —
+   used for the "modelled estimates, not measurements" line every reply
+   with figures starts with, which must not read as small print. */
 function Rich({ text }: { text: string }) {
   const lines = text.split("\n");
   return (
     <>
       {lines.map((line, i) => {
         const isBullet = line.startsWith("- ");
+        const isNotice = line.startsWith("> ");
         const isNum = /^\d+\.\s/.test(line);
-        const content = isBullet
+        const content = isBullet || isNotice
           ? line.slice(2)
           : isNum
             ? line.replace(/^\d+\.\s/, "")
@@ -58,7 +61,15 @@ function Rich({ text }: { text: string }) {
         );
         return (
           <Fragment key={i}>
-            {isBullet ? (
+            {isNotice ? (
+              <span
+                role="note"
+                className="block rounded-lg border border-amber/40 bg-amber/[0.08] px-3 py-2 text-ink"
+              >
+                <span aria-hidden className="text-amber mr-1.5">⚠</span>
+                {parts}
+              </span>
+            ) : isBullet ? (
               <span className="flex gap-2.5 pl-1">
                 <span className="text-emerald mt-[3px] shrink-0">·</span>
                 <span>{parts}</span>

@@ -18,6 +18,7 @@ import {
   aqiBand,
   genSeries,
   getStations,
+  originOf,
   scoreBand,
   type DataOrigin,
   type LayerKey,
@@ -166,7 +167,20 @@ export default function EnvironmentalMap() {
   const mapRef = useRef<maplibregl.Map | null>(null);
 
   const [ready, setReady] = useState(false);
-  const [booting, setBooting] = useState(true);
+  // The cinematic boot overlay is skipped on narrow screens: there it only
+  // delays the first view of the map, on the devices with the least time
+  // to spare. Decided before first paint so it never flashes.
+  const [booting, setBooting] = useState(
+    () => typeof window === "undefined" || window.matchMedia("(min-width: 640px)").matches,
+  );
+  // The model overview is secondary; mount it once the browser is idle so
+  // the map and its controls render first, in shorter tasks.
+  const [pulseReady, setPulseReady] = useState(false);
+  useEffect(() => {
+    const w = window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number };
+    if (w.requestIdleCallback) w.requestIdleCallback(() => setPulseReady(true), { timeout: 2500 });
+    else window.setTimeout(() => setPulseReady(true), 1200);
+  }, []);
   const [activeLayer, setActiveLayer] = useState<LayerKey>("air");
   const [selected, setSelected] = useState<Station | null>(null);
   const [hoverStation, setHoverStation] = useState<Station | null>(null);
@@ -252,6 +266,12 @@ export default function EnvironmentalMap() {
       dragRotate: false,
       trackResize: false,
       attributionControl: { compact: true },
+      // A phone reports a device pixel ratio of 2.5–3, which makes the map
+      // draw up to 9× the pixels of ratio 1 on every frame. Capped at 1.5:
+      // indistinguishable for raster tiles and soft heat fields, and far
+      // less main-thread and GPU work on the devices that can least spare it.
+      pixelRatio: Math.min(window.devicePixelRatio || 1, 1.5),
+      fadeDuration: 0,
     });
     mapRef.current = map;
     map.touchZoomRotate.disableRotation();
@@ -616,9 +636,10 @@ export default function EnvironmentalMap() {
         dict={dict}
       />
 
-      <GlobalPulse isDesktop={isDesktop} />
+      {pulseReady && <GlobalPulse isDesktop={isDesktop} />}
 
       <LayerLegend
+        liveAir={liveOn}
         layer={activeLayer}
         label={dict.atlas.layers[activeLayer].label}
         unit={LAYERS[activeLayer].unit}
@@ -915,7 +936,7 @@ function HoverContent({
           <span className="text-[0.9375rem] ml-1 opacity-70">{bandText}</span>
         </span>
       </div>
-      <span className="telemetry !text-[0.9375rem] mt-2 block text-emerald/70">{dict.map.clickToOpen}</span>
+      <span className="telemetry !text-[0.9375rem] mt-2 block text-emerald">{dict.map.clickToOpen}</span>
     </>
   );
 }
@@ -1098,9 +1119,9 @@ const StationPanel = memo(function StationPanel({
         </div>
 
         <div className="flex flex-col gap-4">
-          <MetricRow label={dict.map.airMetric(aqiBandLabel(air.label, locale))} value={s.aqi} max={300} color={TONE_HEX[air.tone]} origin={METRIC_ORIGIN.aqi} />
-          <MetricRow label={dict.map.pm25} value={s.pm25} max={150} color={TONE_HEX.cyan} origin={METRIC_ORIGIN.pm25} />
-          <MetricRow label={dict.map.pm10} value={s.pm10} max={250} color={TONE_HEX.cyan} origin={METRIC_ORIGIN.pm10} />
+          <MetricRow label={dict.map.airMetric(aqiBandLabel(air.label, locale))} value={s.aqi} max={300} color={TONE_HEX[air.tone]} origin={originOf("aqi", Boolean(s.liveAir))} />
+          <MetricRow label={dict.map.pm25} value={s.pm25} max={150} color={TONE_HEX.cyan} origin={originOf("pm25", Boolean(s.liveAir))} />
+          <MetricRow label={dict.map.pm10} value={s.pm10} max={250} color={TONE_HEX.cyan} origin={originOf("pm10", Boolean(s.liveAir))} />
           <MetricRow label={dict.map.industrial} value={s.industrialEmissions} max={100} color={TONE_HEX.coral} origin={METRIC_ORIGIN.industrialEmissions} />
           <MetricRow label={dict.map.water} value={s.waterQuality} max={100} color="#4f9dde" origin={METRIC_ORIGIN.waterQuality} />
           <MetricRow label={dict.map.bio} value={s.biodiversity} max={100} color={TONE_HEX.emerald} origin={METRIC_ORIGIN.biodiversity} />

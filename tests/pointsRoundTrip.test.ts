@@ -12,18 +12,29 @@ import { computePoints } from "@/lib/points";
    their CURRENT status, and that a row written by this device still comes
    back marked as this device's.
 
+   Since privacy-hardening.sql the database no longer says whose row is
+   whose — anon_id is not readable. A device recognises its rows by the ids
+   it kept when it filed them (the local mirror), which is what is stubbed
+   here.
+
    Both halves are asserted here, against the real module, with fetch and
    localStorage stubbed — because if either broke, points would simply be
    quietly lower than the platform says they are, on a screen nobody can
    check against anything.
    ───────────────────────────────────────────────────────────── */
 
-const DEVICE = "device-under-test-0001";
+const MY_REPORT = "11111111-2222-3333-4444-555555555555";
 
 let store: Record<string, string>;
 
 beforeEach(() => {
-  store = { "aetheris.community.anon.v1": DEVICE };
+  store = {
+    "aetheris.community.anon.v2": "v2-00000000-0000-4000-8000-000000000001",
+    // What createReport left behind when this device filed MY_REPORT.
+    "aetheris.community.reports.v1": JSON.stringify([
+      { id: MY_REPORT, title: "filed yesterday", createdAt: Date.now() - 86_400_000, remote: true },
+    ]),
+  };
   vi.stubGlobal("window", {
     localStorage: {
       getItem: (k: string) => store[k] ?? null,
@@ -45,9 +56,8 @@ afterEach(() => {
 /** One PostgREST row, as the API would hand it back. */
 function row(over: Record<string, unknown> = {}) {
   return {
-    id: "11111111-2222-3333-4444-555555555555",
+    id: MY_REPORT,
     created_at: new Date().toISOString(),
-    anon_id: DEVICE,
     author: "Anonymous",
     city: "Almaty",
     lat: 43.238,
@@ -91,7 +101,7 @@ describe("a report corroborated while you were away", () => {
   });
 
   it("does not pay it to a different device", async () => {
-    stubList([row({ status: "corroborated", anon_id: "somebody-elses-device" })]);
+    stubList([row({ status: "corroborated", id: "99999999-8888-7777-6666-555555555555" })]);
     const { getRemoteReports } = await import("@/lib/reports");
     const mine = (await getRemoteReports())!.filter((r) => r.userCreated);
     expect(mine).toHaveLength(0);

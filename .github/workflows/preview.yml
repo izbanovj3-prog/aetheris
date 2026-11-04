@@ -1,0 +1,103 @@
+# Checks every deployment Vercel reports as ready — each preview, and
+# production after a merge — with the full Playwright suite run against the
+# deployed site: Vercel's real headers and CSP, routing, 404s, three
+# languages, the report flow. Can also be run by hand with a URL.
+#
+# The database is never written to: every spec stubs Supabase writes, and
+# the deployment's own requests go out unchanged only in the read-only
+# header/console check.
+#
+# If Vercel Deployment Protection is on, add the project's "Protection
+# Bypass for Automation" secret as the repository secret
+# VERCEL_AUTOMATION_BYPASS_SECRET (see tests/e2e/vercel-bypass.setup.ts).
+
+name: Deployment check
+
+on:
+  deployment_status:
+  workflow_dispatch:
+    inputs:
+      url:
+        description: "Deployment URL, e.g. https://aetheris-git-….vercel.app"
+        required: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deployment-check-${{ github.event.deployment_status.environment_url || inputs.url }}
+  cancel-in-progress: true
+
+jobs:
+  e2e:
+    name: Playwright against ${{ github.event.deployment.environment || 'deployment' }}
+    if: github.event_name == 'workflow_dispatch' || github.event.deployment_status.state == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    env:
+      # From Vercel's deployment status or the manual input — checked below
+      # before anything uses it.
+      DEPLOY_URL: ${{ github.event.deployment_status.environment_url || inputs.url }}
+      VERCEL_AUTOMATION_BYPASS_SECRET: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+    steps:
+      - name: Check the deployment URL
+        run: |
+          DEPLOY_URL="${DEPLOY_URL%/}"
+          if ! printf '%s' "$DEPLOY_URL" | grep -Eq '^https://([a-z0-9-]+\.vercel\.app|(www\.)?aetherisearth\.live)$'; then
+            echo "::error::Not a Vercel or aetherisearth.live URL: $DEPLOY_URL"
+            exit 1
+          fi
+          echo "E2E_BASE_URL=$DEPLOY_URL" >> "$GITHUB_ENV"
+          echo "Checking $DEPLOY_URL"
+      - name: Reach the deployment
+        run: |
+          # Pasted secrets often carry a trailing newline or space; Vercel
+          # compares exactly, so send it trimmed (the test setup does too).
+          secret="$(printf '%s' "$VERCEL_AUTOMATION_BYPASS_SECRET" | sed -e 's/^[[:space:]]*//' -e 's/[[:space:]]*$//')"
+          if [ "$secret" != "$VERCEL_AUTOMATION_BYPASS_SECRET" ]; then
+            echo "::warning::VERCEL_AUTOMATION_BYPASS_SECRET has leading or trailing whitespace; it is sent trimmed."
+          fi
+          args=(-s -o /dev/null -w '%{http_code} %{redirect_url}' --max-time 30)
+          if [ -n "$secret" ]; then
+            args+=(-H "x-vercel-protection-bypass: $secret")
+          fi
+          out=$(curl "${args[@]}" "$E2E_BASE_URL/")
+          code="${out%% *}"
+          location="${out#* }"
+          # Never print a redirect's query string: it can carry a token.
+          where="${location%%\?*}"
+          echo "GET / → $code${where:+ → $where}"
+          protected=false
+          case "$code" in 401|403) protected=true ;; esac
+          case "$where" in https://vercel.com/*) protected=true ;; esac
+          if $protected && [ -z "$VERCEL_AUTOMATION_BYPASS_SECRET" ]; then
+            echo "::error::The deployment is behind Vercel Deployment Protection and VERCEL_AUTOMATION_BYPASS_SECRET is empty in this run. It must be a repository secret: Settings → Secrets and variables → Actions → Secrets tab → Repository secrets, with exactly that name (not a Variable, not an Environment, Dependabot or Codespaces secret)."
+            exit 1
+          fi
+          if $protected; then
+            # A fingerprint, never the value: lets the owner compare without
+            # anyone printing the secret.
+            fp="$(printf '%s' "$secret" | sha256sum | cut -c1-8)"
+            echo "::error::The deployment is behind Vercel Deployment Protection and rejected the bypass secret that was sent (${#secret} characters, sha256 starts with $fp). Compare with the secret in Vercel → Settings → Deployment Protection → Protection Bypass for Automation: printf %s '<secret>' | sha256sum | cut -c1-8"
+            exit 1
+          fi
+          [ "$code" = "200" ] || { echo "::error::Expected 200 from /, got $code"; exit 1; }
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - name: Install Chromium for Playwright
+        run: npx playwright install --with-deps chromium
+      - name: End-to-end tests against the deployment
+        run: npx playwright test
+      - name: Upload Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report-deployment
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7

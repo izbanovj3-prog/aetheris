@@ -35,6 +35,8 @@ export function Footer() {
         { label: dict.footer.press, href: "/press" },
         { label: "Oxford Challenge 2026", href: "/oxford-challenge" },
         { label: dict.footer.contact, href: "/contact" },
+        { label: dict.footer.privacy, href: "/privacy" },
+        { label: dict.footer.terms, href: "/terms" },
       ],
     },
   ];
@@ -59,7 +61,7 @@ export function Footer() {
             <span className="telemetry">
               {dict.footer.stations(networkStats().cities)}
               <SourceNote
-                source="Aetheris station registry · one station per monitored city, fed by Open-Meteo grid readings"
+                source={dict.footer.citiesSource}
                 className="ml-1.5"
               />
             </span>
@@ -67,13 +69,13 @@ export function Footer() {
         </div>
 
         {columns.map((col) => (
-          <div key={col.title} className="flex flex-col gap-3">
+          <div key={col.title} className="flex flex-col gap-3 min-w-0">
             <span className="telemetry telemetry-bright mb-1">{col.title}</span>
             {col.links.map((l) => (
               <Link
                 key={l.href}
                 href={localePath(l.href, locale)}
-                className="text-sm text-ink-dim hover:text-emerald transition-colors duration-300 w-fit link-sweep"
+                className="text-sm text-ink-dim hover:text-emerald transition-colors duration-300 w-fit max-w-full break-words link-sweep"
               >
                 {l.label}
               </Link>

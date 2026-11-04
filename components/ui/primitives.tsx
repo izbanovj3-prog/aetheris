@@ -319,7 +319,8 @@ export function SourceNote({
   asOf?: string;
   className?: string;
 }) {
-  const note = `Source: ${source} · as of ${asOf ?? BUILT_AT ?? "build time unavailable"}`;
+  const w = useDict().sourceNote;
+  const note = `${w.source}: ${source} · ${w.asOf} ${asOf ?? BUILT_AT ?? w.noBuild}`;
   return (
     <span
       role="note"

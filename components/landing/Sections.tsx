@@ -58,14 +58,18 @@ function tickerItems(stations: Station[], live: boolean, locale: Locale): string
   const byPm = [...stations].sort((a, b) => b.pm25 - a.pm25);
   const byWater = [...stations].sort((a, b) => a.waterQuality - b.waterQuality);
 
+  // Every item says what it is: air values are open data only for cities
+  // whose reading arrived; water and hotspot ratings are always modelled.
+  const model = ` · ${dict.dataOrigin.modeled.toUpperCase()}`;
+  const air = (s: Station) => (s.liveAir ? "" : model);
   return [
-    ...byAqi.slice(0, 5).map((s) => `${name(s)} AQI ${s.aqi}${arrow(s)}`),
-    `${name(byPm[0])} PM2.5 ${byPm[0].pm25} µg/m³`,
-    ...byWater.slice(0, 3).map((s) => `${name(s)} WQI ${s.waterQuality}`),
+    ...byAqi.slice(0, 5).map((s) => `${name(s)} AQI ${s.aqi}${arrow(s)}${air(s)}`),
+    `${name(byPm[0])} PM2.5 ${byPm[0].pm25} µg/m³${air(byPm[0])}`,
+    ...byWater.slice(0, 3).map((s) => `${name(s)} WQI ${s.waterQuality}${model}`),
     ...HOTSPOTS.filter((h) => h.status === "critical").map(
-      (h) => `${hotspotName(h.id, h.name, locale).toUpperCase()} — ${dict.ticker.critical}`,
+      (h) => `${hotspotName(h.id, h.name, locale).toUpperCase()} — ${dict.ticker.critical}${model}`,
     ),
-    `${dict.ticker.networkMean} ${planetSummary(stations).meanAqi}`,
+    `${dict.ticker.networkMean} ${planetSummary(stations).meanAqi}${stations.every((s) => s.liveAir) ? "" : model}`,
   ];
 }
 
@@ -289,7 +293,7 @@ export function AssistantPreview() {
                 <span className="grid place-items-center w-8 h-8 rounded-lg bg-emerald/10 border border-emerald/30 text-emerald text-sm font-bold shrink-0">
                   Æ
                 </span>
-                <span className="telemetry telemetry-bright">{dict.assistant.analyst}</span>
+                <span className="telemetry telemetry-bright min-w-0 break-words">{dict.assistant.analyst}</span>
               </div>
               <span className="flex items-center gap-2 shrink-0">
                 <span className="dot-live" />
@@ -412,7 +416,7 @@ export function CommunityStrip() {
                 <Reveal key={s.l} index={i}>
                   <div className="flex items-baseline gap-4 border-b border-line pb-4">
                     <span className="readout text-2xl sm:text-3xl text-emerald">{s.v}</span>
-                    <span className="telemetry">{s.l}</span>
+                    <span className="telemetry min-w-0 break-words">{s.l}</span>
                   </div>
                 </Reveal>
               ))}

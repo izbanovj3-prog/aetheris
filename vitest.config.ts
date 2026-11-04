@@ -32,5 +32,12 @@ export default defineConfig({
     // every change; the audit is a deliberate, separate act.
     include: ["tests/**/*.test.ts"],
     exclude: ["tests/**/*.rls.test.ts", "**/node_modules/**"],
+    // lib/supabase.ts has no built-in project: the client tests get a made-up
+    // one (fetch is stubbed in every test that would reach it), and
+    // tests/supabase.config.test.ts clears it to test the no-backend mode.
+    env: {
+      NEXT_PUBLIC_SUPABASE_URL: "https://unit-test.supabase.co",
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: "sb_publishable_unit_test",
+    },
   },
 });

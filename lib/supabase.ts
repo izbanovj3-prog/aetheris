@@ -5,28 +5,92 @@
    site already talks to Open-Meteo and GBIF this way, the whole surface
    used here is two HTTP calls, and it keeps ~50 KB out of the bundle.
 
-   The key below is Supabase's *publishable* key. It is designed to ship
-   in client code — every protection lives in the row-level security
-   policies in supabase/reports.sql, not in key secrecy. A `sb_secret_`
-   key must never appear here.
+   The project comes from the build environment only —
+   NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY — so a build
+   is never pointed at a project by accident. The key is the publishable
+   (anon) key: it ships in the bundle by design, and every protection
+   lives in the row-level security in supabase/*.sql. A `sb_secret_` key
+   must never be put in either variable.
 
-   Everything degrades: if the project is unreachable, the table is
-   missing, or RLS rejects the write, the caller falls back to
-   localStorage and the app behaves exactly as it did before. That
-   fallback is why the "no backend" copy stays until persistence is
-   actually verified.
+   Without both variables the site runs with no backend: nothing is sent
+   anywhere, reports stay in this browser, and the community page says
+   the shared database is not connected. If the project is unreachable or
+   the table is missing, the caller falls back to localStorage too. A
+   write the database declines (RLS, a constraint, a trigger) is not an
+   outage: it is reported as refused and nothing is kept, because a local
+   copy would never sync.
    ───────────────────────────────────────────────────────────── */
 
-export const SUPABASE_URL =
-  process.env.NEXT_PUBLIC_SUPABASE_URL ?? "https://effxsftaolpjjlpuqwax.supabase.co";
+/** Only an https origin counts; anything else leaves the backend off. */
+function projectUrl(v: string | undefined): string {
+  const url = (v ?? "").trim().replace(/\/+$/, "");
+  return /^https:\/\/[^/\s]+$/.test(url) ? url : "";
+}
 
-export const SUPABASE_KEY =
-  process.env.NEXT_PUBLIC_SUPABASE_KEY ??
-  "sb_publishable_YERf0Mpcy2YhOFyvIz5H1w_rQ9-H6go";
+export const SUPABASE_URL = projectUrl(process.env.NEXT_PUBLIC_SUPABASE_URL);
+
+export const SUPABASE_KEY = (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? "").trim();
 
 export const REPORTS_TABLE = "reports";
 
 export const isConfigured = () => Boolean(SUPABASE_URL && SUPABASE_KEY);
+
+/**
+ * Columns a visitor may read. supabase/privacy-hardening.sql grants SELECT
+ * on exactly these — anon_id is deliberately absent — so `select=*` is
+ * refused once that file is applied. Every read names them.
+ */
+export const REPORT_PUBLIC_COLUMNS = [
+  "id",
+  "created_at",
+  "author",
+  "city",
+  "lat",
+  "lon",
+  "category",
+  "severity",
+  "title",
+  "body",
+  "status",
+  "upvotes",
+  "forwarded_at",
+  "forwarded_to",
+  "org_response",
+  "org_response_org",
+  "org_response_at",
+  "parent_id",
+  "photo_quality",
+].join(",");
+
+/** Two decimals ≈ 1 km — the most precise position the platform stores. */
+export const COORD_DECIMALS = 2;
+export function coarsen(v: number | null | undefined): number | null {
+  if (v == null || !Number.isFinite(v)) return null;
+  const f = 10 ** COORD_DECIMALS;
+  return Math.round(v * f) / f;
+}
+
+/**
+ * POST to a database function. Resolves to null when the function does not
+ * exist yet (PostgREST answers 404) — the caller then uses the path that
+ * works against a database without privacy-hardening.sql.
+ */
+export async function callRpc(
+  fn: string,
+  body: Record<string, unknown>,
+  signal?: AbortSignal,
+): Promise<Response | null> {
+  // No backend: answer as a failure, never as "function missing" (null),
+  // which would send the caller down a fallback path to the same nowhere.
+  if (!isConfigured()) return new Response(null, { status: 503 });
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify(body),
+    signal,
+  });
+  return res.status === 404 ? null : res;
+}
 
 function headers(extra: Record<string, string> = {}) {
   return {
@@ -60,7 +124,8 @@ export type RemoteStatus =
 export interface RemoteReport {
   id: string;
   created_at: string;
-  anon_id: string;
+  /** Not readable by visitors since privacy-hardening.sql. */
+  anon_id?: string;
   author: string;
   city: string;
   lat: number | null;
@@ -90,10 +155,12 @@ export interface RemoteReport {
   photo_quality?: boolean | null;
 }
 
-export type NewRemoteReport = Omit<
+export type NewRemoteReport = { anon_id: string } & Omit<
   RemoteReport,
   | "id"
   | "created_at"
+  | "anon_id"
+  | "author"
   | "status"
   | "upvotes"
   | "forwarded_at"
@@ -110,15 +177,20 @@ export type NewRemoteReport = Omit<
  */
 const MIGRATION_ONLY_COLUMNS = ["parent_id", "photo_quality"] as const;
 
-/** Newest reports first. Returns null on any failure — never throws. */
+/**
+ * Newest reports first, `limit` rows starting at `offset` — one page of the
+ * feed, never the whole table. Returns null on any failure — never throws.
+ */
 export async function listRemoteReports(
   limit = 50,
   signal?: AbortSignal,
+  offset = 0,
 ): Promise<RemoteReport[] | null> {
   if (!isConfigured()) return null;
+  const page = `&limit=${Math.max(1, Math.floor(limit))}` + (offset > 0 ? `&offset=${Math.floor(offset)}` : "");
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/${REPORTS_TABLE}?select=*&order=created_at.desc&limit=${limit}`,
+      `${SUPABASE_URL}/rest/v1/${REPORTS_TABLE}?select=${REPORT_PUBLIC_COLUMNS}&order=created_at.desc${page}`,
       { headers: headers(), signal },
     );
     if (!res.ok) return null;
@@ -138,6 +210,7 @@ export async function listRemoteReports(
 export type InsertResult =
   | { ok: true; row: RemoteReport }
   | { ok: false; reason: "rate-limited"; scope: "hourly" | "daily" }
+  | { ok: false; reason: "refused"; code: string }
   | { ok: false; reason: "unavailable" };
 
 /** One POST attempt. Separated so the caller can retry with fewer columns. */
@@ -145,7 +218,9 @@ async function postReport(
   report: Record<string, unknown>,
   signal?: AbortSignal,
 ): Promise<InsertResult | "unknown-column"> {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${REPORTS_TABLE}`, {
+  // The explicit select matters: return=representation otherwise asks for
+  // every column back, including anon_id, which visitors cannot read.
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${REPORTS_TABLE}?select=${REPORT_PUBLIC_COLUMNS}`, {
     method: "POST",
     // Prefer: return=representation gives back the inserted row, so the
     // UI shows the server's id and timestamp rather than guessing.
@@ -180,6 +255,16 @@ async function postReport(
     return "unknown-column";
   }
 
+  // Any other 4xx is the database declining this row — a pin outside the
+  // coverage area, a follow-up to someone else's report, a check
+  // constraint. That is an answer, not an outage: saying "unreachable" and
+  // keeping it on the device would promise a sync that will never happen.
+  // 404 stays "unavailable": it means the table is missing, which the
+  // device-only fallback exists for.
+  if (res.status >= 400 && res.status < 500 && res.status !== 404) {
+    return { ok: false, reason: "refused", code: body?.code ?? String(res.status) };
+  }
+
   return { ok: false, reason: "unavailable" };
 }
 
@@ -212,9 +297,9 @@ export async function insertRemoteReport(
  * Which of these ids still exist in the table.
  *
  * Asked about specific ids rather than inferred from the feed page on
- * purpose: listRemoteReports caps at 50 rows, so "absent from the feed"
- * and "deleted" stop meaning the same thing as soon as the feed is longer
- * than that. Returns null on any failure, so a caller can tell "confirmed
+ * purpose: the feed is read a page (20 rows) at a time, so "absent from
+ * the feed" and "deleted" stop meaning the same thing as soon as the feed
+ * is longer than that. Returns null on any failure, so a caller can tell "confirmed
  * gone" apart from "could not check" and leave the data alone.
  */
 export async function existingReportIds(
@@ -234,6 +319,25 @@ export async function existingReportIds(
     return new Set(rows.map((r) => r.id));
   } catch {
     return null;
+  }
+}
+
+/**
+ * Delete one of this device's own reports. "unsupported" means the database
+ * predates privacy-hardening.sql and has no way to prove ownership.
+ */
+export async function deleteRemoteReport(
+  reportId: string,
+  anonId: string,
+): Promise<"deleted" | "refused" | "unsupported" | "unavailable"> {
+  if (!isConfigured()) return "unavailable";
+  try {
+    const res = await callRpc("delete_my_report", { p_report_id: reportId, p_anon_id: anonId });
+    if (!res) return "unsupported";
+    if (!res.ok) return "unavailable";
+    return (await res.json()) === true ? "deleted" : "refused";
+  } catch {
+    return "unavailable";
   }
 }
 

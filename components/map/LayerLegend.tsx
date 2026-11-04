@@ -24,7 +24,10 @@ export const LayerLegend = memo(function LayerLegend({
   ramp,
   domain,
   liveRow,
+  liveAir = false,
 }: {
+  /** True once real air readings replaced the baseline on the map. */
+  liveAir?: boolean;
   layer: LayerKey;
   label: string;
   unit: string;
@@ -62,7 +65,7 @@ export const LayerLegend = memo(function LayerLegend({
           <span className="telemetry !text-[0.9375rem]">{unit}</span>
         </div>
         <div className="mb-2">
-          <OriginBadge origin={LAYER_ORIGIN[layer]} />
+          <OriginBadge origin={LAYER_ORIGIN[layer] === "live" && !liveAir ? "modeled" : LAYER_ORIGIN[layer]} />
         </div>
         <div
           className="h-2 rounded-full"

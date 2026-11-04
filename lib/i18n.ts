@@ -52,6 +52,9 @@ const LOCALIZED_ROOTS = [
   /^\/mission(\/|$)/,
   /^\/press(\/|$)/,
   /^\/contact(\/|$)/,
+  /^\/privacy(\/|$)/,
+  /^\/terms(\/|$)/,
+  /^\/community(\/|$)/,
 ];
 
 export function isLocalized(path: string): boolean {
@@ -253,6 +256,22 @@ export interface Dict {
     critical: string;
   };
   /** Provenance badge shown next to every displayed measurement. */
+  sourceNote: { source: string; asOf: string; noBuild: string };
+  skipLink: string;
+  errors: {
+    nfKicker: string;
+    nfTitle: string;
+    nfBody: string;
+    home: string;
+    atlas: string;
+    errKicker: string;
+    errTitle: string;
+    errBody: string;
+    retry: string;
+    fatalTitle: string;
+    fatalBody: string;
+    reload: string;
+  };
   dataOrigin: {
     live: string;
     modeled: string;
@@ -335,6 +354,9 @@ export interface Dict {
     mission: string;
     press: string;
     contact: string;
+    privacy: string;
+    terms: string;
+    citiesSource: string;
     independence: string;
     bottomLeft: string;
     bottomRight: string;
@@ -383,8 +405,7 @@ export interface Dict {
     badgeLive: string;
     badgeModel: string;
     title: string;
-    ingestRate: string;
-    modelLatency: string;
+    aqiCurveNote: string;
     anomalyTitle: string;
     vsBaseline: string;
     window90: string;
@@ -465,6 +486,8 @@ export interface Dict {
     atlasDescription: string;
     dashboardTitle: string;
     dashboardDescription: string;
+    communityTitle: string;
+    communityDescription: string;
   };
 }
 
@@ -474,37 +497,53 @@ const en: Dict = {
     intelligence: "Intelligence",
     assistant: "Assistant",
     community: "Community",
-    live: "Live",
-    menuNetwork: "Planetary network · Live",
+    live: "Open data + model",
+    menuNetwork: "Kazakhstan · open data + model",
   },
   hero: {
-    badgeLive: "Kazakhstan network · live readings",
-    badgeBaseline: "Kazakhstan network · model baseline",
+    badgeLive: "Air quality · live open data",
+    badgeBaseline: "Kazakhstan · modelled baseline",
     h1a: "The operating",
     h1b: "system for",
     h1Accent: "Kazakhstan.",
-    lede: "Aetheris fuses satellites, ground stations, and AI into a single living picture of Kazakhstan — live air quality across every region, with water, industrial pollution, biodiversity and ecological risk on a modeled baseline.",
+    lede: "Aetheris puts Kazakhstan's environmental picture on one map: air quality from open data (Open-Meteo / CAMS) for every region, and modelled estimates — clearly marked — for water, industrial pollution, biodiversity and ecological risk.",
     ctaAtlas: "Open the Atlas",
     ctaIntel: "View intelligence",
     statCities: (c, r) => `${c} cities · ${r} regions`,
     statLayers: "5 environmental layers",
-    statReadings: (n) => `${n} live readings / day`,
-    chipAqi: "Mean AQI · Network",
+    statReadings: (n) => `${n} open-data values / day`,
+    chipAqi: "Mean AQI · all cities",
     chipAnomaly: "Temp anomaly",
     chipHotspots: "Environmental hotspots",
     descend: "Descend",
   },
   ticker: {
-    networkMean: "NETWORK MEAN AQI",
+    networkMean: "MEAN AQI · ALL CITIES",
     critical: "CRITICAL",
   },
+  errors: {
+    nfKicker: "Error 404",
+    nfTitle: "Page not found",
+    nfBody: "There is no page at this address. It may have moved, or the link may be mistyped.",
+    home: "Go to the home page",
+    atlas: "Open the Atlas",
+    errKicker: "Error",
+    errTitle: "Something went wrong",
+    errBody: "An unexpected error interrupted this page. Nothing you entered was sent because of it. Try again — if it keeps happening, write to izbanovj3@gmail.com.",
+    retry: "Try again",
+    fatalTitle: "Aetheris could not load",
+    fatalBody: "The page failed to start. Reload to try again.",
+    reload: "Reload",
+  },
+  skipLink: "Skip to main content",
+  sourceNote: { source: "Source", asOf: "as of", noBuild: "build time unavailable" },
   dataOrigin: {
     live: "Live",
     modeled: "Modeled",
     liveNote:
-      "Live measurement — fetched at page load from Open-Meteo (CAMS air quality and forecast weather), refreshed hourly upstream.",
+      "Live open data — fetched at page load from Open-Meteo: the CAMS air-quality model and the weather forecast, updated hourly at the source. Not a ground-station reading.",
     modeledNote:
-      "Modeled value — a deterministic regional baseline, not a real-time sensor feed. Indicative, not measured. See /methodology.",
+      "Modelled estimate — a deterministic regional baseline, not a measurement. Indicative only. See /methodology.",
     community: "Live · community",
     communityNote:
       "Filed by people, not instruments. Real and current, but self-reported, unverified against any sensor, and shaped by who happens to be looking — a city with no reports is not a clean city, it is a city nobody reported from.",
@@ -513,11 +552,11 @@ const en: Dict = {
     tag: "System architecture",
     titleA: "One signal chain, ",
     titleAccent: "nation-wide.",
-    lede: "Most environmental tools show you a slice. Aetheris closes the loop — from raw photons hitting a sensor to a decision made on the ground in Kazakhstan.",
+    lede: "Most environmental tools show you a slice. Aetheris puts open air-quality data, modelled layers and residents' reports side by side — and says which is which.",
     items: [
       {
         title: "Sense",
-        body: "A national nervous system. Satellite-fed CAMS air-quality fields, Open-Meteo weather, and community reports stream {readings} fresh readings a day — every region, hourly — into one coherent model.",
+        body: "Open data in one place. CAMS air-quality fields and Open-Meteo weather for every region, refreshed hourly at the source ({readings} values a day), next to residents' reports — each kept separate and labelled.",
       },
       {
         title: "Reason",
@@ -525,15 +564,15 @@ const en: Dict = {
       },
       {
         title: "Act",
-        body: "From insight to intervention. Ranked sustainability actions, modeled impact, and a community that verifies change on the ground.",
+        body: "From insight to action: ranked measures with modelled impact, and residents who report what they see on the ground.",
       },
     ],
   },
   stats: {
-    readings: "Live readings / day",
-    cities: "Cities monitored",
+    readings: "Open-data values / day",
+    cities: "Cities covered",
     regions: "Regions covered",
-    hotspots: "Hotspots under watch",
+    hotspots: "Hotspots mapped",
   },
   atlas: {
     tag: "The Kazakhstan Atlas",
@@ -553,30 +592,30 @@ const en: Dict = {
     tag: "Environmental AI",
     titleA: "Ask the network",
     titleAccent: "anything.",
-    lede: "The Aetheris analyst reads every layer of the Kazakhstan model — live air quality and the modeled baseline alike — and answers in plain language, with citations back to the source.",
+    lede: "The Aetheris analyst answers in plain language from the Kazakhstan model — a simulated baseline for air, water, industrial pollution, biodiversity and risk. Its figures are estimates, and every answer says so.",
     cta: "Start a conversation",
     analyst: "Environmental analyst",
     reasoning: "Reasoning",
     demoUser: "Risk outlook for Almaty?",
     demoAi:
-      "Composite environmental risk for Almaty sits at 57/100 — driven by winter inversions that trap traffic and heating emissions in the mountain basin. PM2.5 episodes are projected to intensify through the cold season…",
-    grounded: "Grounded in live network · 28 cities · Kazakhstan",
+      "Modelled composite risk for Almaty is 57/100 (an estimate, not a measurement) — driven by winter inversions that trap traffic and heating emissions in the mountain basin. PM2.5 episodes are projected to intensify through the cold season…",
+    grounded: "Modelled baseline · 28 cities · Kazakhstan",
     online: "Online",
     emptyTitle: "Ask the network anything.",
     emptyLede:
-      "I read Kazakhstan's environmental model — live air quality, plus modeled water, industrial pollution, biodiversity and ecological risk — and answer with sources.",
-    reading: "Reading sensor field…",
+      "I answer from Aetheris's model — a simulated baseline for air quality, water, industrial pollution, biodiversity and ecological risk. My figures are estimates, not measurements; for air quality from open data, open a city page.",
+    reading: "Reading the model…",
     placeholder: "Ask about any city, risk, or metric…",
     sendAria: "Send",
     messageAria: "Message the environmental analyst",
     disclaimer:
-      "Analysis grounded in network telemetry · not a substitute for official advisories",
+      "Modelled values are estimates, not measurements · not a substitute for official advisories",
   },
   community: {
-    tag: "Ground truth network",
+    tag: "Residents' reports",
     titleA: "Satellites see the planet.",
-    titleB: "People verify it.",
-    lede: "Every Aetheris layer is sharpened by citizen scientists — photographing waterways, logging species, flagging pollution events. Reports are cross-checked against sensor data and rewarded.",
+    titleB: "People report what they see.",
+    lede: "Every Aetheris layer is sharpened by citizen scientists — photographing waterways, logging species, flagging pollution events. Reports are public as filed and unchecked; when independent devices describe the same thing, the report says so.",
     cta: "Join the network",
     statLabels: [
       "Field reports in the pilot feed",
@@ -588,14 +627,14 @@ const en: Dict = {
     tag: "Begin",
     titleA: "Kazakhstan is already",
     titleAccent: "talking. Listen in.",
-    lede: "Open the Atlas and watch Kazakhstan's vital signs update in real time — no account required.",
+    lede: "Open the Atlas: live air quality from open data, modelled layers marked as such — no account required.",
     ctaAtlas: "Open the Atlas",
     ctaAssistant: "Ask the analyst",
   },
   footer: {
     tagline:
       "Kazakhstan's environmental intelligence, in one living system. Built for scientists, cities, and citizens.",
-    stations: (n) => `${n} city stations reporting`,
+    stations: (n) => `${n} cities covered`,
     colPlatform: "Platform",
     colScience: "Science",
     colCompany: "Company",
@@ -605,13 +644,16 @@ const en: Dict = {
     community: "Community",
     methodology: "Methodology",
     dataSources: "Data sources",
-    sensorNetwork: "Sensor network",
+    sensorNetwork: "Coverage",
     mission: "Mission",
     press: "Press kit",
     contact: "Contact",
+    privacy: "Privacy (draft)",
+    terms: "Terms (draft)",
+    citiesSource: "City list · one grid point per city, air quality from Open-Meteo (CAMS model)",
     independence:
       "Aetheris is an independent student project. It is not affiliated with, endorsed by, or operated in partnership with Kazhydromet or any government agency unless explicitly stated.",
-    bottomLeft: "© 2026 Aetheris Systems · Kazakhstan environmental intelligence",
+    bottomLeft: "© 2026 Aetheris · an independent student project",
     bottomRight: "51.17°N 71.43°E · Astana uplink nominal",
   },
   city: {
@@ -660,7 +702,7 @@ const en: Dict = {
     sustainability: "Sustainability",
     ctaAtlas: (city) => `See ${city} on the Atlas`,
     ctaIntel: "Network intelligence",
-    allCities: "All monitored cities →",
+    allCities: "All cities →",
     advice: {
       Good: "Air quality is satisfactory and poses little or no risk. It's a great time to be active outside.",
       Moderate:
@@ -677,8 +719,7 @@ const en: Dict = {
     badgeLive: "Live · Open-Meteo feed",
     badgeModel: "Modeled baseline · live feed unavailable",
     title: "State of Kazakhstan",
-    ingestRate: "Ingest rate",
-    modelLatency: "Model latency",
+    aqiCurveNote: "The 90-day curve is a modelled illustration, not recorded history.",
     anomalyTitle: "Global temperature anomaly",
     vsBaseline: "vs 1991–2020",
     window90: "90-day window",
@@ -716,7 +757,7 @@ const en: Dict = {
     layersTitle: "Layers",
     clickToOpen: "Click to open analytics →",
     citiesKz: (n) => `${n} cities · Kazakhstan`,
-    hotspotsTracked: (n) => `${n} environmental hotspots tracked`,
+    hotspotsTracked: (n) => `${n} environmental hotspots on the map`,
     liveAir: "● live air · Open-Meteo",
     zoomIn: "Zoom in",
     zoomOut: "Zoom out",
@@ -757,19 +798,19 @@ const en: Dict = {
     planet: "Planet",
     health: "Health",
     index: "INDEX",
-    planetaryPulse: "Planetary pulse",
+    planetaryPulse: "Model overview",
     pulseAqi: "Mean AQI",
     pulseAnomaly: "Anomaly",
     pulseHotspots: "Hotspots",
-    feedTitle: "Environmental feed",
-    streaming: "streaming",
+    feedTitle: "Notable modelled values",
+    streaming: "modelled",
     bootLines: [
-      "Establishing satellite uplink",
-      "Synchronising 28 regional stations",
-      "Calibrating AQI · PM2.5 · PM10 grid",
-      "Loading industrial emission feed",
-      "Resolving biodiversity index",
-      "Rendering Kazakhstan surface",
+      "Loading the map of Kazakhstan",
+      "Fetching air quality from Open-Meteo / CAMS",
+      "Computing modelled layers",
+      "Placing 28 cities",
+      "Placing environmental hotspots",
+      "Rendering",
     ],
     bootWordmark: "AETHERIS · KAZAKHSTAN ATLAS",
     bootAria: "Loading the global environmental map",
@@ -777,19 +818,22 @@ const en: Dict = {
   meta: {
     homeTitle: "AETHERIS — Kazakhstan Environmental Intelligence",
     homeDescription:
-      "National environmental intelligence for Kazakhstan — real-time air quality plus modeled water, industrial emissions and ecological risk across every region and major city, in one living model.",
+      "Kazakhstan's environment on one map — air quality from open data (Open-Meteo / CAMS) plus clearly marked modelled estimates for water, industrial pollution and ecological risk, across every region.",
     cityTitle: (city) => `${city} air quality`,
     cityDescription: (city, region) =>
-      `Live air quality in ${city}, ${region} — AQI, PM2.5, NO₂ and health guidance, plus modeled water, biodiversity and industrial-load indices.`,
+      `Air quality in ${city}, ${region} from open data (Open-Meteo / CAMS) — AQI, PM2.5, NO₂ and health guidance, plus modelled water, biodiversity and industrial-pollution indices.`,
     assistantTitle: "AI Assistant",
     assistantDescription:
-      "Converse with the Aetheris environmental analyst — live briefings, risk outlooks and metric explainers for every monitored city in Kazakhstan.",
+      "Ask the Aetheris analyst about any of 28 cities in Kazakhstan — briefings, risk outlooks and metric explainers, with modelled values marked as estimates.",
     atlasTitle: "Kazakhstan Atlas",
     atlasDescription:
-      "A living map of Kazakhstan — air quality, industrial emissions, water, biodiversity and environmental risk rendered as continuous fields across 28 cities and 17 regions.",
+      "A map of Kazakhstan — air quality from open data, and modelled industrial pollution, water, biodiversity and environmental risk, across 28 cities and 17 regions.",
     dashboardTitle: "Intelligence",
     dashboardDescription:
-      "Real-time environmental analytics for Kazakhstan — network AQI, temperature anomaly, city rankings, AI insights and the national hotspot registry.",
+      "Environmental analytics for Kazakhstan — mean AQI from open data, temperature anomaly, city rankings and the hotspot registry, with modelled values marked.",
+    communityTitle: "Community",
+    communityDescription:
+      "Residents' reports from across Kazakhstan — public as filed and unchecked, with matches between independent devices shown, Eco-Points, geographic badges and local eco-events.",
   },
 };
 
@@ -799,37 +843,53 @@ const ru: Dict = {
     intelligence: "Аналитика",
     assistant: "Ассистент",
     community: "Сообщество",
-    live: "Live",
-    menuNetwork: "Национальная сеть · Live",
+    live: "Открытые данные + модель",
+    menuNetwork: "Казахстан · открытые данные + модель",
   },
   hero: {
-    badgeLive: "Сеть Казахстана · живые данные",
-    badgeBaseline: "Сеть Казахстана · модельная база",
+    badgeLive: "Качество воздуха · открытые данные",
+    badgeBaseline: "Казахстан · модельная база",
     h1a: "Операционная",
     h1b: "система для",
     h1Accent: "Казахстана.",
-    lede: "Aetheris соединяет спутники, наземные станции и ИИ в единую живую картину Казахстана — качество воздуха в реальном времени по всем регионам, вода, промышленное загрязнение, биоразнообразие и экологический риск на модельной базовой линии.",
+    lede: "Aetheris собирает экологическую ситуацию Казахстана на одной карте: качество воздуха по открытым данным (Open-Meteo / CAMS) для всех регионов и модельные оценки — с явной пометкой — для воды, промышленного загрязнения, биоразнообразия и экологического риска.",
     ctaAtlas: "Открыть Атлас",
     ctaIntel: "Смотреть аналитику",
     statCities: (c, r) => `${c} городов · ${r} регионов`,
     statLayers: "5 экологических слоёв",
-    statReadings: (n) => `${n} живых замера в сутки`,
-    chipAqi: "Средний AQI · Сеть",
+    statReadings: (n) => `${n} значений открытых данных в сутки`,
+    chipAqi: "Средний AQI · все города",
     chipAnomaly: "Аномалия температуры",
     chipHotspots: "Экологические горячие точки",
     descend: "Вниз",
   },
   ticker: {
-    networkMean: "СРЕДНИЙ AQI СЕТИ",
+    networkMean: "СРЕДНИЙ AQI · ВСЕ ГОРОДА",
     critical: "КРИТИЧНО",
   },
+  errors: {
+    nfKicker: "Ошибка 404",
+    nfTitle: "Страница не найдена",
+    nfBody: "По этому адресу страницы нет. Возможно, она переехала или в ссылке опечатка.",
+    home: "На главную",
+    atlas: "Открыть Атлас",
+    errKicker: "Ошибка",
+    errTitle: "Что-то пошло не так",
+    errBody: "Непредвиденная ошибка прервала работу страницы. Из-за неё ничего из введённого вами не отправлено. Попробуйте ещё раз — если ошибка повторяется, напишите на izbanovj3@gmail.com.",
+    retry: "Попробовать снова",
+    fatalTitle: "Aetheris не загрузился",
+    fatalBody: "Страница не смогла запуститься. Обновите её, чтобы попробовать снова.",
+    reload: "Обновить",
+  },
+  skipLink: "Перейти к основному содержанию",
+  sourceNote: { source: "Источник", asOf: "на", noBuild: "время сборки неизвестно" },
   dataOrigin: {
     live: "Live",
     modeled: "Модель",
     liveNote:
-      "Живое измерение — загружается при открытии страницы из Open-Meteo (качество воздуха CAMS и прогноз погоды), обновление ежечасно на стороне источника.",
+      "Открытые данные — загружаются при открытии страницы из Open-Meteo: модель качества воздуха CAMS и прогноз погоды, обновление ежечасно на стороне источника. Это не показания наземной станции.",
     modeledNote:
-      "Модельное значение — детерминированная региональная базовая линия, а не поток датчиков в реальном времени. Индикативно, не измерено. См. /methodology.",
+      "Модельная оценка — детерминированная региональная базовая линия, а не измерение. Только для ориентира. См. /methodology.",
     community: "Live · сообщество",
     communityNote:
       "Присылают люди, а не приборы. Реально и актуально, но это самоотчёты, не сверенные ни с одним датчиком и зависящие от того, кто смотрит: город без отчётов — не чистый город, а город, откуда никто не написал.",
@@ -838,11 +898,11 @@ const ru: Dict = {
     tag: "Архитектура системы",
     titleA: "Одна сигнальная цепь — ",
     titleAccent: "вся страна.",
-    lede: "Большинство экологических сервисов показывают лишь срез. Aetheris замыкает цикл — от фотона, попавшего в сенсор, до решения, принятого на земле в Казахстане.",
+    lede: "Большинство экологических сервисов показывают лишь срез. Aetheris ставит рядом открытые данные о воздухе, модельные слои и сообщения жителей — и говорит, что есть что.",
     items: [
       {
         title: "Чувствовать",
-        body: "Национальная нервная система. Спутниковые поля CAMS, погода Open-Meteo и отчёты сообщества дают {readings} свежих замера в сутки — каждый регион, каждый час — в единой модели.",
+        body: "Открытые данные в одном месте. Поля качества воздуха CAMS и погода Open-Meteo по каждому региону, ежечасное обновление у источника ({readings} значений в сутки), рядом — сообщения жителей; всё помечено и не смешивается.",
       },
       {
         title: "Понимать",
@@ -850,15 +910,15 @@ const ru: Dict = {
       },
       {
         title: "Действовать",
-        body: "От инсайта к действию: ранжированные меры устойчивости, смоделированный эффект и сообщество, которое подтверждает изменения на месте.",
+        body: "От вывода к действию: ранжированные меры со смоделированным эффектом и жители, которые сообщают о том, что видят на месте.",
       },
     ],
   },
   stats: {
-    readings: "Живых замеров / сутки",
-    cities: "Городов под наблюдением",
+    readings: "Значений открытых данных / сутки",
+    cities: "Городов охвачено",
     regions: "Регионов покрыто",
-    hotspots: "Горячих точек на контроле",
+    hotspots: "Горячих точек на карте",
   },
   atlas: {
     tag: "Атлас Казахстана",
@@ -878,30 +938,30 @@ const ru: Dict = {
     tag: "Экологический ИИ",
     titleA: "Спросите сеть",
     titleAccent: "о чём угодно.",
-    lede: "Аналитик Aetheris читает каждый слой модели Казахстана — и живое качество воздуха, и модельную базовую линию — и отвечает простым языком со ссылками на источники.",
+    lede: "Аналитик Aetheris простым языком отвечает по модели Казахстана — симулированной базе для воздуха, воды, промышленного загрязнения, биоразнообразия и риска. Его цифры — оценки, и каждый ответ это прямо говорит.",
     cta: "Начать диалог",
     analyst: "Экологический аналитик",
     reasoning: "Анализ",
     demoUser: "Прогноз рисков для Алматы?",
     demoAi:
-      "Совокупный экологический риск Алматы — 57/100: зимние инверсии запирают выбросы транспорта и отопления в горной котловине. Эпизоды PM2.5 будут усиливаться в холодный сезон…",
-    grounded: "На базе живой сети · 28 городов · Казахстан",
+      "Модельная оценка совокупного риска для Алматы — 57/100 (оценка, не измерение): зимние инверсии запирают выбросы транспорта и отопления в горной котловине. Эпизоды PM2.5 будут усиливаться в холодный сезон…",
+    grounded: "Модельная база · 28 городов · Казахстан",
     online: "Онлайн",
     emptyTitle: "Спросите сеть о чём угодно.",
     emptyLede:
-      "Я читаю экологическую модель Казахстана — живое качество воздуха плюс модельные вода, промышленное загрязнение, биоразнообразие и экологический риск — и отвечаю со ссылками на источники.",
-    reading: "Читаю поле сенсоров…",
+      "Я отвечаю по модели Aetheris — симулированной базе для качества воздуха, воды, промышленного загрязнения, биоразнообразия и экологического риска. Мои цифры — оценки, а не измерения; качество воздуха по открытым данным — на странице города.",
+    reading: "Читаю модель…",
     placeholder: "Спросите о городе, риске или показателе…",
     sendAria: "Отправить",
     messageAria: "Написать экологическому аналитику",
     disclaimer:
-      "Анализ на основе телеметрии сети · не заменяет официальные предупреждения",
+      "Модельные значения — оценки, а не измерения · не заменяет официальные предупреждения",
   },
   community: {
-    tag: "Сеть наземной проверки",
+    tag: "Сообщения жителей",
     titleA: "Спутники видят планету.",
-    titleB: "Люди подтверждают.",
-    lede: "Каждый слой Aetheris уточняют гражданские учёные: фотографируют водоёмы, фиксируют виды, отмечают загрязнения. Отчёты сверяются с данными сенсоров и вознаграждаются.",
+    titleB: "Люди сообщают, что видят.",
+    lede: "Каждый слой Aetheris уточняют гражданские учёные: фотографируют водоёмы, фиксируют виды, отмечают загрязнения. Сообщения публикуются как есть и никем не проверяются; если независимые устройства описывают одно и то же, это видно в статусе.",
     cta: "Присоединиться",
     statLabels: [
       "Полевых отчётов в пилотной ленте",
@@ -913,14 +973,14 @@ const ru: Dict = {
     tag: "Начать",
     titleA: "Казахстан уже говорит.",
     titleAccent: "Прислушайтесь.",
-    lede: "Откройте Атлас и наблюдайте, как обновляются жизненные показатели Казахстана в реальном времени — без регистрации.",
+    lede: "Откройте Атлас: качество воздуха по открытым данным, модельные слои помечены — без регистрации.",
     ctaAtlas: "Открыть Атлас",
     ctaAssistant: "Спросить аналитика",
   },
   footer: {
     tagline:
       "Экологический интеллект Казахстана в одной живой системе. Для учёных, городов и граждан.",
-    stations: (n) => `${n} городских станций на связи`,
+    stations: (n) => `${n} городов на карте`,
     colPlatform: "Платформа",
     colScience: "Наука",
     colCompany: "Компания",
@@ -930,13 +990,16 @@ const ru: Dict = {
     community: "Сообщество",
     methodology: "Методология",
     dataSources: "Источники данных",
-    sensorNetwork: "Сеть станций",
+    sensorNetwork: "Охват",
     mission: "Миссия",
     press: "Пресс-кит",
     contact: "Контакты",
+    privacy: "Конфиденциальность (черновик)",
+    terms: "Условия (черновик)",
+    citiesSource: "Список городов · одна точка сетки на город, качество воздуха из Open-Meteo (модель CAMS)",
     independence:
       "Aetheris — независимый студенческий проект. Он не аффилирован с Казгидрометом или каким-либо государственным органом, не одобрен ими и не работает с ними в партнёрстве, если прямо не указано иное.",
-    bottomLeft: "© 2026 Aetheris Systems · Экологический интеллект Казахстана",
+    bottomLeft: "© 2026 Aetheris · независимый студенческий проект",
     bottomRight: "51.17°N 71.43°E · Астана, связь в норме",
   },
   city: {
@@ -985,7 +1048,7 @@ const ru: Dict = {
     sustainability: "Устойчивость",
     ctaAtlas: (city) => `${city} на Атласе`,
     ctaIntel: "Аналитика сети",
-    allCities: "Все города под наблюдением →",
+    allCities: "Все города →",
     advice: {
       Good: "Воздух чистый и практически не представляет риска. Отличное время для активности на улице.",
       Moderate:
@@ -1002,8 +1065,7 @@ const ru: Dict = {
     badgeLive: "Live · поток Open-Meteo",
     badgeModel: "Модельная база · живой поток недоступен",
     title: "Состояние Казахстана",
-    ingestRate: "Скорость приёма",
-    modelLatency: "Задержка модели",
+    aqiCurveNote: "Кривая за 90 дней — модельная иллюстрация, а не записанная история.",
     anomalyTitle: "Глобальная температурная аномалия",
     vsBaseline: "к 1991–2020",
     window90: "окно 90 дней",
@@ -1041,7 +1103,7 @@ const ru: Dict = {
     layersTitle: "Слои",
     clickToOpen: "Нажмите, чтобы открыть аналитику →",
     citiesKz: (n) => `${n} городов · Казахстан`,
-    hotspotsTracked: (n) => `${n} экологических горячих точек на контроле`,
+    hotspotsTracked: (n) => `${n} экологических горячих точек на карте`,
     liveAir: "● живой воздух · Open-Meteo",
     zoomIn: "Приблизить",
     zoomOut: "Отдалить",
@@ -1082,19 +1144,19 @@ const ru: Dict = {
     planet: "Планета",
     health: "Здоровье",
     index: "ИНДЕКС",
-    planetaryPulse: "Планетарный пульс",
+    planetaryPulse: "Обзор модели",
     pulseAqi: "Средний AQI",
     pulseAnomaly: "Аномалия",
     pulseHotspots: "Точки",
-    feedTitle: "Экологическая лента",
-    streaming: "поток",
+    feedTitle: "Заметные модельные значения",
+    streaming: "модель",
     bootLines: [
-      "Установка спутниковой связи",
-      "Синхронизация 28 региональных станций",
-      "Калибровка сетки AQI · PM2.5 · PM10",
-      "Загрузка потока промышленных выбросов",
-      "Разрешение индекса биоразнообразия",
-      "Отрисовка поверхности Казахстана",
+      "Загрузка карты Казахстана",
+      "Запрос качества воздуха из Open-Meteo / CAMS",
+      "Расчёт модельных слоёв",
+      "Размещение 28 городов",
+      "Размещение горячих точек",
+      "Отрисовка",
     ],
     bootWordmark: "AETHERIS · АТЛАС КАЗАХСТАНА",
     bootAria: "Загрузка глобальной экологической карты",
@@ -1102,19 +1164,22 @@ const ru: Dict = {
   meta: {
     homeTitle: "Экологический интеллект Казахстана",
     homeDescription:
-      "Национальная экологическая аналитика Казахстана — качество воздуха в реальном времени плюс модельные вода, промышленные выбросы и экологические риски по всем регионам и крупным городам в одной живой модели.",
+      "Экологическая ситуация Казахстана на одной карте — качество воздуха по открытым данным (Open-Meteo / CAMS) и явно помеченные модельные оценки воды, промышленного загрязнения и экологического риска по всем регионам.",
     cityTitle: (city) => `Качество воздуха — ${city}`,
     cityDescription: (city, region) =>
-      `Живое качество воздуха: ${city}, ${region} — AQI, PM2.5, NO₂ и рекомендации для здоровья, плюс модельные индексы воды, биоразнообразия и промышленной нагрузки.`,
+      `Качество воздуха: ${city}, ${region} — по открытым данным (Open-Meteo / CAMS): AQI, PM2.5, NO₂ и рекомендации для здоровья, плюс модельные индексы воды, биоразнообразия и промышленного загрязнения.`,
     assistantTitle: "ИИ-ассистент",
     assistantDescription:
-      "Диалог с экологическим аналитиком Aetheris — живые сводки, прогнозы рисков и объяснения показателей для каждого города Казахстана под наблюдением.",
+      "Спросите аналитика Aetheris о любом из 28 городов Казахстана — сводки, прогнозы рисков и объяснения показателей; модельные значения помечены как оценки.",
     atlasTitle: "Атлас Казахстана",
     atlasDescription:
-      "Живая карта Казахстана — качество воздуха, промышленные выбросы, вода, биоразнообразие и экологический риск как непрерывные поля по 28 городам и 17 регионам.",
+      "Карта Казахстана — качество воздуха по открытым данным и модельные промышленное загрязнение, вода, биоразнообразие и экологический риск по 28 городам и 17 регионам.",
     dashboardTitle: "Аналитика",
     dashboardDescription:
-      "Экологическая аналитика Казахстана в реальном времени — AQI сети, температурная аномалия, рейтинги городов, выводы ИИ и национальный реестр горячих точек.",
+      "Экологическая аналитика Казахстана — средний AQI по открытым данным, температурная аномалия, рейтинги городов и реестр горячих точек; модельные значения помечены.",
+    communityTitle: "Сообщество",
+    communityDescription:
+      "Сообщения жителей со всего Казахстана — публикуются как есть и никем не проверяются; видно, когда независимые устройства сообщают одно и то же. Eco-Points, географические значки и местные экособытия.",
   },
 };
 
@@ -1124,37 +1189,53 @@ const kk: Dict = {
     intelligence: "Аналитика",
     assistant: "Ассистент",
     community: "Қауымдастық",
-    live: "Live",
-    menuNetwork: "Ұлттық желі · Live",
+    live: "Ашық дерек + модель",
+    menuNetwork: "Қазақстан · ашық деректер + модель",
   },
   hero: {
-    badgeLive: "Қазақстан желісі · тірі деректер",
-    badgeBaseline: "Қазақстан желісі · модельдік база",
+    badgeLive: "Ауа сапасы · ашық деректер",
+    badgeBaseline: "Қазақстан · модельдік база",
     h1a: "Қазақстанның",
     h1b: "операциялық",
     h1Accent: "жүйесі.",
-    lede: "Aetheris жерсеріктерді, жер станцияларын және ЖИ-ді Қазақстанның біртұтас тірі бейнесіне біріктіреді — барлық өңірлерде нақты уақыттағы ауа сапасы, ал су, өнеркәсіптік ластану, биоалуантүрлілік және экологиялық тәуекел модельдік базалық сызықта.",
+    lede: "Aetheris Қазақстанның экологиялық жағдайын бір картаға жинайды: барлық өңірлер бойынша ашық деректерден (Open-Meteo / CAMS) алынған ауа сапасы және су, өнеркәсіптік ластану, биоалуантүрлілік пен экологиялық тәуекел үшін анық белгіленген модельдік бағалаулар.",
     ctaAtlas: "Атласты ашу",
     ctaIntel: "Аналитиканы көру",
     statCities: (c, r) => `${c} қала · ${r} өңір`,
     statLayers: "5 экологиялық қабат",
-    statReadings: (n) => `тәулігіне ${n} тірі өлшем`,
-    chipAqi: "Орташа AQI · Желі",
+    statReadings: (n) => `тәулігіне ${n} ашық дерек мәні`,
+    chipAqi: "Орташа AQI · барлық қалалар",
     chipAnomaly: "Температура ауытқуы",
     chipHotspots: "Экологиялық ошақтар",
     descend: "Төмен",
   },
   ticker: {
-    networkMean: "ЖЕЛІНІҢ ОРТАША AQI",
+    networkMean: "ОРТАША AQI · БАРЛЫҚ ҚАЛАЛАР",
     critical: "КРИТИКАЛЫҚ",
   },
+  errors: {
+    nfKicker: "404 қатесі",
+    nfTitle: "Бет табылмады",
+    nfBody: "Бұл мекенжайда бет жоқ. Мүмкін, ол көшірілген немесе сілтемеде қате бар.",
+    home: "Басты бетке",
+    atlas: "Атласты ашу",
+    errKicker: "Қате",
+    errTitle: "Бірдеңе дұрыс болмады",
+    errBody: "Күтпеген қате беттің жұмысын үзді. Соның салдарынан сіз енгізген ештеңе жіберілген жоқ. Қайталап көріңіз — қате қайталанса, izbanovj3@gmail.com мекенжайына жазыңыз.",
+    retry: "Қайталау",
+    fatalTitle: "Aetheris жүктелмеді",
+    fatalBody: "Бет іске қосыла алмады. Қайталау үшін жаңартыңыз.",
+    reload: "Жаңарту",
+  },
+  skipLink: "Негізгі мазмұнға өту",
+  sourceNote: { source: "Дереккөз", asOf: "уақыты", noBuild: "құрастыру уақыты белгісіз" },
   dataOrigin: {
     live: "Live",
     modeled: "Модель",
     liveNote:
-      "Тірі өлшем — бет ашылғанда Open-Meteo дереккөзінен (CAMS ауа сапасы және ауа райы болжамы) алынады, дереккөзде сағат сайын жаңарады.",
+      "Ашық деректер — бет ашылғанда Open-Meteo-дан алынады: CAMS ауа сапасы моделі және ауа райы болжамы, дереккөзде сағат сайын жаңарады. Бұл жер үсті станциясының көрсеткіші емес.",
     modeledNote:
-      "Модельдік мән — детерминистік аймақтық базалық сызық, нақты уақыттағы сенсор ағыны емес. Индикативті, өлшенген емес. /methodology қараңыз.",
+      "Модельдік бағалау — детерминистік аймақтық базалық сызық, өлшеу емес. Тек бағдар үшін. /methodology қараңыз.",
     community: "Live · қауымдастық",
     communityNote:
       "Аспаптар емес, адамдар жіберген. Нақты әрі өзекті, бірақ бұл өзін-өзі есептеу: ешбір сенсормен тексерілмеген және кім қарайтынына тәуелді — есебі жоқ қала таза қала емес, ол — ешкім жазбаған қала.",
@@ -1163,11 +1244,11 @@ const kk: Dict = {
     tag: "Жүйе архитектурасы",
     titleA: "Бір сигнал тізбегі — ",
     titleAccent: "бүкіл ел.",
-    lede: "Экологиялық сервистердің көбі тек үзік көріністі көрсетеді. Aetheris циклді тұйықтайды — сенсорға түскен фотоннан Қазақстанда жерде қабылданған шешімге дейін.",
+    lede: "Экологиялық сервистердің көбі тек үзік көріністі көрсетеді. Aetheris ауа туралы ашық деректерді, модельдік қабаттарды және тұрғындар хабарламаларын қатар қояды — және қайсысы не екенін айтады.",
     items: [
       {
         title: "Сезу",
-        body: "Ұлттық жүйке жүйесі. CAMS жерсеріктік өрістері, Open-Meteo ауа райы және қауымдастық есептері тәулігіне {readings} жаңа өлшем береді — әр өңір, әр сағат — бір модельде.",
+        body: "Ашық деректер бір жерде. Әр өңір бойынша CAMS ауа сапасы өрістері мен Open-Meteo ауа райы, дереккөзде сағат сайын жаңарады (тәулігіне {readings} мән), қасында — тұрғындар хабарламалары; бәрі белгіленген және араласпайды.",
       },
       {
         title: "Түсіну",
@@ -1175,15 +1256,15 @@ const kk: Dict = {
       },
       {
         title: "Әрекет ету",
-        body: "Түсініктен іс-қимылға: сараланған тұрақтылық шаралары, модельденген әсер және өзгерісті жерде растайтын қауымдастық.",
+        body: "Түсініктен іс-қимылға: модельденген әсері бар сараланған шаралар және жерде көргенін хабарлайтын тұрғындар.",
       },
     ],
   },
   stats: {
-    readings: "Тірі өлшем / тәулік",
-    cities: "Бақылаудағы қалалар",
+    readings: "Ашық дерек мәні / тәулік",
+    cities: "Қамтылған қалалар",
     regions: "Қамтылған өңірлер",
-    hotspots: "Бақылаудағы ошақтар",
+    hotspots: "Картадағы ошақтар",
   },
   atlas: {
     tag: "Қазақстан Атласы",
@@ -1203,30 +1284,30 @@ const kk: Dict = {
     tag: "Экологиялық ЖИ",
     titleA: "Желіден кез келгенін",
     titleAccent: "сұраңыз.",
-    lede: "Aetheris аналитигі Қазақстан моделінің әр қабатын оқиды — тірі ауа сапасын да, модельдік базалық сызықты да — және қарапайым тілмен, дереккөздерге сілтеме жасай отырып жауап береді.",
+    lede: "Aetheris аналитигі Қазақстан моделі бойынша — ауа, су, өнеркәсіптік ластану, биоалуантүрлілік және тәуекел үшін симуляцияланған база бойынша — қарапайым тілмен жауап береді. Оның сандары — бағалаулар, және әр жауап мұны ашық айтады.",
     cta: "Диалог бастау",
     analyst: "Экологиялық аналитик",
     reasoning: "Талдау",
     demoUser: "Алматы бойынша тәуекел болжамы?",
     demoAi:
-      "Алматының жиынтық экологиялық тәуекелі — 57/100: қысқы инверсиялар көлік пен жылыту шығарындыларын тау қазаншұңқырында ұстап қалады. PM2.5 эпизодтары суық маусымда күшейе түседі…",
-    grounded: "Тірі желі негізінде · 28 қала · Қазақстан",
+      "Алматының жиынтық тәуекелінің модельдік бағасы — 57/100 (өлшеу емес, бағалау): қысқы инверсиялар көлік пен жылыту шығарындыларын тау қазаншұңқырында ұстап қалады. PM2.5 эпизодтары суық маусымда күшейе түседі…",
+    grounded: "Модельдік база · 28 қала · Қазақстан",
     online: "Онлайн",
     emptyTitle: "Желіден кез келгенін сұраңыз.",
     emptyLede:
-      "Мен Қазақстанның экологиялық моделін оқимын — тірі ауа сапасы, сондай-ақ модельдік су, өнеркәсіп, биоалуантүрлілік және экологиялық тәуекел — және дереккөздермен жауап беремін.",
-    reading: "Сенсор өрісін оқып жатырмын…",
+      "Мен Aetheris моделі бойынша жауап беремін — ауа сапасы, су, өнеркәсіптік ластану, биоалуантүрлілік және экологиялық тәуекел үшін симуляцияланған база. Менің сандарым өлшеу емес, бағалау; ашық деректер бойынша ауа сапасы — қала бетінде.",
+    reading: "Модельді оқып жатырмын…",
     placeholder: "Қала, тәуекел немесе көрсеткіш туралы сұраңыз…",
     sendAria: "Жіберу",
     messageAria: "Экологиялық аналитикке жазу",
     disclaimer:
-      "Талдау желі телеметриясына негізделген · ресми ескертулерді алмастырмайды",
+      "Модельдік мәндер — өлшеу емес, бағалау · ресми ескертулерді алмастырмайды",
   },
   community: {
-    tag: "Жердегі растау желісі",
+    tag: "Тұрғындар хабарламалары",
     titleA: "Жерсеріктер планетаны көреді.",
-    titleB: "Адамдар растайды.",
-    lede: "Aetheris-тің әр қабатын азаматтық ғалымдар нақтылайды: су айдындарын суретке түсіреді, түрлерді тіркейді, ластануды белгілейді. Есептер сенсор деректерімен салыстырылып, марапатталады.",
+    titleB: "Адамдар көргенін хабарлайды.",
+    lede: "Aetheris-тің әр қабатын азаматтық ғалымдар нақтылайды: су айдындарын суретке түсіреді, түрлерді тіркейді, ластануды белгілейді. Хабарламалар жіберілген күйінде жарияланады және ешкім тексермейді; тәуелсіз құрылғылар бір нәрсені сипаттаса, бұл мәртебеде көрінеді.",
     cta: "Желіге қосылу",
     statLabels: [
       "Пилоттық таспадағы далалық есептер",
@@ -1238,14 +1319,14 @@ const kk: Dict = {
     tag: "Бастау",
     titleA: "Қазақстан сөйлеп тұр.",
     titleAccent: "Құлақ салыңыз.",
-    lede: "Атласты ашып, Қазақстанның өмірлік көрсеткіштерінің нақты уақытта жаңаруын бақылаңыз — тіркеусіз.",
+    lede: "Атласты ашыңыз: ауа сапасы ашық деректер бойынша, модельдік қабаттар белгіленген — тіркеусіз.",
     ctaAtlas: "Атласты ашу",
     ctaAssistant: "Аналитиктен сұрау",
   },
   footer: {
     tagline:
       "Қазақстанның экологиялық интеллектісі — бір тірі жүйеде. Ғалымдарға, қалаларға және азаматтарға арналған.",
-    stations: (n) => `${n} қала станциясы байланыста`,
+    stations: (n) => `картада ${n} қала`,
     colPlatform: "Платформа",
     colScience: "Ғылым",
     colCompany: "Компания",
@@ -1255,13 +1336,16 @@ const kk: Dict = {
     community: "Қауымдастық",
     methodology: "Әдіснама",
     dataSources: "Дерек көздері",
-    sensorNetwork: "Станциялар желісі",
+    sensorNetwork: "Қамту",
     mission: "Миссия",
     press: "Баспасөз жинағы",
     contact: "Байланыс",
+    privacy: "Құпиялылық (жоба)",
+    terms: "Шарттар (жоба)",
+    citiesSource: "Қалалар тізімі · әр қалаға бір тор нүктесі, ауа сапасы Open-Meteo-дан (CAMS моделі)",
     independence:
       "Aetheris — тәуелсіз студенттік жоба. Ол Қазгидрометпен немесе кез келген мемлекеттік органмен аффилиирленбеген, олармен мақұлданбаған және серіктестікте жұмыс істемейді, егер тікелей өзгеше көрсетілмесе.",
-    bottomLeft: "© 2026 Aetheris Systems · Қазақстанның экологиялық интеллектісі",
+    bottomLeft: "© 2026 Aetheris · тәуелсіз студенттік жоба",
     bottomRight: "51.17°N 71.43°E · Астана, байланыс қалыпты",
   },
   city: {
@@ -1310,7 +1394,7 @@ const kk: Dict = {
     sustainability: "Тұрақтылық",
     ctaAtlas: (city) => `Атластағы ${city}`,
     ctaIntel: "Желі аналитикасы",
-    allCities: "Барлық бақылаудағы қалалар →",
+    allCities: "Барлық қалалар →",
     advice: {
       Good: "Ауа таза, қауіп жоқтың қасы. Далада белсенді болуға тамаша уақыт.",
       Moderate:
@@ -1327,8 +1411,7 @@ const kk: Dict = {
     badgeLive: "Live · Open-Meteo ағыны",
     badgeModel: "Модельдік база · тірі ағын қолжетімсіз",
     title: "Қазақстан жағдайы",
-    ingestRate: "Қабылдау жылдамдығы",
-    modelLatency: "Модель кідірісі",
+    aqiCurveNote: "90 күндік қисық — жазылған тарих емес, модельдік иллюстрация.",
     anomalyTitle: "Жаһандық температура ауытқуы",
     vsBaseline: "1991–2020-ға",
     window90: "90 күндік терезе",
@@ -1366,7 +1449,7 @@ const kk: Dict = {
     layersTitle: "Қабаттар",
     clickToOpen: "Аналитиканы ашу үшін басыңыз →",
     citiesKz: (n) => `${n} қала · Қазақстан`,
-    hotspotsTracked: (n) => `${n} экологиялық ошақ бақылауда`,
+    hotspotsTracked: (n) => `картада ${n} экологиялық ошақ`,
     liveAir: "● тірі ауа · Open-Meteo",
     zoomIn: "Жақындату",
     zoomOut: "Алыстату",
@@ -1407,19 +1490,19 @@ const kk: Dict = {
     planet: "Планета",
     health: "Денсаулық",
     index: "ИНДЕКС",
-    planetaryPulse: "Планеталық импульс",
+    planetaryPulse: "Модель шолуы",
     pulseAqi: "Орташа AQI",
     pulseAnomaly: "Ауытқу",
     pulseHotspots: "Ошақтар",
-    feedTitle: "Экологиялық лента",
-    streaming: "ағын",
+    feedTitle: "Назар аударарлық модельдік мәндер",
+    streaming: "модель",
     bootLines: [
-      "Спутниктік байланыс орнату",
-      "28 өңірлік станцияны синхрондау",
-      "AQI · PM2.5 · PM10 торын калибрлеу",
-      "Өнеркәсіптік шығарынды ағынын жүктеу",
-      "Биоалуантүрлілік индексін шешу",
-      "Қазақстан бетін бейнелеу",
+      "Қазақстан картасын жүктеу",
+      "Open-Meteo / CAMS-тан ауа сапасын сұрау",
+      "Модельдік қабаттарды есептеу",
+      "28 қаланы орналастыру",
+      "Экологиялық ошақтарды орналастыру",
+      "Бейнелеу",
     ],
     bootWordmark: "AETHERIS · ҚАЗАҚСТАН АТЛАСЫ",
     bootAria: "Жаһандық экологиялық картаны жүктеу",
@@ -1427,19 +1510,22 @@ const kk: Dict = {
   meta: {
     homeTitle: "Қазақстанның экологиялық интеллектісі",
     homeDescription:
-      "Қазақстанның ұлттық экологиялық аналитикасы — нақты уақыттағы ауа сапасы, сондай-ақ модельдік су, өнеркәсіптік шығарындылар және экологиялық тәуекелдер, барлық өңірлер мен ірі қалалар бір тірі модельде.",
+      "Қазақстанның экологиялық жағдайы бір картада — ашық деректер бойынша ауа сапасы (Open-Meteo / CAMS) және барлық өңірлер бойынша су, өнеркәсіптік ластану мен экологиялық тәуекелдің анық белгіленген модельдік бағалаулары.",
     cityTitle: (city) => `${city} — ауа сапасы`,
     cityDescription: (city, region) =>
-      `${city} (${region}) бойынша тірі ауа сапасы — AQI, PM2.5, NO₂ және денсаулық ұсыныстары, қоса модельдік су, биоалуантүрлілік және өнеркәсіп индекстері.`,
+      `${city} (${region}) бойынша ауа сапасы ашық деректерден (Open-Meteo / CAMS) — AQI, PM2.5, NO₂ және денсаулық ұсыныстары, қоса модельдік су, биоалуантүрлілік және өнеркәсіптік ластану индекстері.`,
     assistantTitle: "ЖИ-ассистент",
     assistantDescription:
-      "Aetheris экологиялық аналитигімен диалог — Қазақстанның бақылаудағы әр қаласы бойынша тірі сводкалар, тәуекел болжамдары және көрсеткіш түсіндірмелері.",
+      "Aetheris аналитигінен Қазақстанның 28 қаласының кез келгені туралы сұраңыз — сводкалар, тәуекел болжамдары және көрсеткіштерді түсіндіру; модельдік мәндер бағалау ретінде белгіленген.",
     atlasTitle: "Қазақстан Атласы",
     atlasDescription:
-      "Қазақстанның тірі картасы — ауа сапасы, өнеркәсіптік шығарындылар, су, биоалуантүрлілік және экологиялық тәуекел 28 қала мен 17 өңір бойынша үздіксіз өрістер ретінде.",
+      "Қазақстан картасы — ашық деректер бойынша ауа сапасы және 28 қала мен 17 өңір бойынша модельдік өнеркәсіптік ластану, су, биоалуантүрлілік және экологиялық тәуекел.",
     dashboardTitle: "Аналитика",
     dashboardDescription:
-      "Қазақстанның нақты уақыттағы экологиялық аналитикасы — желі AQI, температура ауытқуы, қала рейтингтері, ЖИ тұжырымдары және ұлттық ошақтар тізілімі.",
+      "Қазақстанның экологиялық аналитикасы — ашық деректер бойынша орташа AQI, температура ауытқуы, қала рейтингтері және ошақтар тізілімі; модельдік мәндер белгіленген.",
+    communityTitle: "Қауымдастық",
+    communityDescription:
+      "Қазақстанның түкпір-түкпірінен тұрғындар хабарламалары — жіберілген күйінде жарияланады және тексерілмейді; тәуелсіз құрылғылар бір нәрсені хабарлағаны көрінеді. Eco-Points, географиялық белгілер және жергілікті экоіс-шаралар.",
   },
 };
 

@@ -54,8 +54,29 @@ function regionAliases(region: string): string[] {
 
 /** Resolve the city a query names — in any language. City names win over
  *  region names; a region resolves to its largest representative station. */
+/* Russian and Kazakh inflect place names ("в Аральске", "Караганды",
+   "Алматыда"), so an exact whole-word match missed the app's own
+   suggested prompt "Прогноз рисков для Аральска". A name also matches with
+   a common case ending; a name ending in а/я also matches on its stem. */
+const RU_ENDINGS = "а|у|е|ом|ой|ы|и|я|ю|ем";
+const KK_ENDINGS =
+  "да|де|та|те|дағы|дегі|тағы|тегі|ның|нің|дың|дің|тың|тің|ға|ге|қа|ке|на|не|ны|ні|ды|ді|ты|ті|дан|ден|тан|тен|нан|нен";
+
+function hasName(text: string, name: string): boolean {
+  if (hasWord(text, name)) return true;
+  const esc = (v: string) => v.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const stems = [esc(name)];
+  if (/[ая]$/.test(name)) stems.push(esc(name.slice(0, -1)));
+  const re = new RegExp(
+    `(?:^|[^\\p{L}\\p{N}])(?:${stems.join("|")})(?:${RU_ENDINGS}|${KK_ENDINGS})(?:[^\\p{L}\\p{N}]|$)`,
+    "iu",
+  );
+  // Very short names would match too much once endings are allowed.
+  return name.length >= 4 && re.test(text);
+}
+
 function findStation(q: string): Station | undefined {
-  const byName = stations.find((s) => stationAliases(s).some((a) => hasWord(q, a)));
+  const byName = stations.find((s) => stationAliases(s).some((a) => hasName(q, a)));
   if (byName) return byName;
   const inRegion = stations
     .filter((s) => regionAliases(s.region).some((a) => hasWord(q, a)))
@@ -97,6 +118,8 @@ interface AiStrings {
   hotspotReply: (ctx: { total: number; critical: number; body: string }) => string;
   greeting: string;
   fallback: (count: number) => string;
+  /** Prepended to every reply that contains figures. */
+  modelNotice: string;
   cite: {
     natCities: string;
     natBaseline: string;
@@ -120,7 +143,7 @@ const EN: AiStrings = {
   },
   brief: (s, c) =>
     [
-      `**${c.name}, ${c.region}** — current environmental state:`,
+      `**${c.name}, ${c.region}** — modelled environmental profile:`,
       ``,
       `- **Air quality:** AQI ${s.aqi} (${c.aqi}) · PM2.5 ${s.pm25} µg/m³ · PM10 ${s.pm10} µg/m³ · NO₂ ${s.no2} ppb`,
       `- **Conditions:** ${s.temperature} °C · ${s.humidity}% relative humidity`,
@@ -141,7 +164,7 @@ const EN: AiStrings = {
     none: (s) => `No critical risk drivers detected. The dominant signal is the regional warming trend of +${s.tempAnomaly.toFixed(2)} °C — within adaptive range but compounding.`,
   },
   riskReply: (name, body) =>
-    `Here is the 12-month environmental risk outlook for **${name}**:\n\n${body}\n\n**Confidence:** moderate-high. The model blends current telemetry with seasonal climatology; acute events (major fires, industrial incidents) are outside scope.`,
+    `Here is the 12-month environmental risk outlook for **${name}**:\n\n${body}\n\n**Confidence:** moderate-high. The outlook is built on the modelled baseline and seasonal climatology; acute events (major fires, industrial incidents) are outside scope.`,
   recs: {
     air: "Accelerate the shift from coal heating to gas/electric and expand low-emission zones — modeled to cut winter PM2.5 18–25% within two seasons.",
     industrial: "Mandate continuous stack monitoring and capture retrofits at the dominant plant; public real-time readings cut unreported exceedances sharply.",
@@ -159,13 +182,13 @@ const EN: AiStrings = {
     industrial: "**The Industrial Emission Index (IEI)** scores the local emission load from metallurgy, coal power and oil-and-gas operations on a 0–100 scale. The Temirtau steel belt, Ekibastuz power complex and Oskemen smelters dominate the national signal.",
     pollution: "**The Pollution Index** is a 0–100 composite of ambient air pollution and industrial emission load for a city — a single readout of how much human-driven contamination its residents are exposed to day to day.",
     biodiversity: "**Biodiversity Intactness (BII)** estimates how much of an area's original species community remains. We fuse steppe and wetland habitat extent, fragmentation metrics and observation records. Above 90 is near-pristine; below 30 indicates ecosystem-function loss.",
-    sustainability: "**The Aetheris Sustainability Score** is a weighted composite of air, water, biodiversity, inverse environmental risk and inverse pollution. It is designed to be comparable across cities and auditable — every input traces to a sensor or dataset.",
+    sustainability: "**The Aetheris Sustainability Score** is a weighted composite of air, water, biodiversity, inverse environmental risk and inverse pollution. It is designed to be comparable across cities; every input is listed in the methodology, and most are modelled today.",
     anomaly: "**Temperature anomaly** is the difference between current temperature and the 1991–2020 climatological baseline. Central Asia is warming faster than the global mean — most Kazakh cities now run +1.5 to +2.5 °C, the clearest local fingerprint of climate change.",
-    aral: "**The Aral Sea** collapse is the defining ecological disaster of the region — irrigation diversion shrank it to a fraction of its 1960 extent, exposing the Aralkum: a salt desert whose toxic dust storms drive respiratory illness across Kyzylorda. Aetheris tracks the seabed dust index and lower Syr Darya salinity.",
+    aral: "**The Aral Sea** collapse is the defining ecological disaster of the region — irrigation diversion shrank it to a fraction of its 1960 extent, exposing the Aralkum: a salt desert whose toxic dust storms drive respiratory illness across Kyzylorda. Aetheris does not measure dust or salinity there; the region's figures on this site are modelled estimates.",
   },
   national: (c) =>
     [
-      `**National snapshot — last sensor sweep across ${c.count} cities:**`,
+      `**National snapshot — modelled baseline across ${c.count} cities:**`,
       ``,
       `- Mean urban AQI: **${c.aqi}** (${c.aqiLabel})`,
       `- Mean surface water quality: **${c.sum.meanWater}/100**`,
@@ -178,15 +201,17 @@ const EN: AiStrings = {
       `The strongest negative signals are the Temirtau steel belt and the Aral dust season; the strongest positive signal is air-quality improvement across the northern oblasts.`,
     ].join("\n"),
   hotspotReply: (c) =>
-    `**Environmental hotspot situation:** ${c.total} sites under track, ${c.critical} flagged critical.\n\n${c.body}\n\nOpen the Atlas on the Industrial Load layer for live positions.`,
+    `**Environmental hotspot situation:** ${c.total} sites in the registry, ${c.critical} rated critical (modelled severity).\n\n${c.body}\n\nOpen the Atlas on the Industrial Load layer to see them on the map.`,
   greeting:
-    `Hello — I'm the Aetheris environmental analyst for Kazakhstan. I sit on top of the national sensor network and can:\n\n- Brief you on any monitored city (try **"How is Almaty doing?"**)\n- Produce **risk outlooks** and **sustainability recommendations**\n- Explain the science behind any metric (**"What does PM10 mean?"**)\n- Summarize the **national** picture\n\nWhere should we look first?`,
+    `Hello — I'm the Aetheris environmental analyst for Kazakhstan. I answer from Aetheris's model — a simulated baseline for 28 cities — so my figures are estimates, not measurements. I can:\n\n- Brief you on any of the cities (try **"How is Almaty doing?"**)\n- Produce **risk outlooks** and **sustainability recommendations**\n- Explain the science behind any metric (**"What does PM10 mean?"**)\n- Summarize the **national** picture\n\nWhere should we look first?`,
   fallback: (count) =>
-    `I can analyze any of the **${count} monitored cities** across Kazakhstan — ask about a specific place ("air quality in Temirtau"), request a **risk outlook**, ask for **recommendations**, or say **"national summary"** for the country-wide view.\n\nCoverage expands as community stations come online — the fastest way to add one is through the Community hub.`,
+    `I can analyze any of the **${count} cities on the map** across Kazakhstan — ask about a specific place ("air quality in Temirtau"), request a **risk outlook**, ask for **recommendations**, or say **"national summary"** for the country-wide view.\n\nResidents can add what they see on the Community page; those reports are shown separately and are not mixed into my figures.`,
+  modelNotice:
+    "> **Modelled estimates, not measurements.** Every figure below — air quality included — comes from the Aetheris simulated baseline. For air quality from open data (Open-Meteo / CAMS), open the city page.",
   cite: {
-    natCities: "Open-Meteo (CAMS) air-quality feed · 28 cities",
-    natBaseline: "Aetheris modeled baseline — water, biodiversity, industrial pollution (simulated)",
-    cluster: (name) => `${name} station cluster · live`,
+    natCities: "Live air quality for these cities: Open-Meteo (CAMS) on each city page — not used in this answer",
+    natBaseline: "Aetheris modelled baseline — every figure in this answer, air quality included (simulated)",
+    cluster: (name) => `${name} · Aetheris modelled baseline (simulated)`,
     riskModel: "Aetheris environmental risk model ERI-4",
     seasonal: "Copernicus seasonal forecast (simulated feed)",
     interventions: "Aetheris intervention impact library",
@@ -194,7 +219,7 @@ const EN: AiStrings = {
     methodologyShort: "Aetheris methodology v4.2",
     who: "WHO air quality guidelines (2021)",
     firms: "MODIS / FIRMS thermal anomalies (simulated feed)",
-    industrialRegistry: "Aetheris industrial monitoring registry",
+    industrialRegistry: "Aetheris hotspot registry · modelled severities",
   },
 };
 
@@ -206,7 +231,7 @@ const RU: AiStrings = {
   },
   brief: (s, c) =>
     [
-      `**${c.name}, ${c.region}** — текущее состояние среды:`,
+      `**${c.name}, ${c.region}** — модельный профиль состояния окружающей среды:`,
       ``,
       `- **Качество воздуха:** AQI ${s.aqi} (${c.aqi}) · PM2.5 ${s.pm25} µg/m³ · PM10 ${s.pm10} µg/m³ · NO₂ ${s.no2} ppb`,
       `- **Условия:** ${s.temperature} °C · ${s.humidity}% относительной влажности`,
@@ -227,7 +252,7 @@ const RU: AiStrings = {
     none: (s) => `Критических факторов риска не выявлено. Доминирующий сигнал — региональное потепление +${s.tempAnomaly.toFixed(2)} °C: в пределах адаптивного диапазона, но накапливается.`,
   },
   riskReply: (name, body) =>
-    `Вот 12-месячный прогноз экологического риска для города **${name}**:\n\n${body}\n\n**Уверенность:** умеренно-высокая. Модель сочетает текущую телеметрию с сезонной климатологией; острые события (крупные пожары, промышленные аварии) вне охвата.`,
+    `Вот 12-месячный прогноз экологического риска для города **${name}**:\n\n${body}\n\n**Уверенность:** умеренно-высокая. Прогноз построен на модельной базе и сезонной климатологии; острые события (крупные пожары, промышленные аварии) вне охвата.`,
   recs: {
     air: "Ускорить переход с угольного отопления на газ/электричество и расширить зоны низких выбросов — по модели это снижает зимний PM2.5 на 18–25% за два сезона.",
     industrial: "Обязать непрерывный мониторинг труб и модернизацию улавливания на доминирующем предприятии; публичные данные в реальном времени резко сокращают незаявленные превышения.",
@@ -245,13 +270,13 @@ const RU: AiStrings = {
     industrial: "**Индекс промышленных выбросов (IEI)** оценивает локальную эмиссионную нагрузку металлургии, угольной энергетики и нефтегаза по шкале 0–100. Национальный сигнал определяют стальной пояс Темиртау, энергокомплекс Экибастуза и заводы Өскемена.",
     pollution: "**Индекс загрязнения** — композит 0–100 из атмосферного загрязнения и промышленной эмиссионной нагрузки города: единый показатель того, насколько его жители ежедневно подвержены антропогенному загрязнению.",
     biodiversity: "**Сохранность биоразнообразия (BII)** оценивает, сколько исходного видового сообщества территории сохранилось. Мы объединяем площадь степных и водно-болотных местообитаний, метрики фрагментации и записи наблюдений. Выше 90 — почти нетронуто; ниже 30 — потеря функций экосистем.",
-    sustainability: "**Оценка устойчивости Aetheris** — взвешенный композит воздуха, воды, биоразнообразия, обратного экологического риска и обратного загрязнения. Она сопоставима между городами и проверяема — каждый вход прослеживается до сенсора или набора данных.",
+    sustainability: "**Оценка устойчивости Aetheris** — взвешенный композит воздуха, воды, биоразнообразия, обратного экологического риска и обратного загрязнения. Она сопоставима между городами; все входные данные перечислены в методологии, и большинство из них сейчас модельные.",
     anomaly: "**Температурная аномалия** — разница между текущей температурой и климатической базой 1991–2020. Центральная Азия теплеет быстрее среднемирового; большинство казахстанских городов сейчас на +1,5…+2,5 °C — самый чёткий локальный отпечаток изменения климата.",
-    aral: "**Аральское море** — определяющая экологическая катастрофа региона: отвод воды на ирригацию сократил его до доли уровня 1960 года, обнажив Аралкум — солевую пустыню, чьи токсичные пыльные бури вызывают болезни дыхания по всей Кызылординской области. Aetheris отслеживает индекс пыли с обнажённого дна и засоление низовий Сырдарьи.",
+    aral: "**Аральское море** — определяющая экологическая катастрофа региона: отвод воды на ирригацию сократил его до доли уровня 1960 года, обнажив Аралкум — солевую пустыню, чьи токсичные пыльные бури вызывают болезни дыхания по всей Кызылординской области. Aetheris не измеряет там пыль и солёность; цифры по региону на сайте — модельные оценки.",
   },
   national: (c) =>
     [
-      `**Национальный срез — последний проход сети по ${c.count} городам:**`,
+      `**Национальный срез — модельная база по ${c.count} городам:**`,
       ``,
       `- Средний городской AQI: **${c.aqi}** (${c.aqiLabel})`,
       `- Среднее качество поверхностных вод: **${c.sum.meanWater}/100**`,
@@ -264,15 +289,17 @@ const RU: AiStrings = {
       `Сильнейшие негативные сигналы — стальной пояс Темиртау и сезон аральской пыли; сильнейший позитивный — улучшение качества воздуха в северных областях.`,
     ].join("\n"),
   hotspotReply: (c) =>
-    `**Ситуация по горячим точкам:** ${c.total} объектов под контролем, ${c.critical} отмечены критическими.\n\n${c.body}\n\nОткройте Атлас на слое промышленной нагрузки, чтобы видеть позиции в реальном времени.`,
+    `**Ситуация по горячим точкам:** ${c.total} объектов в реестре, ${c.critical} с критической модельной оценкой.\n\n${c.body}\n\nОткройте Атлас на слое промышленной нагрузки, чтобы увидеть их на карте.`,
   greeting:
-    `Здравствуйте — я экологический аналитик Aetheris по Казахстану. Я работаю поверх национальной сети сенсоров и могу:\n\n- Дать сводку по любому городу под наблюдением (попробуйте **«Как дела в Алматы?»**)\n- Составить **прогноз рисков** и **рекомендации по устойчивости**\n- Объяснить науку за любым показателем (**«Что значит PM10?»**)\n- Обобщить **национальную** картину\n\nС чего начнём?`,
+    `Здравствуйте — я экологический аналитик Aetheris по Казахстану. Я отвечаю по модели Aetheris — симулированной базе для 28 городов, — поэтому мои цифры — оценки, а не измерения. Я могу:\n\n- Дать сводку по любому из этих городов (попробуйте **«Как дела в Алматы?»**)\n- Составить **прогноз рисков** и **рекомендации по устойчивости**\n- Объяснить науку за любым показателем (**«Что значит PM10?»**)\n- Обобщить **национальную** картину\n\nС чего начнём?`,
   fallback: (count) =>
-    `Я могу проанализировать любой из **${count} городов под наблюдением** по Казахстану — спросите про конкретное место («качество воздуха в Темиртау»), запросите **прогноз рисков**, попросите **рекомендации** или скажите **«национальная сводка»** для картины по стране.\n\nПокрытие растёт по мере подключения станций сообщества — быстрее всего добавить свою через хаб сообщества.`,
+    `Я могу проанализировать любой из **${count} городов на карте** Казахстана — спросите про конкретное место («качество воздуха в Темиртау»), запросите **прогноз рисков**, попросите **рекомендации** или скажите **«национальная сводка»** для картины по стране.\n\nЖители могут сообщить о том, что видят, на странице сообщества; эти сообщения показываются отдельно и не смешиваются с моими цифрами.`,
+  modelNotice:
+    "> **Модельные оценки, а не измерения.** Все цифры ниже, включая качество воздуха, взяты из симулированной базы Aetheris. Качество воздуха по открытым данным (Open-Meteo / CAMS) — на странице города.",
   cite: {
-    natCities: "Поток Open-Meteo (CAMS) по качеству воздуха · 28 городов",
-    natBaseline: "Модельная база Aetheris — вода, биоразнообразие, промышленное загрязнение (симуляция)",
-    cluster: (name) => `Кластер станций «${name}» · live`,
+    natCities: "Качество воздуха по открытым данным Open-Meteo (CAMS) — на странице каждого города; в этом ответе не используется",
+    natBaseline: "Модельная база Aetheris — все цифры в этом ответе, включая качество воздуха (симуляция)",
+    cluster: (name) => `${name} · модельная база Aetheris (симуляция)`,
     riskModel: "Модель экологического риска Aetheris ERI-4",
     seasonal: "Сезонный прогноз Copernicus (симуляция потока)",
     interventions: "Библиотека эффектов вмешательств Aetheris",
@@ -280,7 +307,7 @@ const RU: AiStrings = {
     methodologyShort: "Методология Aetheris v4.2",
     who: "Рекомендации ВОЗ по качеству воздуха (2021)",
     firms: "Термоаномалии MODIS / FIRMS (симуляция потока)",
-    industrialRegistry: "Реестр промышленного мониторинга Aetheris",
+    industrialRegistry: "Реестр горячих точек Aetheris · модельные оценки",
   },
 };
 
@@ -292,7 +319,7 @@ const KK: AiStrings = {
   },
   brief: (s, c) =>
     [
-      `**${c.name}, ${c.region}** — қоршаған ортаның ағымдағы жағдайы:`,
+      `**${c.name}, ${c.region}** — қоршаған орта жай-күйінің модельдік профилі:`,
       ``,
       `- **Ауа сапасы:** AQI ${s.aqi} (${c.aqi}) · PM2.5 ${s.pm25} µg/m³ · PM10 ${s.pm10} µg/m³ · NO₂ ${s.no2} ppb`,
       `- **Жағдай:** ${s.temperature} °C · ${s.humidity}% салыстырмалы ылғалдылық`,
@@ -313,7 +340,7 @@ const KK: AiStrings = {
     none: (s) => `Критикалық тәуекел факторлары анықталмады. Басым сигнал — өңірлік жылыну +${s.tempAnomaly.toFixed(2)} °C: бейімделу шегінде, бірақ жинақталуда.`,
   },
   riskReply: (name, body) =>
-    `**${name}** бойынша 12 айлық экологиялық тәуекел болжамы:\n\n${body}\n\n**Сенімділік:** орташа-жоғары. Модель ағымдағы телеметрияны маусымдық климатологиямен ұштастырады; кенет оқиғалар (ірі өрттер, өнеркәсіптік апаттар) қамту аясынан тыс.`,
+    `**${name}** бойынша 12 айлық экологиялық тәуекел болжамы:\n\n${body}\n\n**Сенімділік:** орташа-жоғары. Болжам модельдік базаға және маусымдық климатологияға негізделген; кенет оқиғалар (ірі өрттер, өнеркәсіптік апаттар) қамту аясынан тыс.`,
   recs: {
     air: "Көмір жылытудан газ/электрге көшуді жеделдетіп, төмен шығарынды аймақтарын кеңейту — модель бойынша екі маусымда қысқы PM2.5-ті 18–25% азайтады.",
     industrial: "Басым зауытта мұржаларды үздіксіз бақылау мен ұстау модернизациясын міндеттеу; нақты уақыттағы ашық деректер жарияланбаған асып кетулерді күрт азайтады.",
@@ -331,13 +358,13 @@ const KK: AiStrings = {
     industrial: "**Өнеркәсіптік шығарынды индексі (IEI)** металлургия, көмір энергетикасы және мұнай-газдың жергілікті шығарынды жүктемесін 0–100 шкаласымен бағалайды. Ұлттық сигналды Теміртау болат белдеуі, Екібастұз энергокешені және Өскемен зауыттары айқындайды.",
     pollution: "**Ластану индексі** — қаланың атмосфералық ластануы мен өнеркәсіптік шығарынды жүктемесінен тұратын 0–100 композиті: тұрғындардың күнделікті антропогендік ластануға ұшырау дәрежесінің бірыңғай көрсеткіші.",
     biodiversity: "**Биоалуантүрлілік сақталуы (BII)** аумақтың бастапқы түр қауымдастығының қаншасы сақталғанын бағалайды. Біз дала мен сулы-батпақты мекендеу ауқымын, фрагментация метрикаларын және бақылау жазбаларын біріктіреміз. 90-нан жоғары — таза дерлік; 30-дан төмен — экожүйе функцияларының жоғалуы.",
-    sustainability: "**Aetheris тұрақтылық бағасы** — ауа, су, биоалуантүрлілік, кері экологиялық тәуекел және кері ластанудың салмақталған композиті. Ол қалалар арасында салыстырмалы әрі тексерілетін етіп жасалған — әр кіріс сенсорға немесе деректер жиынына апарады.",
+    sustainability: "**Aetheris тұрақтылық бағасы** — ауа, су, биоалуантүрлілік, кері экологиялық тәуекел және кері ластанудың салмақталған композиті. Ол қалалар арасында салыстырмалы; барлық кіріс деректері әдістемеде көрсетілген, олардың көбі қазір модельдік.",
     anomaly: "**Температура ауытқуы** — ағымдағы температура мен 1991–2020 климаттық база арасындағы айырма. Орталық Азия әлемдік ортадан жылдам жылынуда — қазақстандық қалалардың көбі қазір +1,5…+2,5 °C, бұл климат өзгерісінің ең айқын жергілікті ізі.",
-    aral: "**Арал теңізі** — өңірдің айқындаушы экологиялық апаты: суды суаруға бұру оны 1960 жылғы деңгейдің бір бөлігіне дейін кішірейтіп, Аралқұмды ашты — оның улы шаңды дауылдары бүкіл Қызылорда бойынша тыныс алу ауруларын тудырады. Aetheris ашылған түп шаңы индексі мен Сырдария төменгі ағысының тұздануын қадағалайды.",
+    aral: "**Арал теңізі** — өңірдің айқындаушы экологиялық апаты: суды суаруға бұру оны 1960 жылғы деңгейдің бір бөлігіне дейін кішірейтіп, Аралқұмды ашты — оның улы шаңды дауылдары бүкіл Қызылорда бойынша тыныс алу ауруларын тудырады. Aetheris онда шаң мен тұздылықты өлшемейді; сайттағы өңір бойынша сандар — модельдік бағалаулар.",
   },
   national: (c) =>
     [
-      `**Ұлттық қима — ${c.count} қала бойынша соңғы желі өтуі:**`,
+      `**Ұлттық қима — ${c.count} қала бойынша модельдік база:**`,
       ``,
       `- Орташа қалалық AQI: **${c.aqi}** (${c.aqiLabel})`,
       `- Орташа жерүсті су сапасы: **${c.sum.meanWater}/100**`,
@@ -350,15 +377,17 @@ const KK: AiStrings = {
       `Ең күшті теріс сигналдар — Теміртау болат белдеуі мен Арал шаң маусымы; ең күшті оң сигнал — солтүстік облыстардағы ауа сапасының жақсаруы.`,
     ].join("\n"),
   hotspotReply: (c) =>
-    `**Экологиялық ошақтар жағдайы:** ${c.total} нысан қадағалауда, ${c.critical} критикалық деп белгіленген.\n\n${c.body}\n\nНақты уақыттағы позицияларды көру үшін Атласты өнеркәсіп жүктемесі қабатында ашыңыз.`,
+    `**Экологиялық ошақтар жағдайы:** ${c.total} нысан тізілімде, ${c.critical} нысанның модельдік бағасы критикалық.\n\n${c.body}\n\nОларды картадан көру үшін Атласты өнеркәсіп жүктемесі қабатында ашыңыз.`,
   greeting:
-    `Сәлеметсіз бе — мен Қазақстан бойынша Aetheris экологиялық аналитигімін. Ұлттық сенсорлар желісінің үстінде жұмыс істеймін және:\n\n- Кез келген бақылаудағы қала бойынша қысқаша сводка беремін (**«Алматы қалай?»** деп көріңіз)\n- **Тәуекел болжамдары** мен **тұрақтылық ұсыныстарын** дайындаймын\n- Кез келген көрсеткіштің ғылымын түсіндіремін (**«PM10 деген не?»**)\n- **Ұлттық** картинаны қорытындылаймын\n\nҚайдан бастаймыз?`,
+    `Сәлеметсіз бе — мен Қазақстан бойынша Aetheris экологиялық аналитигімін. Мен Aetheris моделі бойынша — 28 қалаға арналған симуляцияланған база бойынша — жауап беремін, сондықтан менің сандарым өлшеу емес, бағалау. Мен:\n\n- Осы қалалардың кез келгені бойынша қысқаша сводка беремін (**«Алматы қалай?»** деп көріңіз)\n- **Тәуекел болжамдары** мен **тұрақтылық ұсыныстарын** дайындаймын\n- Кез келген көрсеткіштің ғылымын түсіндіремін (**«PM10 деген не?»**)\n- **Ұлттық** картинаны қорытындылаймын\n\nҚайдан бастаймыз?`,
   fallback: (count) =>
-    `Мен Қазақстандағы **${count} бақылаудағы қаланың** кез келгенін талдай аламын — нақты жер туралы сұраңыз («Теміртаудағы ауа сапасы»), **тәуекел болжамын** сұраңыз, **ұсыныстар** сұраңыз немесе ел бойынша көрініс үшін **«ұлттық сводка»** деңіз.\n\nҚамту қауымдастық станциялары қосылған сайын өседі — өзіңіздікін қосудың ең жылдам жолы — қауымдастық хабы.`,
+    `Мен Қазақстандағы картадағы **${count} қаланың** кез келгенін талдай аламын — нақты жер туралы сұраңыз («Теміртаудағы ауа сапасы»), **тәуекел болжамын** сұраңыз, **ұсыныстар** сұраңыз немесе ел бойынша көрініс үшін **«ұлттық сводка»** деңіз.\n\nТұрғындар көргенін қауымдастық бетінде хабарлай алады; ол хабарламалар бөлек көрсетіледі және менің сандарыма араластырылмайды.`,
+  modelNotice:
+    "> **Өлшеу емес, модельдік бағалаулар.** Төмендегі барлық сандар, ауа сапасын қоса, Aetheris симуляцияланған базасынан алынған. Ашық деректер бойынша ауа сапасы (Open-Meteo / CAMS) — қала бетінде.",
   cite: {
-    natCities: "Open-Meteo (CAMS) ауа сапасы ағыны · 28 қала",
-    natBaseline: "Aetheris модельдік базасы — су, биоалуантүрлілік, өнеркәсіп (симуляция)",
-    cluster: (name) => `«${name}» станциялар кластері · live`,
+    natCities: "Ашық деректер бойынша ауа сапасы Open-Meteo (CAMS) — әр қаланың бетінде; бұл жауапта қолданылмайды",
+    natBaseline: "Aetheris модельдік базасы — бұл жауаптағы барлық сандар, ауа сапасын қоса (симуляция)",
+    cluster: (name) => `${name} · Aetheris модельдік базасы (симуляция)`,
     riskModel: "Aetheris экологиялық тәуекел моделі ERI-4",
     seasonal: "Copernicus маусымдық болжамы (симуляция ағыны)",
     interventions: "Aetheris араласу әсерлері кітапханасы",
@@ -366,7 +395,7 @@ const KK: AiStrings = {
     methodologyShort: "Aetheris әдіснамасы v4.2",
     who: "ДДҰ ауа сапасы бойынша ұсынымдары (2021)",
     firms: "MODIS / FIRMS термоаномалиялары (симуляция ағыны)",
-    industrialRegistry: "Aetheris өнеркәсіптік мониторинг тізілімі",
+    industrialRegistry: "Aetheris ошақтар тізілімі · модельдік бағалаулар",
   },
 };
 
@@ -427,8 +456,8 @@ export function generate(query: string, locale: Locale = "en"): AssistantReply {
   // 1 · Explicit national intent wins even when a place is also named.
   if (isNational) {
     return {
-      text: t.national({ count: stations.length, aqi: sum.meanAqi, aqiLabel: aqiLabel(sum.meanAqi, locale), sum }),
-      citations: [t.cite.natCities, t.cite.natBaseline],
+      text: `${t.modelNotice}\n\n${t.national({ count: stations.length, aqi: sum.meanAqi, aqiLabel: aqiLabel(sum.meanAqi, locale), sum })}`,
+      citations: [t.cite.natBaseline, t.cite.natCities],
     };
   }
 
@@ -444,7 +473,7 @@ export function generate(query: string, locale: Locale = "en"): AssistantReply {
       if (s.biodiversity < 45) drivers.push(t.risk.habitat(s));
       if (drivers.length === 0) drivers.push(t.risk.none(s));
       return {
-        text: t.riskReply(name, drivers.map((d) => `- ${d}`).join("\n")),
+        text: `${t.modelNotice}\n\n${t.riskReply(name, drivers.map((d) => `- ${d}`).join("\n"))}`,
         citations: [t.cite.cluster(name), t.cite.riskModel, t.cite.seasonal],
       };
     }
@@ -457,12 +486,12 @@ export function generate(query: string, locale: Locale = "en"): AssistantReply {
       if (s.climateRisk > 50) recs.push(t.recs.exposure);
       if (recs.length === 0) recs.push(t.recs.none);
       return {
-        text: t.recReply(name, recs.map((r, i) => `${i + 1}. ${r}`).join("\n")),
+        text: `${t.modelNotice}\n\n${t.recReply(name, recs.map((r, i) => `${i + 1}. ${r}`).join("\n"))}`,
         citations: [t.cite.cluster(name), t.cite.interventions],
       };
     }
     return {
-      text: `${t.brief(s, {
+      text: `${t.modelNotice}\n\n${t.brief(s, {
         name,
         region: regionLabel(s.region, locale),
         aqi: aqiLabel(s.aqi, locale),
@@ -490,7 +519,7 @@ export function generate(query: string, locale: Locale = "en"): AssistantReply {
       .map((h) => `- **${hotspotName(h.id, h.name, locale)}** (${regionLabel(h.region, locale)}) — ${h.severity}/100, ${h.status}. ${h.detail}.`)
       .join("\n");
     return {
-      text: t.hotspotReply({ total: sum.hotspots, critical: sum.criticalSites, body }),
+      text: `${t.modelNotice}\n\n${t.hotspotReply({ total: sum.hotspots, critical: sum.criticalSites, body })}`,
       citations: [t.cite.firms, t.cite.industrialRegistry],
     };
   }

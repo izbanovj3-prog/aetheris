@@ -1,12 +1,17 @@
 import type { Metadata } from "next";
 import Community from "@/components/community/Community";
 import { Footer } from "@/components/chrome/Footer";
+import { getDict, hreflangAlternates } from "@/lib/i18n";
+
+const dict = getDict("en");
 
 export const metadata: Metadata = {
-  title: "Community",
-  description:
-    "Field reports from across Kazakhstan, corroborated between independent contributors — with Eco-Points, geographic badges and local eco-events.",
-  alternates: { canonical: "/community/" },
+  title: dict.meta.communityTitle,
+  description: dict.meta.communityDescription,
+  alternates: {
+    canonical: "/community/",
+    languages: hreflangAlternates("/community/"),
+  },
 };
 
 export default function CommunityPage() {

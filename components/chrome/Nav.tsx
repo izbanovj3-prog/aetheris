@@ -117,7 +117,8 @@ export function Nav() {
           <ReadingControls />
           <LangSwitch className="mr-1" />
           <span className="hidden 2xl:flex items-center gap-2">
-            <span className="dot-live" />
+            {/* Not a pulsing "live" dot: most of the site is modelled. */}
+            <span className="w-1.5 h-1.5 rounded-full border border-current opacity-70" aria-hidden />
             <span className="telemetry telemetry-bright">{dict.nav.live}</span>
           </span>
           <UtcClock />
@@ -168,7 +169,7 @@ export function Nav() {
             <ReadingControls className="px-4 pt-2" />
             <div className="flex items-center justify-between gap-2 px-4 pt-2 pb-1 border-t border-line mt-1">
               <span className="flex items-center gap-2">
-                <span className="dot-live" />
+                <span className="w-1.5 h-1.5 rounded-full border border-current opacity-70" aria-hidden />
                 <span className="telemetry telemetry-bright">
                   {dict.nav.menuNetwork}
                 </span>

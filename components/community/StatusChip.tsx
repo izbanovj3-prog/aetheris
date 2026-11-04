@@ -1,6 +1,7 @@
 "use client";
 
 import { STATUS_META, type ReportStatus, type Tone } from "@/lib/reports";
+import { useCommunityText } from "@/lib/useLocale";
 
 /* ─────────────────────────────────────────────────────────────
    The status chip — concept section 1.3, and the UI component the
@@ -28,14 +29,15 @@ const NUMERALS = ["①", "②", "③", "④", "⑤"];
 
 export function StatusChip({ status }: { status: ReportStatus }) {
   const meta = STATUS_META[status];
+  const text = useCommunityText().statuses[status];
   return (
     <span
-      title={`${meta.label} — ${meta.gloss}. ${meta.note}`}
-      className={`telemetry !text-[0.9375rem] !tracking-[0.12em] border rounded-full px-2.5 py-1 inline-flex items-center gap-1.5 cursor-help ${TONE_CHIP[meta.tone]}`}
+      title={`${text.label} — ${text.gloss}. ${text.note}`}
+      className={`telemetry !text-[0.9375rem] !tracking-[0.12em] border rounded-2xl px-2.5 py-1 inline-flex items-start gap-1.5 cursor-help max-w-full whitespace-normal break-words text-left ${TONE_CHIP[meta.tone]}`}
     >
       <span aria-hidden>{NUMERALS[meta.step - 1]}</span>
-      <span>{meta.label}</span>
-      <span className="sr-only"> — {meta.gloss}. {meta.note}</span>
+      <span className="min-w-0 break-words">{text.label}</span>
+      <span className="sr-only"> — {text.gloss}. {text.note}</span>
     </span>
   );
 }
@@ -45,9 +47,10 @@ export function StatusChip({ status }: { status: ReportStatus }) {
    from it — is worth stating openly rather than leaving to be inferred
    from whichever chips happen to be on screen. */
 export function StatusLegend() {
+  const t = useCommunityText();
   return (
     <div className="glass rounded-xl p-4 flex flex-col gap-3">
-      <div className="telemetry">Report statuses</div>
+      <div className="telemetry">{t.legend.title}</div>
       <ol className="flex flex-col gap-2.5">
         {(Object.keys(STATUS_META) as ReportStatus[])
           .sort((a, b) => STATUS_META[a].step - STATUS_META[b].step)
@@ -59,19 +62,15 @@ export function StatusLegend() {
                   {NUMERALS[m.step - 1]}
                 </span>
                 <span className="min-w-0">
-                  <span className="block text-[0.9375rem] text-ink leading-snug">{m.label}</span>
-                  <span className="block telemetry !text-[0.9375rem] mt-0.5">{m.gloss}</span>
+                  <span className="block text-[0.9375rem] text-ink leading-snug">{t.statuses[s].label}</span>
+                  <span className="block telemetry !text-[0.9375rem] mt-0.5">{t.statuses[s].gloss}</span>
                 </span>
               </li>
             );
           })}
       </ol>
       <p className="text-[0.9375rem] text-ink-faint font-light leading-relaxed border-t border-line pt-3">
-        There is no &quot;confirmed&quot; and no &quot;resolved&quot; status, and there
-        will not be one until something real stands behind it. Aetheris has no
-        moderators and no instrument check for a field report, so the furthest the
-        platform goes is saying that independent people described the same thing, or
-        that data was passed on. Neither of those means a report is right.
+        {t.legend.note}
       </p>
     </div>
   );

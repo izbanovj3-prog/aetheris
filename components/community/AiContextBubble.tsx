@@ -4,6 +4,7 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { EASE } from "@/components/ui/primitives";
 import type { AiContext } from "@/lib/aiContext";
+import { useCommunityText } from "@/lib/useLocale";
 
 /* ─────────────────────────────────────────────────────────────
    AI-контекст bubble — concept section 1.2, collapsed by default and
@@ -33,6 +34,7 @@ export function AiContextBubble({
   failed?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const t = useCommunityText().bubble;
 
   if (loading) {
     return (
@@ -40,7 +42,7 @@ export function AiContextBubble({
         <span className="grid place-items-center w-5 h-5 rounded-md bg-emerald/10 border border-emerald/25 text-emerald text-[0.9375rem] font-bold shrink-0">
           Æ
         </span>
-        <span className="telemetry !text-[0.9375rem]">Analyst is pulling comparable data…</span>
+        <span className="telemetry !text-[0.9375rem]">{t.loading}</span>
       </div>
     );
   }
@@ -59,9 +61,7 @@ export function AiContextBubble({
           ⚠
         </span>
         <p className="text-base text-ink-dim font-light leading-relaxed">
-          <span className="text-amber">Context unavailable.</span> The live feed
-          didn&apos;t answer, so nothing could be placed beside this report right now.
-          This says nothing about the report itself — reload to try again.
+          <span className="text-amber">{t.failedLead}</span> {t.failedBody}
         </p>
       </div>
     );
@@ -94,11 +94,11 @@ export function AiContextBubble({
           Æ
         </span>
         <span className="min-w-0 flex-1">
-          <span className={`telemetry !text-[0.9375rem] ${noSource ? "" : "text-emerald/80"}`}>
-            AI-контекст
+          <span className={`telemetry !text-[0.9375rem] ${noSource ? "" : "text-emerald"}`}>
+            {t.title}
           </span>
           <span className="block text-[0.9375rem] text-ink-faint font-light mt-0.5">
-            Context, not a verdict — {noSource ? "no live source for this category" : "a reading from beside the report"}
+            {t.sub(noSource)}
           </span>
         </span>
         <svg
@@ -127,9 +127,7 @@ export function AiContextBubble({
 
               {!noSource && (
                 <p className="text-[0.9375rem] text-ink-faint font-light leading-relaxed">
-                  This reading was taken when this page loaded, not when the report
-                  was filed. For a report from the last hour those are close to the
-                  same thing; for an older one they are not.
+                  {t.stale}
                 </p>
               )}
 

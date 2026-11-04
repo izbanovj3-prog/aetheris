@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { AnimatePresence, motion } from "framer-motion";
 import {
@@ -11,15 +11,20 @@ import {
   TelemetryTag,
 } from "@/components/ui/primitives";
 import { useLiveStations } from "@/lib/useLiveStations";
+import { isConfigured } from "@/lib/supabase";
 import { assistantPrompt, buildAiContext, type AiContext } from "@/lib/aiContext";
 import { POINTS } from "@/lib/points";
+import { getStations } from "@/lib/data";
+import { localePath } from "@/lib/i18n";
+import { placeName, relativeTimeIn, type CommunityText } from "@/lib/communityText";
+import { useCommunityText, useLocale } from "@/lib/useLocale";
 import {
   CATEGORIES,
   SEED_REPORTS,
   SEVERITIES,
-  STATUS_META,
-  displayTime,
-  getRemoteReports,
+  FEED_PAGE,
+  deleteMyReport,
+  getRemoteReportsPage,
   getUserReports,
   namesOrganisation,
   reconcileLocalMirrors,
@@ -77,8 +82,6 @@ function SampleTag({ note, children }: { note: string; children: ReactNode }) {
 
 interface Mission {
   id: string;
-  title: string;
-  desc: string;
   reward: number;
   progress: number;
   total: number;
@@ -86,9 +89,9 @@ interface Mission {
 }
 
 const MISSIONS: Mission[] = [
-  { id: "m1", title: "Watershed Watch", desc: "Log 5 water-quality readings from your local waterway this month.", reward: 450, progress: 3, total: 5, joined: true },
-  { id: "m2", title: "Canopy Census", desc: "Map 20 street trees with species + condition in your district.", reward: 600, progress: 0, total: 20, joined: false },
-  { id: "m3", title: "Night Sky Audit", desc: "Submit 3 light-pollution measurements after 23:00.", reward: 280, progress: 1, total: 3, joined: true },
+  { id: "m1", reward: 450, progress: 3, total: 5, joined: true },
+  { id: "m2", reward: 600, progress: 0, total: 20, joined: false },
+  { id: "m3", reward: 280, progress: 1, total: 3, joined: true },
 ];
 
 /* The rank-shaped names (Sentinel, Constellation) that used to sit in this
@@ -97,12 +100,40 @@ const MISSIONS: Mission[] = [
    duplicated-nomenclature bug this project has been caught by before.
    What is left is the achievements that are not ranks, with the wording
    that promised a verification step the platform cannot perform removed. */
+/* Text for each is in lib/communityText.ts, in the same order. */
 const ACHIEVEMENTS = [
-  { icon: "◬", name: "First Signal", desc: "First report filed", unlocked: true },
-  { icon: "❋", name: "Field Naturalist", desc: "25 species logged", unlocked: false },
-  { icon: "◈", name: "Stream Keeper", desc: "10 water samples", unlocked: false },
-  { icon: "◉", name: "Ground Truth", desc: "50 reports with a live reading beside them", unlocked: false },
+  { icon: "◬", unlocked: true },
+  { icon: "❋", unlocked: false },
+  { icon: "◈", unlocked: false },
+  { icon: "◉", unlocked: false },
 ];
+
+/** Initials from the name as shown, so a Cyrillic name gets Cyrillic initials. */
+const initialsOf = (name: string) =>
+  name
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase() ?? "")
+    .join("") || "AN";
+
+/** DOM id of a feed card, the target focus moves to after "Show more". */
+const cardDomId = (id: string) => `report-${id}`;
+
+const STATION_ID_BY_NAME = new Map(getStations().map((s) => [s.name, s.id]));
+
+/** The card's text in the reader's language: seeded examples are
+ *  translated; real reports keep the author's own words, with only the
+ *  city label and the time rendered locally. */
+function shown(r: Report, t: CommunityText, locale: ReturnType<typeof useLocale>) {
+  const seed = t.seeds[r.id];
+  return {
+    author: seed?.author ?? r.author,
+    city: seed?.city ?? placeName(r.city, locale, STATION_ID_BY_NAME),
+    time: r.createdAt ? relativeTimeIn(r.createdAt, t.time) : (seed?.time ?? r.time ?? ""),
+    title: seed?.title || r.title,
+    body: seed?.body || r.body,
+  };
+}
 
 /* ── AI context, per card ─────────────────────────────────────
    Fetched in the browser from the same feeds the city pages use. Air and
@@ -113,6 +144,7 @@ const ACHIEVEMENTS = [
 function useAiContext(
   report: Report,
   stations: ReturnType<typeof useLiveStations>,
+  locale: ReturnType<typeof useLocale>,
 ): { context: AiContext | null; loading: boolean; failed: boolean } {
   const [context, setContext] = useState<AiContext | null>(null);
   const [loading, setLoading] = useState(true);
@@ -127,7 +159,7 @@ function useAiContext(
     let alive = true;
     setLoading(true);
     setFailed(false);
-    buildAiContext(report, stations.stations, stations.live, stations.fetchedAt, ac.signal)
+    buildAiContext(report, stations.stations, stations.live, stations.fetchedAt, ac.signal, locale)
       .then((c) => {
         if (!alive) return;
         setContext(c);
@@ -142,7 +174,7 @@ function useAiContext(
       alive = false;
       ac.abort();
     };
-  }, [report, stations.stations, stations.live, stations.fetchedAt]);
+  }, [report, stations.stations, stations.live, stations.fetchedAt, locale]);
 
   return { context, loading, failed };
 }
@@ -153,17 +185,42 @@ function ReportCard({
   r,
   highlight,
   live,
+  onDeleted,
 }: {
   r: Report;
   highlight?: boolean;
   live: ReturnType<typeof useLiveStations>;
+  onDeleted?: (id: string, message: string) => void;
 }) {
+  const [deleting, setDeleting] = useState(false);
+  const [deleteNote, setDeleteNote] = useState<string | null>(null);
+  const t = useCommunityText();
+  const locale = useLocale();
+  const view = shown(r, t, locale);
+
+  async function remove() {
+    if (deleting) return;
+    if (!window.confirm(t.card.deleteConfirm)) return;
+    setDeleting(true);
+    setDeleteNote(null);
+    const result = await deleteMyReport(r.id);
+    setDeleting(false);
+    if (result === "deleted" || result === "local-only") {
+      onDeleted?.(r.id, t.page.toastDeleted);
+    } else if (result === "refused") {
+      setDeleteNote(t.card.deleteRefused);
+    } else if (result === "unsupported") {
+      setDeleteNote(t.card.deleteUnsupported);
+    } else {
+      setDeleteNote(t.card.deleteFailed);
+    }
+  }
   const [votes, setVotes] = useState(r.upvotes);
   const [voted, setVoted] = useState(false);
   const cat = CATEGORIES[r.category];
   const sev = SEVERITIES[r.severity];
 
-  const { context, loading, failed } = useAiContext(r, live);
+  const { context, loading, failed } = useAiContext(r, live, locale);
   // ② is derived: a report shows "AI-контекст добавлен" once real context
   // has actually resolved for it, and not before.
   const status = resolveStatus(r, Boolean(context) && context?.kind !== "none");
@@ -177,45 +234,45 @@ function ReportCard({
       <div className="flex flex-wrap items-start justify-between gap-4 mb-3">
         <div className="flex items-center gap-3">
           <span className="grid place-items-center w-9 h-9 rounded-full bg-carbon-3 border border-line-bright text-[0.9375rem] font-semibold text-ink-dim">
-            {r.initials}
+            {initialsOf(view.author)}
           </span>
           <div>
             <div className="text-sm font-medium flex items-center gap-2 flex-wrap">
-              {r.author}
+              {view.author}
               {r.userCreated && (
                 <span className="telemetry !text-[0.9375rem] text-emerald border border-emerald/30 rounded-full px-1.5 py-0.5">
-                  You
+                  {t.card.you}
                 </span>
               )}
               {/* Seeded illustrative rows carry the mark; real submissions
                   never do, so the two can't be confused either way. */}
               {!r.remote && !r.createdAt && (
                 <span
-                  title="Illustrative example written to demonstrate the feed — not a real submission."
+                  title={t.card.sampleTitle}
                   className="telemetry !text-[0.9375rem] text-amber border border-amber/30 rounded-full px-1.5 py-0.5 cursor-help"
                 >
-                  Sample
+                  {t.card.sample}
                 </span>
               )}
               {r.remote && (
                 <span
-                  title="Real submission, stored in the shared database and visible to every visitor."
+                  title={t.card.filedTitle}
                   className="telemetry !text-[0.9375rem] text-cyan border border-cyan/30 rounded-full px-1.5 py-0.5 cursor-help"
                 >
-                  Filed
+                  {t.card.filed}
                 </span>
               )}
               {r.parentId && (
                 <span
-                  title="A follow-up update on an earlier report."
+                  title={t.card.updateTitle}
                   className="telemetry !text-[0.9375rem] text-atmos border border-atmos/30 rounded-full px-1.5 py-0.5 cursor-help"
                 >
-                  Update
+                  {t.card.update}
                 </span>
               )}
             </div>
             <div className="telemetry !text-[0.9375rem] mt-0.5">
-              {r.city} · {displayTime(r)}
+              {view.city} · {view.time}
             </div>
           </div>
         </div>
@@ -224,15 +281,15 @@ function ReportCard({
 
       <div className="flex flex-wrap items-center gap-2 mb-1.5">
         <span className={`text-sm ${TONE_TEXT[cat.tone]}`}>{cat.glyph}</span>
-        <span className="telemetry">{cat.label}</span>
+        <span className="telemetry">{t.categories[r.category].label}</span>
         <span className={`telemetry !text-[0.9375rem] border rounded-full px-2 py-0.5 ml-1 ${TONE_CHIP[sev.tone]}`}>
-          {sev.label}
+          {t.severities[r.severity]}
         </span>
       </div>
-      <h3 className="font-[family-name:var(--font-syne)] font-bold text-lg leading-snug mb-2">
-        {r.title}
+      <h3 id={`${cardDomId(r.id)}-title`} className="font-[family-name:var(--font-syne)] font-bold text-lg leading-snug mb-2">
+        {view.title}
       </h3>
-      <p className="text-base text-ink-dim font-light leading-relaxed mb-4">{r.body}</p>
+      <p className="text-base text-ink-dim font-light leading-relaxed mb-4">{view.body}</p>
 
       {/* The report's own words are never altered. When they name an outside
           organisation, this sits beside them so nobody reads the mention as
@@ -243,20 +300,23 @@ function ReportCard({
             ⚠
           </span>
           <p className="text-base text-ink-dim font-light leading-relaxed">
-            <span className="text-amber">Independent report.</span> This account
-            names an outside organisation. Aetheris is not affiliated with it, and
-            the organisation has neither reviewed nor commented on this report.
+            <span className="text-amber">{t.card.independentLead}</span> {t.card.independentBody}
           </p>
         </div>
       )}
 
       {r.photo && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={r.photo}
-          alt={`Field photo for ${r.title}`}
-          className="w-full max-h-64 object-cover rounded-xl border border-line mb-4"
-        />
+        <figure className="mb-4">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={r.photo}
+            alt={t.card.photoAlt(view.title)}
+            className="w-full max-h-64 object-cover rounded-xl border border-line"
+          />
+          <figcaption className="telemetry !text-[0.9375rem] mt-1.5">
+            {t.card.photoCaption}
+          </figcaption>
+        </figure>
       )}
 
       {/* ② AI-контекст — collapsible, sitting under the photo. */}
@@ -265,18 +325,15 @@ function ReportCard({
       {/* ④ / ⑤ — only ever present when an operator recorded them. */}
       {r.forwardedAt && (
         <div className="rounded-xl border border-amber/25 bg-amber/[0.04] px-3.5 py-2.5 mb-4">
-          <div className="telemetry !text-[0.9375rem] text-amber/80 mb-1">Transfer log</div>
+          <div className="telemetry !text-[0.9375rem] text-amber mb-1">{t.card.transferTitle}</div>
           <p className="text-base text-ink-dim font-light leading-relaxed">
-            Passed to {r.forwardedTo} on{" "}
-            {new Date(r.forwardedAt).toISOString().slice(0, 10)}. This records that
-            the data was sent, and nothing about how it was received or whether
-            anything followed.
+            {t.card.transferBody(r.forwardedTo ?? "", new Date(r.forwardedAt).toISOString().slice(0, 10))}
           </p>
         </div>
       )}
       {r.orgResponse && (
         <div className="rounded-xl border border-coral/25 bg-coral/[0.04] px-3.5 py-2.5 mb-4">
-          <div className="telemetry !text-[0.9375rem] text-coral/80 mb-1">
+          <div className="telemetry !text-[0.9375rem] text-coral mb-1">
             {r.orgResponseOrg}
           </div>
           <p className="text-base text-ink-dim font-light leading-relaxed">
@@ -293,8 +350,7 @@ function ReportCard({
             setVotes((v) => (voted ? v - 1 : v + 1));
           }}
           aria-pressed={voted}
-          aria-label={voted ? "Remove reaction" : "I see it too"}
-          title="I see it too"
+          title={t.card.seeToo}
           className={`flex items-center gap-2 text-[0.9375rem] rounded-full border px-3.5 py-1.5 transition-all duration-300 ${
             voted
               ? "border-emerald/40 text-emerald bg-emerald/[0.07]"
@@ -302,53 +358,69 @@ function ReportCard({
           }`}
         >
           <span aria-hidden>👁</span>
+          {/* The name carries the count that is on screen (WCAG 2.5.3);
+              aria-pressed says whether this device has marked it. */}
+          <span className="sr-only">{t.card.seeToo}</span>
           <span className="readout">{votes}</span>
         </button>
 
         {/* Concept 5.2 — hands this specific report to the Analyst that
-            already exists on /assistant, rather than building a second
-            chat. The deep link is the ?q= the assistant already reads.
-
-            The Russian tree, not the English one: the prompt is written in
-            Russian (as the concept writes it, and as this button is
-            labelled), and the Analyst answers in the language of the route
-            it is opened on. Sending a Russian question to /assistant would
-            get an English answer back. */}
+            already exists on /assistant. The question is written in the
+            page's language and opens the assistant in that same language,
+            so the answer comes back in it too. */}
         <Link
-          href={`/ru/assistant?q=${encodeURIComponent(assistantPrompt(r, context))}`}
+          href={`${localePath("/assistant", locale)}?q=${encodeURIComponent(assistantPrompt(r, context, locale))}`}
           className="flex items-center gap-2 text-[0.9375rem] rounded-full border border-line text-ink-dim hover:text-emerald hover:border-emerald/30 px-3.5 py-1.5 transition-colors duration-300"
         >
           <span className="text-[0.9375rem] font-bold" aria-hidden>
             Æ
           </span>
-          Спросить ИИ
+          {t.card.askAi}
         </Link>
 
-        <span className="ml-auto telemetry !text-[0.9375rem] text-emerald/60">
-          +{POINTS.corroboration} Eco-Points on corroboration
+        {r.userCreated && (
+          <button
+            type="button"
+            onClick={remove}
+            disabled={deleting}
+            className="flex items-center gap-2 text-[0.9375rem] rounded-full border border-line text-ink-dim hover:text-coral hover:border-coral/40 px-3.5 py-1.5 transition-colors duration-300 disabled:opacity-50"
+          >
+            {deleting ? t.card.deleting : t.card.delete}
+          </button>
+        )}
+
+        <span className="ml-auto telemetry !text-[0.9375rem] text-emerald">
+          {t.card.corroborationPoints(POINTS.corroboration)}
         </span>
       </div>
+      {deleteNote && (
+        <p role="alert" className="text-[0.9375rem] text-coral mt-3 leading-relaxed">
+          {deleteNote}
+        </p>
+      )}
     </GlassCard>
   );
 }
 
 function MissionCard({ m, index }: { m: Mission; index: number }) {
   const [joined, setJoined] = useState(m.joined);
+  const t = useCommunityText();
+  const text = t.missions[index];
   const pct = (m.progress / m.total) * 100;
   return (
     <Reveal index={index}>
       <div className="glass rounded-xl p-5">
-        <div className="flex items-start justify-between gap-3 mb-1.5">
-          <h4 className="font-[family-name:var(--font-syne)] font-bold text-[15px]">{m.title}</h4>
+        <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1 mb-1.5">
+          <h4 className="font-[family-name:var(--font-syne)] font-bold text-[15px] min-w-0 break-words">{text.title}</h4>
           <span className="readout text-sm text-emerald whitespace-nowrap">
             +{m.reward} Eco-Points
           </span>
         </div>
-        <p className="text-[0.9375rem] text-ink-faint font-light leading-relaxed mb-3.5">{m.desc}</p>
+        <p className="text-[0.9375rem] text-ink-faint font-light leading-relaxed mb-3.5">{text.desc}</p>
         {joined ? (
           <>
             <div className="flex justify-between mb-1.5">
-              <span className="telemetry !text-[0.9375rem]">Progress</span>
+              <span className="telemetry !text-[0.9375rem]">{t.missionProgress}</span>
               <span className="readout text-[0.9375rem] text-cyan">
                 {m.progress}/{m.total}
               </span>
@@ -368,7 +440,7 @@ function MissionCard({ m, index }: { m: Mission; index: number }) {
             onClick={() => setJoined(true)}
             className="w-full rounded-lg border border-emerald/30 text-emerald text-[0.9375rem] font-semibold py-2 hover:bg-emerald/[0.08] transition-colors duration-300"
           >
-            Join mission
+            {t.missionJoin}
           </button>
         )}
       </div>
@@ -379,6 +451,7 @@ function MissionCard({ m, index }: { m: Mission; index: number }) {
 /* ── Success toast ────────────────────────────────────────────── */
 
 function Toast({ message, onClose }: { message: string; onClose: () => void }) {
+  const t = useCommunityText();
   useEffect(() => {
     const t = window.setTimeout(onClose, 4200);
     return () => window.clearTimeout(t);
@@ -404,13 +477,13 @@ function Toast({ message, onClose }: { message: string; onClose: () => void }) {
             sensor cross-check", which promised an instrument step that
             does not exist. */}
         <div className="telemetry !text-[0.9375rem] mt-0.5">
-          {STATUS_META.submitted.label} · nobody has reviewed it
+          {t.statuses.submitted.label} · {t.page.toastSub}
         </div>
       </div>
       <button
         type="button"
         onClick={onClose}
-        aria-label="Dismiss"
+        aria-label={t.page.dismiss}
         className="ml-1 text-ink-faint hover:text-ink transition-colors"
       >
         <svg viewBox="0 0 14 14" className="w-3 h-3" fill="none" aria-hidden>
@@ -424,7 +497,23 @@ function Toast({ message, onClose }: { message: string; onClose: () => void }) {
 /* ── Page ─────────────────────────────────────────────────────── */
 
 export default function Community() {
-  const [reports, setReports] = useState<Report[]>(SEED_REPORTS);
+  const t = useCommunityText();
+  /* The feed is three runs in a fixed order: `head` — real submissions,
+     newest first, fetched a page at a time; `tail` — this device's reports
+     the database does not have, then the seeded examples. The tail is only
+     reachable once the database has no more pages, so an example never
+     sits above a real report that simply has not been fetched yet. */
+  const [head, setHead] = useState<Report[]>([]);
+  const [tail, setTail] = useState<Report[]>(SEED_REPORTS);
+  const [hasMore, setHasMore] = useState(false);
+  /** Rows taken from the database so far — the next page's offset. */
+  const [remoteOffset, setRemoteOffset] = useState(0);
+  const [shown, setShown] = useState(FEED_PAGE);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadMoreFailed, setLoadMoreFailed] = useState(false);
+  const [announce, setAnnounce] = useState("");
+  /** First card a "Show more" added; focus moves there once it renders. */
+  const [focusId, setFocusId] = useState<string | null>(null);
   const [mine, setMine] = useState<Report[]>([]);
   const [flowOpen, setFlowOpen] = useState(false);
   const [justAddedId, setJustAddedId] = useState<string | null>(null);
@@ -458,36 +547,102 @@ export default function Community() {
     // immediately and still works with no network at all.
     const own = getUserReports();
     setMine(own);
-    if (own.length) setReports([...own, ...SEED_REPORTS]);
+    if (own.length) setTail([...own, ...SEED_REPORTS]);
 
-    getRemoteReports(ac.signal).then(async (rows) => {
-      if (!rows) return; // backend unreachable — keep the local view
+    getRemoteReportsPage(0, FEED_PAGE, ac.signal).then(async (page) => {
+      if (!page) return; // backend unreachable — keep the local view
       setBackendLive(true);
+      const rows = page.reports;
 
       // Drop mirrors of rows that have since been deleted from Postgres —
       // otherwise they sit in this device's feed for good, still marked
       // "Filed". Checked by id rather than against `rows`, because that
-      // list is capped at 50 and "not on this page" is not "deleted".
+      // list is one page and "not on this page" is not "deleted".
       const { kept, removed } = await reconcileLocalMirrors(ac.signal);
       if (removed.length) setDeadIds((prev) => new Set([...prev, ...removed]));
       if (ac.signal.aborted) return;
 
       const remoteIds = new Set(rows.map((r) => r.id));
-      const localOnly = kept.filter((r) => !remoteIds.has(r.id));
-      setReports([...rows, ...localOnly, ...SEED_REPORTS]);
+      // A mirror of a row on a later page is not "local only": it is shown
+      // when that page arrives, not twice.
+      const localOnly = kept.filter((r) => !remoteIds.has(r.id) && !r.remote);
+      setHead(rows);
+      setTail([...localOnly, ...SEED_REPORTS]);
+      setHasMore(page.hasMore);
+      setRemoteOffset(rows.length);
       // Points come from the server's copy of your reports where it has
       // one, so a corroboration that happened after you filed is counted.
-      setMine([...rows.filter((r) => r.userCreated), ...localOnly]);
+      // Your reports on later pages count from their local mirror.
+      setMine([...rows.filter((r) => r.userCreated), ...kept.filter((r) => !remoteIds.has(r.id))]);
     });
 
     return () => ac.abort();
   }, []);
 
+  // Move focus to the first card "Show more" added, once it is on screen,
+  // so a keyboard user carries on reading from there instead of landing
+  // back at the top of the page.
+  useEffect(() => {
+    if (!focusId) return;
+    document.getElementById(cardDomId(focusId))?.focus();
+    setFocusId(null);
+  }, [focusId, head, shown]);
+
+  const visible = useMemo(
+    () => (hasMore ? head : [...head, ...tail]).filter((r) => !deadIds.has(r.id)),
+    [hasMore, head, tail, deadIds],
+  );
+  const canShowMore = hasMore || visible.length > shown;
+
+  async function showMore() {
+    if (loadingMore) return;
+    const next = shown + FEED_PAGE;
+    let list = visible;
+    if (hasMore && head.length < next) {
+      setLoadingMore(true);
+      setLoadMoreFailed(false);
+      const page = await getRemoteReportsPage(remoteOffset, FEED_PAGE);
+      setLoadingMore(false);
+      if (!page) {
+        setLoadMoreFailed(true);
+        setAnnounce(t.page.loadMoreFailed);
+        return;
+      }
+      const have = new Set(head.map((r) => r.id));
+      const fresh = page.reports.filter((r) => !have.has(r.id));
+      const nextHead = [...head, ...fresh];
+      setHead(nextHead);
+      setHasMore(page.hasMore);
+      setRemoteOffset((o) => o + page.reports.length);
+      list = (page.hasMore ? nextHead : [...nextHead, ...tail]).filter((r) => !deadIds.has(r.id));
+    }
+    const added = list.slice(shown, next);
+    setShown(next);
+    if (added.length) {
+      setFocusId(added[0].id);
+      setAnnounce(t.page.moreShown(added.length, Math.min(next, list.length)));
+    }
+  }
+
+  function handleDeleted(id: string, message: string) {
+    // A deleted database row moves every later row up by one; the next
+    // page starts one earlier so nothing is skipped.
+    if (head.some((r) => r.id === id && r.remote)) setRemoteOffset((o) => Math.max(0, o - 1));
+    setHead((prev) => prev.filter((r) => r.id !== id));
+    setTail((prev) => prev.filter((r) => r.id !== id));
+    setMine((prev) => prev.filter((r) => r.id !== id));
+    setDeadIds((prev) => new Set([...prev, id]));
+    setToast(message);
+  }
+
   function handleCreated(report: Report) {
-    setReports((prev) => [report, ...prev.filter((r) => r.id !== report.id)]);
+    // A new database row moves every later row down by one.
+    if (report.remote) setRemoteOffset((o) => o + 1);
+    setHead((prev) => [report, ...prev.filter((r) => r.id !== report.id)]);
+    setTail((prev) => prev.filter((r) => r.id !== report.id));
     setMine((prev) => [report, ...prev.filter((r) => r.id !== report.id)]);
     setJustAddedId(report.id);
-    setToast("Report filed");
+    setToast(t.page.toastFiled);
     window.setTimeout(() => setJustAddedId((id) => (id === report.id ? null : id)), 4000);
   }
 
@@ -497,11 +652,11 @@ export default function Community() {
       <div className="flex flex-wrap items-end justify-between gap-6 mb-10">
         <div>
           <Reveal>
-            <TelemetryTag tone="cyan">Ground truth network</TelemetryTag>
+            <TelemetryTag tone="cyan">{t.page.kicker}</TelemetryTag>
           </Reveal>
           <Reveal index={1}>
             <h1 className="font-[family-name:var(--font-syne)] font-bold text-4xl sm:text-5xl mt-4 tracking-tight">
-              Community
+              {t.page.title}
             </h1>
           </Reveal>
         </div>
@@ -510,22 +665,29 @@ export default function Community() {
       <div className="grid lg:grid-cols-[1.6fr_1fr] gap-8 items-start">
         {/* feed */}
         <div className="flex flex-col gap-5">
+          {/* A build with no Supabase project configured says so up front:
+              nothing is shared, and nothing is sent anywhere. */}
+          {!isConfigured() && (
+            <p role="status" className="glass rounded-xl p-4 text-base text-ink-dim font-light leading-relaxed">
+              {t.page.noBackend}
+            </p>
+          )}
           <Reveal>
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-3">
                 <h2 className="font-[family-name:var(--font-syne)] font-bold text-xl">
-                  Field reports
+                  {t.page.feedTitle}
                 </h2>
                 {/* The seeded entries are written examples, not submissions
                     from real people. Anything you post yourself IS real. */}
                 <SampleTag
                   note={
                     backendLive
-                      ? `The ${PILOT.reports} entries marked "Sample" are illustrative, written to demonstrate the feed. Anything without that mark is a real submission stored in the shared database and visible to every visitor.`
-                      : `Seeded sample data — ${PILOT.reports} illustrative reports from ${PILOT.contributors} example contributors, written to demonstrate the feed. Not real submissions. Reports you file yourself are real but persist only to this browser; the shared datastore is unreachable right now.`
+                      ? t.page.sampleNoteLive(PILOT.reports)
+                      : t.page.sampleNoteOffline(PILOT.reports, PILOT.contributors)
                   }
                 >
-                  {PILOT.reports} seeded examples
+                  {t.page.sampleCount(PILOT.reports)}
                 </SampleTag>
               </div>
               <button
@@ -536,7 +698,7 @@ export default function Community() {
                 <svg viewBox="0 0 16 16" className="w-3.5 h-3.5" fill="none" aria-hidden>
                   <path d="M8 3v10M3 8h10" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
                 </svg>
-                New report
+                {t.page.newReport}
               </button>
             </div>
           </Reveal>
@@ -549,20 +711,51 @@ export default function Community() {
                 the text tree, so a card that had been filtered out was
                 being read by screen readers and leaving a blank gap. */}
             <AnimatePresence initial={false} mode="popLayout" key={deadIds.size}>
-              {reports.filter((r) => !deadIds.has(r.id)).map((r) => (
+              {visible.slice(0, shown).map((r) => (
                 <motion.div
                   key={r.id}
+                  id={cardDomId(r.id)}
+                  tabIndex={-1}
+                  aria-labelledby={`${cardDomId(r.id)}-title`}
+                  className="rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-emerald/60"
                   layout
                   initial={{ opacity: 0, y: -16, scale: 0.98 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
                   exit={{ opacity: 0, scale: 0.97 }}
                   transition={{ duration: 0.35, ease: EASE }}
                 >
-                  <ReportCard r={r} highlight={r.id === justAddedId} live={live} />
+                  <ReportCard
+                    r={r}
+                    highlight={r.id === justAddedId}
+                    live={live}
+                    onDeleted={handleDeleted}
+                  />
                 </motion.div>
               ))}
             </AnimatePresence>
           </div>
+
+          {/* "Show more": a real button, never disabled while it works —
+              a disabled button drops keyboard focus to the page body. */}
+          {canShowMore && (
+            <div className="flex flex-col items-center gap-2">
+              <button
+                type="button"
+                onClick={showMore}
+                aria-disabled={loadingMore || undefined}
+                className="rounded-xl border border-line-bright text-ink text-[0.9375rem] font-semibold px-5 py-2.5 hover:border-emerald/40 hover:text-emerald transition-colors duration-300 aria-disabled:opacity-60 aria-disabled:cursor-wait"
+              >
+                {loadingMore ? t.page.loadingMore : t.page.showMore}
+              </button>
+              {loadMoreFailed && (
+                <p className="text-[0.9375rem] text-coral text-center leading-relaxed">{t.page.loadMoreFailed}</p>
+              )}
+            </div>
+          )}
+          {/* Says what "Show more" did, for screen readers. */}
+          <p role="status" aria-live="polite" className="sr-only">
+            {announce}
+          </p>
         </div>
 
         {/* rail */}
@@ -579,11 +772,9 @@ export default function Community() {
             <Reveal>
               <div className="flex flex-wrap items-center gap-2.5 mb-4">
                 <h2 className="font-[family-name:var(--font-syne)] font-bold text-xl">
-                  Active missions
+                  {t.page.missionsTitle}
                 </h2>
-                <SampleTag note="Illustrative mission designs with example progress — no mission system is running yet, and the progress shown is not anyone's.">
-                  Sample data
-                </SampleTag>
+                <SampleTag note={t.page.missionsNote}>{t.page.sampleData}</SampleTag>
               </div>
             </Reveal>
             <div className="flex flex-col gap-3.5">
@@ -597,19 +788,17 @@ export default function Community() {
             <Reveal>
               <div className="flex flex-wrap items-center gap-2.5 mb-4">
                 <h2 className="font-[family-name:var(--font-syne)] font-bold text-xl">
-                  Achievements
+                  {t.page.achievementsTitle}
                 </h2>
-                <SampleTag note="Illustrative badge set — these four are not wired to anything yet. The geographic badges and the rank ladder above them are real and are computed from your own reports.">
-                  Sample data
-                </SampleTag>
+                <SampleTag note={t.page.achievementsNote}>{t.page.sampleData}</SampleTag>
               </div>
             </Reveal>
             <Reveal index={1}>
               <GlassCard className="p-4 grid grid-cols-4 gap-2.5">
-                {ACHIEVEMENTS.map((a) => (
+                {ACHIEVEMENTS.map((a, i) => (
                   <div
-                    key={a.name}
-                    title={`${a.name} — ${a.desc}`}
+                    key={a.icon}
+                    title={`${t.achievements[i].name} — ${t.achievements[i].desc}`}
                     className={`group relative flex flex-col items-center gap-1.5 rounded-xl border p-3 text-center transition-all duration-300 ${
                       a.unlocked
                         ? "border-emerald/25 bg-emerald/[0.05] hover:bg-emerald/[0.1]"
@@ -619,7 +808,7 @@ export default function Community() {
                     <span className={`text-xl ${a.unlocked ? "text-emerald" : "text-ink-faint"}`}>
                       {a.icon}
                     </span>
-                    <span className="text-[0.9375rem] font-medium leading-tight">{a.name}</span>
+                    <span className="text-[0.9375rem] font-medium leading-tight break-words max-w-full">{t.achievements[i].name}</span>
                   </div>
                 ))}
               </GlassCard>

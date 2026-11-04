@@ -22,6 +22,10 @@ export type CityKind =
   | "regional";
 
 export interface Station {
+  /** True only once a real Open-Meteo air-quality reading replaced the
+   *  modelled one for this city (lib/live.ts). Drives the Live/Modelled
+   *  badge, so a modelled number is never shown under "Live". */
+  liveAir?: boolean;
   id: string;
   name: string;
   region: string; // oblast / region
@@ -392,6 +396,14 @@ export const LAYER_ORIGIN: Record<LayerKey, DataOrigin> = {
 };
 
 /** Per-metric provenance for the individual `Station` fields. */
+/** The badge a value actually deserves: a "live" metric is only live when
+ *  the reading behind it was fetched. Before that, or if the fetch failed,
+ *  the number on screen is the modelled baseline and is labelled so. */
+export function originOf(metric: keyof typeof METRIC_ORIGIN, liveAir: boolean): DataOrigin {
+  const o = METRIC_ORIGIN[metric];
+  return o === "live" && !liveAir ? "modeled" : o;
+}
+
 export const METRIC_ORIGIN = {
   // Open-Meteo Air Quality (CAMS)
   aqi: "live",
