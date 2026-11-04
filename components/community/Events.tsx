@@ -20,7 +20,7 @@ import {
   setRsvp,
   type AetherisEvent,
 } from "@/lib/events";
-import { PinMap } from "./PinMap";
+import { PinMap } from "./LazyPinMap";
 
 /* ─────────────────────────────────────────────────────────────
    Local eco-events — concept section 4.1.

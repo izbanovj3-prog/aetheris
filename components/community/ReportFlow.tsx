@@ -19,7 +19,7 @@ import {
   type Severity,
   type Tone,
 } from "@/lib/reports";
-import { PinMap } from "./PinMap";
+import { PinMap } from "./LazyPinMap";
 import { coarsen, isConfigured } from "@/lib/supabase";
 import { localePath } from "@/lib/i18n";
 import { placeName } from "@/lib/communityText";
