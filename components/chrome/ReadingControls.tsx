@@ -42,6 +42,8 @@ export const READING_LABELS: Record<Locale, { group: string; size: string[]; the
   },
 };
 
+const GLYPHS = ["A", "A+", "A++"];
+
 function safeSet(key: string, value: string) {
   try {
     localStorage.setItem(key, value);
@@ -101,7 +103,9 @@ export function ReadingControls({ className = "" }: { className?: string }) {
         <button
           key={v}
           type="button"
-          aria-label={t.size[i]}
+          // Starts with what the button shows, so a voice-control user can
+          // say "click A plus" (WCAG 2.5.3, label in name).
+          aria-label={`${GLYPHS[i]} — ${t.size[i]}`}
           aria-pressed={size === v}
           onClick={() => pickSize(v)}
           className={`${btn} ${
@@ -111,7 +115,7 @@ export function ReadingControls({ className = "" }: { className?: string }) {
           }`}
           style={{ fontSize: 14 + i * 3 }}
         >
-          A{i === 0 ? "" : i === 1 ? "+" : "++"}
+          {GLYPHS[i]}
         </button>
       ))}
       <button

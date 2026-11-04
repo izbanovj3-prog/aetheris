@@ -177,15 +177,20 @@ export type NewRemoteReport = { anon_id: string } & Omit<
  */
 const MIGRATION_ONLY_COLUMNS = ["parent_id", "photo_quality"] as const;
 
-/** Newest reports first. Returns null on any failure — never throws. */
+/**
+ * Newest reports first, `limit` rows starting at `offset` — one page of the
+ * feed, never the whole table. Returns null on any failure — never throws.
+ */
 export async function listRemoteReports(
   limit = 50,
   signal?: AbortSignal,
+  offset = 0,
 ): Promise<RemoteReport[] | null> {
   if (!isConfigured()) return null;
+  const page = `&limit=${Math.max(1, Math.floor(limit))}` + (offset > 0 ? `&offset=${Math.floor(offset)}` : "");
   try {
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/${REPORTS_TABLE}?select=${REPORT_PUBLIC_COLUMNS}&order=created_at.desc&limit=${limit}`,
+      `${SUPABASE_URL}/rest/v1/${REPORTS_TABLE}?select=${REPORT_PUBLIC_COLUMNS}&order=created_at.desc${page}`,
       { headers: headers(), signal },
     );
     if (!res.ok) return null;
@@ -292,9 +297,9 @@ export async function insertRemoteReport(
  * Which of these ids still exist in the table.
  *
  * Asked about specific ids rather than inferred from the feed page on
- * purpose: listRemoteReports caps at 50 rows, so "absent from the feed"
- * and "deleted" stop meaning the same thing as soon as the feed is longer
- * than that. Returns null on any failure, so a caller can tell "confirmed
+ * purpose: the feed is read a page (20 rows) at a time, so "absent from
+ * the feed" and "deleted" stop meaning the same thing as soon as the feed
+ * is longer than that. Returns null on any failure, so a caller can tell "confirmed
  * gone" apart from "could not check" and leave the data alone.
  */
 export async function existingReportIds(

@@ -123,6 +123,29 @@ describe("reading", () => {
     expect(calls[0].url).not.toMatch(/anon_id/);
   });
 
+  it("reads the feed one page at a time, never the whole table", async () => {
+    const row = (i: number) => ({
+      id: `r${i}`, created_at: "2026-11-01T10:00:00Z", author: "A", city: "Almaty", lat: 43.24, lon: 76.89,
+      category: "air", severity: "low", title: `t${i}`, body: "b", status: "submitted", upvotes: 0,
+    });
+    // Asked for 21 (a page of 20 plus one), the server has 21 left: more exist.
+    respondWith(() => Array.from({ length: 21 }, (_, i) => row(i)));
+    const { getRemoteReportsPage, FEED_PAGE } = await import("@/lib/reports");
+    expect(FEED_PAGE).toBe(20);
+    const first = (await getRemoteReportsPage(0))!;
+    expect(calls[0].url).toContain("order=created_at.desc&limit=21");
+    expect(calls[0].url).not.toContain("offset=");
+    expect(first.reports).toHaveLength(20);
+    expect(first.hasMore).toBe(true);
+
+    // The last page: fewer rows than asked for.
+    respondWith(() => Array.from({ length: 7 }, (_, i) => row(40 + i)));
+    const last = (await getRemoteReportsPage(40))!;
+    expect(calls[1].url).toContain("limit=21&offset=40");
+    expect(last.reports.map((r) => r.id)).toEqual(["r40", "r41", "r42", "r43", "r44", "r45", "r46"]);
+    expect(last.hasMore).toBe(false);
+  });
+
   it("builds community signals from counts only", async () => {
     respondWith(() => [
       { city: "Almaty", category: "air", severity: "high", reports: 3, latest: "2026-11-01T10:00:00Z", city_reporters: 2 },

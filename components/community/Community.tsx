@@ -22,8 +22,9 @@ import {
   CATEGORIES,
   SEED_REPORTS,
   SEVERITIES,
+  FEED_PAGE,
   deleteMyReport,
-  getRemoteReports,
+  getRemoteReportsPage,
   getUserReports,
   namesOrganisation,
   reconcileLocalMirrors,
@@ -114,6 +115,9 @@ const initialsOf = (name: string) =>
     .slice(0, 2)
     .map((w) => w[0]?.toUpperCase() ?? "")
     .join("") || "AN";
+
+/** DOM id of a feed card, the target focus moves to after "Show more". */
+const cardDomId = (id: string) => `report-${id}`;
 
 const STATION_ID_BY_NAME = new Map(getStations().map((s) => [s.name, s.id]));
 
@@ -282,7 +286,7 @@ function ReportCard({
           {t.severities[r.severity]}
         </span>
       </div>
-      <h3 className="font-[family-name:var(--font-syne)] font-bold text-lg leading-snug mb-2">
+      <h3 id={`${cardDomId(r.id)}-title`} className="font-[family-name:var(--font-syne)] font-bold text-lg leading-snug mb-2">
         {view.title}
       </h3>
       <p className="text-base text-ink-dim font-light leading-relaxed mb-4">{view.body}</p>
@@ -346,7 +350,6 @@ function ReportCard({
             setVotes((v) => (voted ? v - 1 : v + 1));
           }}
           aria-pressed={voted}
-          aria-label={voted ? t.card.removeReaction : t.card.seeToo}
           title={t.card.seeToo}
           className={`flex items-center gap-2 text-[0.9375rem] rounded-full border px-3.5 py-1.5 transition-all duration-300 ${
             voted
@@ -355,6 +358,9 @@ function ReportCard({
           }`}
         >
           <span aria-hidden>👁</span>
+          {/* The name carries the count that is on screen (WCAG 2.5.3);
+              aria-pressed says whether this device has marked it. */}
+          <span className="sr-only">{t.card.seeToo}</span>
           <span className="readout">{votes}</span>
         </button>
 
@@ -492,7 +498,22 @@ function Toast({ message, onClose }: { message: string; onClose: () => void }) {
 
 export default function Community() {
   const t = useCommunityText();
-  const [reports, setReports] = useState<Report[]>(SEED_REPORTS);
+  /* The feed is three runs in a fixed order: `head` — real submissions,
+     newest first, fetched a page at a time; `tail` — this device's reports
+     the database does not have, then the seeded examples. The tail is only
+     reachable once the database has no more pages, so an example never
+     sits above a real report that simply has not been fetched yet. */
+  const [head, setHead] = useState<Report[]>([]);
+  const [tail, setTail] = useState<Report[]>(SEED_REPORTS);
+  const [hasMore, setHasMore] = useState(false);
+  /** Rows taken from the database so far — the next page's offset. */
+  const [remoteOffset, setRemoteOffset] = useState(0);
+  const [shown, setShown] = useState(FEED_PAGE);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [loadMoreFailed, setLoadMoreFailed] = useState(false);
+  const [announce, setAnnounce] = useState("");
+  /** First card a "Show more" added; focus moves there once it renders. */
+  const [focusId, setFocusId] = useState<string | null>(null);
   const [mine, setMine] = useState<Report[]>([]);
   const [flowOpen, setFlowOpen] = useState(false);
   const [justAddedId, setJustAddedId] = useState<string | null>(null);
@@ -526,40 +547,99 @@ export default function Community() {
     // immediately and still works with no network at all.
     const own = getUserReports();
     setMine(own);
-    if (own.length) setReports([...own, ...SEED_REPORTS]);
+    if (own.length) setTail([...own, ...SEED_REPORTS]);
 
-    getRemoteReports(ac.signal).then(async (rows) => {
-      if (!rows) return; // backend unreachable — keep the local view
+    getRemoteReportsPage(0, FEED_PAGE, ac.signal).then(async (page) => {
+      if (!page) return; // backend unreachable — keep the local view
       setBackendLive(true);
+      const rows = page.reports;
 
       // Drop mirrors of rows that have since been deleted from Postgres —
       // otherwise they sit in this device's feed for good, still marked
       // "Filed". Checked by id rather than against `rows`, because that
-      // list is capped at 50 and "not on this page" is not "deleted".
+      // list is one page and "not on this page" is not "deleted".
       const { kept, removed } = await reconcileLocalMirrors(ac.signal);
       if (removed.length) setDeadIds((prev) => new Set([...prev, ...removed]));
       if (ac.signal.aborted) return;
 
       const remoteIds = new Set(rows.map((r) => r.id));
-      const localOnly = kept.filter((r) => !remoteIds.has(r.id));
-      setReports([...rows, ...localOnly, ...SEED_REPORTS]);
+      // A mirror of a row on a later page is not "local only": it is shown
+      // when that page arrives, not twice.
+      const localOnly = kept.filter((r) => !remoteIds.has(r.id) && !r.remote);
+      setHead(rows);
+      setTail([...localOnly, ...SEED_REPORTS]);
+      setHasMore(page.hasMore);
+      setRemoteOffset(rows.length);
       // Points come from the server's copy of your reports where it has
       // one, so a corroboration that happened after you filed is counted.
-      setMine([...rows.filter((r) => r.userCreated), ...localOnly]);
+      // Your reports on later pages count from their local mirror.
+      setMine([...rows.filter((r) => r.userCreated), ...kept.filter((r) => !remoteIds.has(r.id))]);
     });
 
     return () => ac.abort();
   }, []);
 
+  // Move focus to the first card "Show more" added, once it is on screen,
+  // so a keyboard user carries on reading from there instead of landing
+  // back at the top of the page.
+  useEffect(() => {
+    if (!focusId) return;
+    document.getElementById(cardDomId(focusId))?.focus();
+    setFocusId(null);
+  }, [focusId, head, shown]);
+
+  const visible = useMemo(
+    () => (hasMore ? head : [...head, ...tail]).filter((r) => !deadIds.has(r.id)),
+    [hasMore, head, tail, deadIds],
+  );
+  const canShowMore = hasMore || visible.length > shown;
+
+  async function showMore() {
+    if (loadingMore) return;
+    const next = shown + FEED_PAGE;
+    let list = visible;
+    if (hasMore && head.length < next) {
+      setLoadingMore(true);
+      setLoadMoreFailed(false);
+      const page = await getRemoteReportsPage(remoteOffset, FEED_PAGE);
+      setLoadingMore(false);
+      if (!page) {
+        setLoadMoreFailed(true);
+        setAnnounce(t.page.loadMoreFailed);
+        return;
+      }
+      const have = new Set(head.map((r) => r.id));
+      const fresh = page.reports.filter((r) => !have.has(r.id));
+      const nextHead = [...head, ...fresh];
+      setHead(nextHead);
+      setHasMore(page.hasMore);
+      setRemoteOffset((o) => o + page.reports.length);
+      list = (page.hasMore ? nextHead : [...nextHead, ...tail]).filter((r) => !deadIds.has(r.id));
+    }
+    const added = list.slice(shown, next);
+    setShown(next);
+    if (added.length) {
+      setFocusId(added[0].id);
+      setAnnounce(t.page.moreShown(added.length, Math.min(next, list.length)));
+    }
+  }
+
   function handleDeleted(id: string, message: string) {
-    setReports((prev) => prev.filter((r) => r.id !== id));
+    // A deleted database row moves every later row up by one; the next
+    // page starts one earlier so nothing is skipped.
+    if (head.some((r) => r.id === id && r.remote)) setRemoteOffset((o) => Math.max(0, o - 1));
+    setHead((prev) => prev.filter((r) => r.id !== id));
+    setTail((prev) => prev.filter((r) => r.id !== id));
     setMine((prev) => prev.filter((r) => r.id !== id));
     setDeadIds((prev) => new Set([...prev, id]));
     setToast(message);
   }
 
   function handleCreated(report: Report) {
-    setReports((prev) => [report, ...prev.filter((r) => r.id !== report.id)]);
+    // A new database row moves every later row down by one.
+    if (report.remote) setRemoteOffset((o) => o + 1);
+    setHead((prev) => [report, ...prev.filter((r) => r.id !== report.id)]);
+    setTail((prev) => prev.filter((r) => r.id !== report.id));
     setMine((prev) => [report, ...prev.filter((r) => r.id !== report.id)]);
     setJustAddedId(report.id);
     setToast(t.page.toastFiled);
@@ -631,9 +711,13 @@ export default function Community() {
                 the text tree, so a card that had been filtered out was
                 being read by screen readers and leaving a blank gap. */}
             <AnimatePresence initial={false} mode="popLayout" key={deadIds.size}>
-              {reports.filter((r) => !deadIds.has(r.id)).map((r) => (
+              {visible.slice(0, shown).map((r) => (
                 <motion.div
                   key={r.id}
+                  id={cardDomId(r.id)}
+                  tabIndex={-1}
+                  aria-labelledby={`${cardDomId(r.id)}-title`}
+                  className="rounded-2xl outline-none focus-visible:ring-2 focus-visible:ring-emerald/60"
                   layout
                   initial={{ opacity: 0, y: -16, scale: 0.98 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -650,6 +734,28 @@ export default function Community() {
               ))}
             </AnimatePresence>
           </div>
+
+          {/* "Show more": a real button, never disabled while it works —
+              a disabled button drops keyboard focus to the page body. */}
+          {canShowMore && (
+            <div className="flex flex-col items-center gap-2">
+              <button
+                type="button"
+                onClick={showMore}
+                aria-disabled={loadingMore || undefined}
+                className="rounded-xl border border-line-bright text-ink text-[0.9375rem] font-semibold px-5 py-2.5 hover:border-emerald/40 hover:text-emerald transition-colors duration-300 aria-disabled:opacity-60 aria-disabled:cursor-wait"
+              >
+                {loadingMore ? t.page.loadingMore : t.page.showMore}
+              </button>
+              {loadMoreFailed && (
+                <p className="text-[0.9375rem] text-coral text-center leading-relaxed">{t.page.loadMoreFailed}</p>
+              )}
+            </div>
+          )}
+          {/* Says what "Show more" did, for screen readers. */}
+          <p role="status" aria-live="polite" className="sr-only">
+            {announce}
+          </p>
         </div>
 
         {/* rail */}

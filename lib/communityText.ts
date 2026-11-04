@@ -48,6 +48,11 @@ export interface CommunityText {
     toastDeleted: string;
     toastSub: string;
     dismiss: string;
+    /** "Show more" under the feed, its busy label, what it announces, and its failure. */
+    showMore: string;
+    loadingMore: string;
+    moreShown: Fn<[number, number]>;
+    loadMoreFailed: string;
   };
   card: {
     you: string;
@@ -64,7 +69,6 @@ export interface CommunityText {
     transferTitle: string;
     transferBody: Fn<[string, string]>;
     seeToo: string;
-    removeReaction: string;
     askAi: string;
     delete: string;
     deleting: string;
@@ -281,6 +285,11 @@ const en: CommunityText = {
     toastDeleted: "Report deleted",
     toastSub: "nobody has reviewed it",
     dismiss: "Dismiss",
+    showMore: "Show more",
+    loadingMore: "Loading…",
+    moreShown: (added, total) =>
+      `${added} more report${added === 1 ? "" : "s"} shown, ${total} in the feed now.`,
+    loadMoreFailed: "Could not load more reports. Check the connection and try again.",
   },
   card: {
     you: "You",
@@ -299,7 +308,6 @@ const en: CommunityText = {
     transferBody: (to, date) =>
       `Passed to ${to} on ${date}. This records that the data was sent, and nothing about how it was received or whether anything followed.`,
     seeToo: "I see it too",
-    removeReaction: "Remove reaction",
     askAi: "Ask the analyst",
     delete: "Delete",
     deleting: "Deleting…",
@@ -597,6 +605,10 @@ const ru: CommunityText = {
     toastDeleted: "Сообщение удалено",
     toastSub: "его никто не проверял",
     dismiss: "Закрыть",
+    showMore: "Показать ещё",
+    loadingMore: "Загрузка…",
+    moreShown: (added, total) => `Показано ещё: ${added}. Всего в ленте: ${total}.`,
+    loadMoreFailed: "Не удалось загрузить ещё сообщения. Проверьте соединение и попробуйте снова.",
   },
   card: {
     you: "Вы",
@@ -615,7 +627,6 @@ const ru: CommunityText = {
     transferBody: (to, date) =>
       `Передано: ${to}, ${date}. Это запись о том, что данные отправлены, и ничего не говорит о том, как их приняли и последовало ли что-то.`,
     seeToo: "Я тоже это вижу",
-    removeReaction: "Убрать отметку",
     askAi: "Спросить аналитика",
     delete: "Удалить",
     deleting: "Удаление…",
@@ -983,6 +994,10 @@ const kk: CommunityText = {
     toastDeleted: "Хабарлама жойылды",
     toastSub: "оны ешкім тексерген жоқ",
     dismiss: "Жабу",
+    showMore: "Тағы көрсету",
+    loadingMore: "Жүктелуде…",
+    moreShown: (added, total) => `Тағы ${added} хабарлама көрсетілді. Лентада барлығы: ${total}.`,
+    loadMoreFailed: "Қосымша хабарламаларды жүктеу мүмкін болмады. Байланысты тексеріп, қайта көріңіз.",
   },
   card: {
     you: "Сіз",
@@ -1001,7 +1016,6 @@ const kk: CommunityText = {
     transferBody: (to, date) =>
       `Жіберілді: ${to}, ${date}. Бұл деректердің жіберілгені туралы жазба ғана; олардың қалай қабылданғанын немесе бір нәрсе болғанын білдірмейді.`,
     seeToo: "Мен де көріп тұрмын",
-    removeReaction: "Белгіні алып тастау",
     askAi: "Аналитиктен сұрау",
     delete: "Жою",
     deleting: "Жойылуда…",

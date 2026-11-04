@@ -565,6 +565,25 @@ export async function getRemoteReports(signal?: AbortSignal): Promise<Report[] |
   return rows.map((r) => fromRemote(r, mine));
 }
 
+/** Reports per page of the community feed. */
+export const FEED_PAGE = 20;
+
+/**
+ * One page of real submissions, newest first, starting at `offset`. Asks
+ * for one row more than it shows, so `hasMore` is known without counting
+ * the table. Null when the backend is down.
+ */
+export async function getRemoteReportsPage(
+  offset: number,
+  limit = FEED_PAGE,
+  signal?: AbortSignal,
+): Promise<{ reports: Report[]; hasMore: boolean } | null> {
+  const rows = await listRemoteReports(limit + 1, signal, offset);
+  if (!rows) return null;
+  const mine = new Set(getUserReports().filter((r) => r.remote).map((r) => r.id));
+  return { reports: rows.slice(0, limit).map((r) => fromRemote(r, mine)), hasMore: rows.length > limit };
+}
+
 /** Whether the datastore is actually reachable right now. */
 export { backendReachable } from "./supabase";
 
