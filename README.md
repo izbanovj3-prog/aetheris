@@ -68,7 +68,7 @@ connected. For `npx playwright test`, build with any
 | --- | --- | --- |
 | `npx tsc --noEmit` | types | — |
 | `npm test` | unit tests over the pure logic (points, statuses, sitemap, copy rules, honesty) and `schema.test.ts`, which replays every migration on PGlite and probes what each database role can do | nothing; offline, ~10 s |
-| `npx playwright test` | end to end against `out/`: the report flow in three languages, headers and CSP, layout and axe contrast at 5 widths × 3 modes, SEO, 404s, no-JS reading | `npm run build` first; Chromium |
+| `npx playwright test` | end to end against `out/`: the report flow in three languages, headers and CSP, layout and axe contrast at 5 widths × 3 modes, SEO, 404s, no-JS reading; `static-html-lang.spec.ts` reads every `out/**/*.html` for `lang`, `og:locale`, canonical and og:image | `npm run build` first; Chromium |
 | `npm run lighthouse` | mobile profile, median of 3, against the targets in `scripts/lighthouse-check.mjs`; with `LH_FIXTURE=1` the community feed is 60 fixed reports from `scripts/supabase-fixture.mjs` | a server on :4321 (`npm run serve:static`); for `LH_FIXTURE=1`, a build with `NEXT_PUBLIC_SUPABASE_URL=https://aetheris-lighthouse-fixture.supabase.co` and `openssl` |
 | `npm run test:security` | access control on a **separate test** Supabase project, over the REST API with the publishable key | `SUPABASE_TEST_URL`, `SUPABASE_TEST_KEY`; optional `SUPABASE_TEST_SERVICE_KEY`, `SECURITY_PROBE_NETWORK=1` |
 
@@ -134,7 +134,7 @@ with the security headers, and once a day a synthetic visit checks 19 key
 routes for CSP violations and JavaScript errors. Nothing about real
 visitors is collected; a failed run is the alert (GitHub's notifications
 for failed scheduled runs). The site also includes Vercel Analytics and
-Speed Insights (`app/layout.tsx`); they report in the Vercel dashboard if
+Speed Insights (`components/chrome/RootDocument.tsx`); they report in the Vercel dashboard if
 they are enabled for the project.
 
 `.github/workflows/preview.yml` — **Deployment check**: whenever Vercel
@@ -246,7 +246,10 @@ has no toolbar. Turning it off for previews is a project setting
 ## Layout
 
 ```
-app/             routes (App Router, all prerendered); /ru and /kk trees
+app/             routes (App Router, all prerendered), one root layout per
+                 language: (en)/ (route group, no URL segment), ru/, kk/ —
+                 each prints its own <html lang> and og:locale;
+                 global-not-found.tsx is the shared 404
 components/      chrome, map, dashboard, assistant, community, ui
 lib/             site.ts (metadata), data.ts (model), live.ts + gbif.ts (open data),
                  supabase.ts (PostgREST client), i18n.ts + communityText.ts (copy)
