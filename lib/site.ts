@@ -17,6 +17,10 @@ export const SITE = {
     .trim()
     .replace(/\/$/, ""),
   locale: "en_US",
+  /** Alt text of the English preview card, public/opengraph-image.png
+   *  (scripts/og-images.mjs renders the card; keep its `alt` the same). */
+  ogImageAlt:
+    "Aetheris — Kazakhstan’s environment on one open map. Air quality from open data; water, industrial pollution and biodiversity are modelled estimates, marked as such.",
   creator: "Aetheris",
   keywords: [
     "Kazakhstan environment map",
@@ -33,6 +37,12 @@ export const SITE = {
     "environmental data visualization",
   ],
 } as const;
+
+/** og:locale per language tree (Open Graph uses language_TERRITORY). */
+export const OG_LOCALE = { en: "en_US", ru: "ru_RU", kk: "kk_KZ" } as const satisfies Record<
+  "en" | "ru" | "kk",
+  string
+>;
 
 /** Primary navigable surfaces — drives the sitemap. */
 export const ROUTES = [

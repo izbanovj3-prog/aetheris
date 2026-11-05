@@ -2,8 +2,11 @@
 //
 //   node scripts/og-images.mjs
 //
-// Writes app/{,ru/,kk/}{opengraph,twitter}-image.png and matching .alt.txt.
-// Next picks each up for its own route segment. The text is the claim a
+// Writes app/{ru,kk}/{opengraph,twitter}-image.png with matching .alt.txt —
+// Next picks each up for its own tree — and the English card as plain files
+// in public/ (a stable /opengraph-image.png; see rootMetadata in
+// components/chrome/RootDocument.tsx). The English alt text lives in
+// lib/site.ts (SITE.ogImageAlt) and must match `en.alt` below. The text is the claim a
 // preview makes about the site, so it follows the same rule as the pages:
 // air quality is live open data, water / industrial pollution /
 // biodiversity are modelled, resident reports are unchecked.
@@ -13,7 +16,8 @@ import { join } from "node:path";
 
 const COPY = {
   en: {
-    dir: "app",
+    dir: "public",
+    altFile: false,
     pill: "Independent student project",
     title: ["Kazakhstan’s environment,", "on one open map."],
     lede: "Air quality from open data (Open-Meteo / CAMS). Water, industrial pollution and biodiversity are modelled estimates — and marked as such.",
@@ -83,7 +87,7 @@ for (const [locale, c] of Object.entries(COPY)) {
   const png = await page.screenshot({ type: "png" });
   for (const kind of ["opengraph-image", "twitter-image"]) {
     writeFileSync(join(c.dir, `${kind}.png`), png);
-    writeFileSync(join(c.dir, `${kind}.alt.txt`), c.alt);
+    if (c.altFile !== false) writeFileSync(join(c.dir, `${kind}.alt.txt`), c.alt);
   }
   console.log(`${locale}: ${c.dir}`);
 }

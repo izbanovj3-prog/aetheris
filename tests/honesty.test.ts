@@ -62,7 +62,7 @@ const sources: Array<[string, string]> = [
     [`atlas feed ${l}`, JSON.stringify(buildEvents(l))],
   ] as Array<[string, string]>),
   ["lib/ai.ts", readFileSync(join(process.cwd(), "lib", "ai.ts"), "utf8")],
-  ...["app", "app/ru", "app/kk"].map(
+  ...["app/ru", "app/kk"].map(
     (d) => [`${d} og alt`, readFileSync(join(process.cwd(), d, "opengraph-image.alt.txt"), "utf8")] as [string, string],
   ),
 ];

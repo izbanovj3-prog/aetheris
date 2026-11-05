@@ -47,7 +47,8 @@ describe("legal drafts", () => {
     expect(ROUTES).toContain("/privacy");
     expect(ROUTES).toContain("/terms");
     for (const doc of ["privacy", "terms"]) {
-      expect(existsSync(join(process.cwd(), "app", doc, "page.tsx"))).toBe(true);
+      // English lives in the (en) route group: same URL, its own root layout.
+      expect(existsSync(join(process.cwd(), "app", "(en)", doc, "page.tsx"))).toBe(true);
       for (const l of ["ru", "kk"]) {
         expect(existsSync(join(process.cwd(), "app", l, doc, "page.tsx"))).toBe(true);
       }

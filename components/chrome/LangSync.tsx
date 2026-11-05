@@ -3,10 +3,9 @@
 import { useEffect } from "react";
 import { useLocale } from "@/lib/useLocale";
 
-/** The root layout owns the single <html> tag, so per-locale `lang` can't be
- *  set statically without moving EN off its indexed URLs — sync it on the
- *  client instead (prerendered HTML keeps lang="en"; /ru and /kk correct it
- *  after hydration, and crawlers read hreflang + content language anyway). */
+/** Each tree's root layout prints its own `lang` (app/(en), app/ru, app/kk),
+ *  so this is a fallback: it keeps <html lang> right on the one document
+ *  shared by every tree, the 404 page, after client-side changes. */
 export function LangSync() {
   const locale = useLocale();
   useEffect(() => {

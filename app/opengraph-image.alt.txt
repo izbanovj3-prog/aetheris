@@ -1,1 +1,0 @@
-Aetheris — Kazakhstan’s environment on one open map. Air quality from open data; water, industrial pollution and biodiversity are modelled estimates, marked as such.

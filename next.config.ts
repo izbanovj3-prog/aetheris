@@ -13,6 +13,12 @@ const nextConfig: NextConfig = {
   // Build moment for "as of" stamps in source citations. Inlined into both
   // server and client bundles, so prerendered HTML and hydration agree
   // (a module-level `new Date()` would differ between the two).
+  // Three root layouts — app/(en), app/ru, app/kk — so each tree's HTML
+  // carries its own lang. With no single root layout, the 404 page is
+  // app/global-not-found.tsx, which needs this flag.
+  experimental: {
+    globalNotFound: true,
+  },
   env: {
     NEXT_PUBLIC_BUILD_TIME: new Date().toISOString(),
   },

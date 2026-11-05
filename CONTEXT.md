@@ -1,6 +1,6 @@
 # CONTEXT — публичный запуск Aetheris
 
-Обновлено: 2026-11-04. Ветка: `claude/aetheris-production-launch-zgegoq`
+Обновлено: 2026-11-05. Ветка: `claude/aetheris-production-launch-zgegoq`
 (от `main` @ 4207ed1). PR [izbanovj3-prog/aetheris#2](https://github.com/izbanovj3-prog/aetheris/pull/2)
 — черновик. В `main` ничего не влито, боевая база Supabase не тронута,
 продакшен не менялся.
@@ -126,6 +126,19 @@ CSP ничего не ломает. Next 16.4.4 и `npm audit fix` без сме
 `scripts/supabase-fixture.mjs` (60 фиксированных сообщений), тестовая база
 в замере не участвует. Попутно axe: у кнопок A+/A++ и «Я тоже вижу»
 доступное имя не содержало видимый текст (WCAG 2.5.3) — исправлено.
+
+**SEO: язык в статическом HTML (05.11.2026)** — раньше один корневой
+layout печатал `<html lang="en">` и `og:locale=en_US` на всех 166
+страницах, `/ru` и `/kk` исправлял только скрипт в браузере. Теперь три
+корневых layout (`app/(en)` — route group без сегмента в URL, `app/ru`,
+`app/kk`) с общим `components/chrome/RootDocument.tsx`; в `out/` lang
+ru/kk, `og:locale` ru_RU/kk_KZ и `og:locale:alternate`. 404 —
+`app/global-not-found.tsx` (флаг `experimental.globalNotFound`), для
+него скрипт в `<head>` остаётся запасным. Английская карточка превью
+перенесена в `public/`: в route group Next выдал бы её под хешированным
+именем, а `/opengraph-image.png` уже используется. Переход между языками —
+полная перезагрузка страницы (правило Next для разных корневых layout).
+Проверка: `tests/e2e/static-html-lang.spec.ts`.
 
 ## Решения и почему
 

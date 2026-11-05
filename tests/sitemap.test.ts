@@ -72,7 +72,9 @@ describe("sitemap", () => {
       const path = u.slice(SITE.url.length).replace(/^\/|\/$/g, "");
       const segs = path ? path.split("/") : [];
       const mapped = segs.map((s, i) => (segs[i - 1] === "city" ? "[id]" : s));
-      const file = join(process.cwd(), "app", ...mapped, "page.tsx");
+      // The English tree is the (en) route group: no URL segment of its own.
+      const tree = mapped[0] === "ru" || mapped[0] === "kk" ? [] : ["(en)"];
+      const file = join(process.cwd(), "app", ...tree, ...mapped, "page.tsx");
       expect(existsSync(file), `${u} → ${file}`).toBe(true);
     }
   });

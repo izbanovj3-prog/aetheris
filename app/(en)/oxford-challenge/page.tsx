@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/primitives";
 import { LAYERS, LAYER_ORIGIN, networkStats, type LayerKey } from "@/lib/data";
 import { SEED_REPORTS } from "@/lib/reports";
-import { SITE } from "@/lib/site";
+import { OG_LOCALE, SITE } from "@/lib/site";
 
 /* ─────────────────────────────────────────────────────────────
    AETHERIS · Oxford Saïd Global Climate Tech Challenge 2026
@@ -48,7 +48,8 @@ export const metadata: Metadata = {
     title: OG_TITLE,
     description: OG_DESCRIPTION,
     url: `${SITE.url}/oxford-challenge/`,
-    locale: SITE.locale,
+    locale: OG_LOCALE.en,
+    alternateLocale: [OG_LOCALE.ru, OG_LOCALE.kk],
     images: [
       { url: "/opengraph-image.png", width: 1200, height: 630, alt: OG_TITLE },
     ],
