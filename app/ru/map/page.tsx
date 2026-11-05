@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { MapClient } from "../../map/MapClient";
+import { MapClient } from "../../(en)/map/MapClient";
 import { getDict, hreflangAlternates } from "@/lib/i18n";
 
 const dict = getDict("ru");

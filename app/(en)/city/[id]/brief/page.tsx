@@ -4,7 +4,7 @@ import CityBrief from "@/components/city/CityBrief";
 import { Footer } from "@/components/chrome/Footer";
 import { buildBrief } from "@/lib/brief";
 import { getStations } from "@/lib/data";
-import { SITE } from "@/lib/site";
+import { OG_LOCALE, SITE } from "@/lib/site";
 
 // Static export: one brief per city, prerendered; unknown slugs 404.
 export const dynamicParams = false;
@@ -37,7 +37,8 @@ export async function generateMetadata({
       title,
       description,
       url: `${SITE.url}/city/${id}/brief/`,
-      locale: SITE.locale,
+      locale: OG_LOCALE.en,
+      alternateLocale: [OG_LOCALE.ru, OG_LOCALE.kk],
       images: [{ url: "/opengraph-image.png", width: 1200, height: 630, alt: title }],
     },
     twitter: {
